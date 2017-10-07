@@ -58,10 +58,10 @@ event information</dd>
 <dt>ISR</dt>
 <dd>Initial-State Radiation, implemented in terms of spacelike showers</dd>
 
-<dt>MI</dt>
-<dd>Multiple Interactions, i.e. several (more or less) independent 
-parton-parton subcollisions as part of a hadron-hadron event (sometimes
-also called MPI, with P for parton or parton-parton)</dd>
+<dt>MPI</dt>
+<dd>Multiparton Interactions, i.e. several (more or less) independent 
+parton-parton subcollisions as part of a hadron-hadron event (previously
+called MI for multiple interactions)</dd>
 
 <dt>MSSM</dt>
 <dd>Minimal Supersymmetric extension of the Standard Model</dd>
@@ -77,7 +77,7 @@ in the RPP (see below).</dd>
 
 <dt>pileup</dt>
 <dd>several hadron-hadron collisions in a bunch crossing; not to 
-be confused with MI</dd>
+be confused with MPI</dd>
 
 <dt>RPP</dt>
 <dd>Review of Particle Physics, the biannual review by the ParticleData Group
@@ -93,7 +93,7 @@ to steer the behaviour of a run; normally particle data are considered
 separately but clearly are closely related</dd>
 
 <dt>SLHA</dt>
-<dd>SUSY Les Houchs Accord for interchange of mass and coupling information
+<dd>SUSY Les Houches Accord for interchange of mass and coupling information
 in SUSY scenarios, via a well-defined file format</dd>
 
 <dt>SM</dt>
@@ -117,4 +117,4 @@ Accord takes into account that the unit there is pb)
 </body>
 </html>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->

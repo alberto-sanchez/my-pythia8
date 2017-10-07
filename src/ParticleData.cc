@@ -1,5 +1,5 @@
 // ParticleData.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -7,6 +7,7 @@
 // DecayChannel, ParticleDataEntry and ParticleData classes.
 
 #include "ParticleData.h"
+#include "ResonanceWidths.h"
 #include "StandardModel.h"
 #include "SusyResonanceWidths.h"
 
@@ -89,6 +90,10 @@ const int ParticleDataEntry::INVISIBLETABLE[50] = { 12, 14, 16, 18, 23, 25,
   4900103, 4900104, 4900105, 4900106, 4900107, 4900108, 4900111, 4900113, 
   4900211, 4900213, 4900991, 5000039, 5100039, 9900012, 9900014, 9900016, 
   9900023 };     
+
+// For some particles we know it is necessary to switch off width,
+// although they do have one, so do not warn.
+const int ParticleDataEntry::KNOWNNOWIDTH[3] = {10313, 10323, 10333}; 
 
 // Particles with a read-in tau0 (in mm/c) below this mayDecay by default.
 const double ParticleDataEntry::MAXTAU0FORDECAY = 1000.;
@@ -279,11 +284,16 @@ void ParticleDataEntry::initBWmass() {
 
   // Switch off Breit-Wigner if very close to threshold.
   if (mThr + NARROWMASS > m0Save) {
-    ostringstream osWarn;
-    osWarn << "for id = " << idSave;
-    particleDataPtr->infoPtr->errorMsg("Warning in ParticleDataEntry::"
-      "initBWmass: switching off width", osWarn.str(), true);
     modeBWnow = 0;
+    bool knownProblem = false;
+    for (int i = 0; i < 3; ++i) if (idSave == KNOWNNOWIDTH[i]) 
+      knownProblem = true;
+    if (!knownProblem) {
+      ostringstream osWarn;
+      osWarn << "for id = " << idSave;
+      particleDataPtr->infoPtr->errorMsg("Warning in ParticleDataEntry::"
+        "initBWmass: switching off width", osWarn.str(), true);
+    }
   }
 
 }
@@ -392,7 +402,7 @@ bool ParticleDataEntry::preparePick(int idSgn, double mHat, int idInFlav) {
   currentBRSum = 0.;
 
   // For resonances the widths are calculated dynamically.
-  if (resonancePtr != 0) {
+  if (isResonanceSave && resonancePtr != 0) {
     resonancePtr->widthStore(idSgn, mHat, idInFlav);
     for (int i = 0; i < int(channels.size()); ++i) 
       currentBRSum += channels[i].currentBR();
@@ -508,19 +518,6 @@ void ParticleDataEntry::setConstituentMass() {
     if (id1 <6 && id2 < 6) constituentMassSave 
       = CONSTITUENTMASSTABLE[id1] + CONSTITUENTMASSTABLE[id2];
   }
-
-}
-
-//--------------------------------------------------------------------------
-
-// Convert string to lowercase for case-insensitive comparisons.
-
-string ParticleDataEntry::toLower(const string& nameConv) { 
-
-  string temp(nameConv);
-  for (int i = 0; i < int(temp.length()); ++i) 
-    temp[i] = std::tolower(temp[i]); 
-  return temp; 
 
 }
 
@@ -641,6 +638,14 @@ void ParticleData::initWidths( vector<ResonanceWidths*> resonancePtrs) {
     setResonancePtr( 1000000 + i, resonancePtr);
     resonancePtr = new ResonanceSquark(2000000 + i);
     setResonancePtr( 2000000 + i, resonancePtr);
+  }
+
+  //  - Sleptons and sneutrinos
+  for(int i = 1; i < 7; i++){
+    resonancePtr = new ResonanceSlepton(1000010 + i);
+    setResonancePtr( 1000010 + i, resonancePtr);
+    resonancePtr = new ResonanceSlepton(2000010 + i);
+    setResonancePtr( 2000010 + i, resonancePtr);
   }
 
   // - Gluino
@@ -849,7 +854,7 @@ bool ParticleData::readXML(string inFile, bool reset) {
       } else if (word1 == "<file") {
         string file = attributeValue(line, "name");
         if (file == "") {
-          infoPtr->errorMsg("Warning in ParticleData::readXML:"
+          infoPtr->errorMsg("Error in ParticleData::readXML:"
             " skip unrecognized file name", line);
         } else files.push_back(file);
       }
@@ -1127,8 +1132,9 @@ void ParticleData::listFF(string outFile) {
   // Check that valid particle.
   if ( (!isParticle(idTmp) && property  != "all" && property  != "new") 
   || idTmp <= 0) {
-    if (warn) os << "\n Warning: input particle not found in Particle"
-      << " Data Table; skip:\n   " << lineIn << "\n";
+    if (warn) os << "\n PYTHIA Error: input particle not found in Particle"
+      << " Data Table:\n   " << lineIn << "\n";
+    readingFailedSave = true;
     return false;
   }
 
@@ -1433,8 +1439,9 @@ void ParticleData::listFF(string outFile) {
   }
 
   // Return false if failed to recognize property.
-  if (warn) os << "\n Warning: input property not found in Particle"
-    << " Data Table; skip:\n   " << lineIn << "\n";
+  if (warn) os << "\n PYTHIA Error: input property not found in Particle"
+    << " Data Table:\n   " << lineIn << "\n";
+  readingFailedSave = true;
   return false;
 
 }
@@ -1816,7 +1823,8 @@ void ParticleData::checkTable(int verbosity, ostream& os) {
 
         // Check matrix element mode 1: rho/omega -> pi+ pi- pi0.
         bool useME1 = ( mult == 3 && spinTypeNow == 3 && idNow > 100 
-          && idNow < 1000 && particlePtr->channel(i).contains(211, -211, 111) );
+          && idNow < 1000 
+          && particlePtr->channel(i).contains(211, -211, 111) );
         if ( meMode == 1 && !useME1 ) correctME = false;
         if ( meMode != 1 &&  useME1 ) correctME = false;
 
@@ -1985,7 +1993,9 @@ int ParticleData::nextId(int idIn) {
   // Find pointer to current particle and step up. Return 0 if impossible. 
   map<int, ParticleDataEntry>::const_iterator pdtIn = pdt.find(idIn);
   if (pdtIn == pdt.end()) return 0;
-  return (++pdtIn)->first;
+  ++pdtIn;
+  if (pdtIn == pdt.end()) return 0;
+  return pdtIn->first;
 
 }
 
@@ -2011,31 +2021,6 @@ double ParticleData::resOpenFrac(int id1In, int id2In, int id3In) {
   return answer;
 
 }
-
-//--------------------------------------------------------------------------
-
-// Convert string to lowercase for case-insensitive comparisons.
-
-string ParticleData::toLower(const string& nameConv) { 
-
-  string temp(nameConv);
-  for (int i = 0; i < int(temp.length()); ++i) 
-    temp[i] = std::tolower(temp[i]); 
-  return temp; 
-
-}
-
-//--------------------------------------------------------------------------
-
-// Allow several alternative inputs for true/false.
-
-bool ParticleData::boolString(string tag) {
-
-  string tagLow = toLower(tag);
-  return ( tagLow == "true" || tagLow == "1" || tagLow == "on" 
-  || tagLow == "yes" || tagLow == "ok" ); 
-
-}  
 
 //--------------------------------------------------------------------------
 

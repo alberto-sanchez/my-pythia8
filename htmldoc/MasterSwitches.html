@@ -35,9 +35,11 @@ a parton-level configuration provided by some external program.
 <p/><code>flag&nbsp; </code><strong> ProcessLevel:all &nbsp;</strong> 
  (<code>default = <strong>on</strong></code>)<br/>
 If off, do not attempt to carry out any generation at all on the 
-process or parton level. Do allow parton configurations stored in 
-the event record to hadronize and hadrons to decay, however, as set 
-by the <code>HadronLevel</code> switches. Further details are found
+process level. For the parton level only final-state radiation
+is possible, using the <code>Pythia::forceTimeShower(...)</code> method.
+Do allow parton configurations stored in the event record to hadronize 
+and hadrons to decay, however, as set by the <code>HadronLevel</code> 
+switches. Further details are found 
 <a href="HadronLevelStandalone.html" target="page">here</a>.
    
 
@@ -66,7 +68,7 @@ event generation, i.e. the evolution from an input (hard) process from
 <code>ProcessLevel</code>, containing a few partons only, to a complete 
 parton-level configuration to be handed on to <code>HadronLevel</code>. 
 This step involves the application of initial- and final-state radiation, 
-multiple interactions and the structure of beam remnants.
+multiparton interactions and the structure of beam remnants.
 
 <p/><code>flag&nbsp; </code><strong> PartonLevel:all &nbsp;</strong> 
  (<code>default = <strong>on</strong></code>)<br/>
@@ -80,10 +82,10 @@ one is then not.
 For <code>PartonLevel:all = on</code> some parts of the event generation 
 on this level may be switched off individually: 
 
-<p/><code>flag&nbsp; </code><strong> PartonLevel:MI &nbsp;</strong> 
+<p/><code>flag&nbsp; </code><strong> PartonLevel:MPI &nbsp;</strong> 
  (<code>default = <strong>on</strong></code>)<br/>
-Master switch for multiple interactions; on/off = true/false.
-Further options are found <a href="MultipleInteractions.html" target="page">here</a>.
+Master switch for multiparton interactions; on/off = true/false.
+Further options are found <a href="MultipartonInteractions.html" target="page">here</a>.
   
 
 <p/><code>flag&nbsp; </code><strong> PartonLevel:ISR &nbsp;</strong> 
@@ -94,7 +96,7 @@ Further options are found <a href="SpacelikeShowers.html" target="page">here</a>
 
 <p/><code>flag&nbsp; </code><strong> PartonLevel:FSR &nbsp;</strong> 
  (<code>default = <strong>on</strong></code>)<br/>
-Master switch for initial-state radiation; on/off = true/false.
+Master switch for final-state radiation; on/off = true/false.
 Further options are found <a href="TimelikeShowers.html" target="page">here</a>.
 If you leave this switch on, the following two switches allow 
 more detailed control to switch off only parts of the showers. 
@@ -115,7 +117,7 @@ subsequent to the hard process itself; on/off = true/false. In addition
   
 
 <p/>
-Switching off all the above MI/ISR/FSR switches is <b>not</b> equivalent 
+Switching off all the above MPI/ISR/FSR switches is <b>not</b> equivalent 
 to setting <code>PartonLevel:all = off</code>. In the former case a 
 minimal skeleton of parton-level operations are carried out, such as 
 tying together the scattered partons with the beam remnants into colour 
@@ -184,9 +186,33 @@ on/off = true/false. Further options are found
 <a href="BoseEinsteinEffects.html" target="page">here</a>.
   
 
+<h3>Printing</h3>
+
+<p/><code>flag&nbsp; </code><strong> Print:quiet &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Can be set on to avoid the printing during program execution, to the 
+largest extent possible. This flag acts by setting the relevant values 
+for <code>Init:showProcesses</code>, 
+<code>Init:showMultipartonInteractions</code>,  
+<code>Init:showChangedSettings</code>,  
+<code>Init:showAllSettings</code>,  
+<code>Init:showChangedParticleData</code>,  
+<code>Init:showChangedResonanceData</code>,  
+<code>Init:showAllParticleData</code>,  
+<code>Init:showOneParticleData</code>,  
+<code>Next:numberCount</code>,  
+<code>Next:numberShowLHA</code>,  
+<code>Next:numberShowInfo</code>,  
+<code>Next:numberShowProcess</code>, and  
+<code>Next:numberShowEvent</code>. 
+The change is to off or 0 for <code>Print:quiet = off</code>,
+and restores to the respective default value for <code>= on</code>. 
+Those changes take effect immediately, so individual settings can be 
+changed afterwards.   
+  
 
 
 </body>
 </html>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->

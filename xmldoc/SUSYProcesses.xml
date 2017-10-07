@@ -24,10 +24,10 @@ implementation.
 </p>
 
 <p>Since the implementation of SUSY processes was only recently
-completed <ref>Des11</ref>, case-by-case validations against other codes are still
-recommended. In all cases, a set of default validations have already been
-carried out by the authors. These validations compared to the PYTHIA 6
-SUSY implementation, using an sps1a spectrum. Most of the
+completed <ref>Des11</ref>, case-by-case validations against other codes 
+are still recommended. In all cases, a set of default validations have 
+already been carried out by the authors. These validations compared to 
+the PYTHIA 6 SUSY implementation, using an sps1a spectrum. Most of the
 SLHA2-specific extensions have  not been explicitly validated,
 however, with the exception of the R-parity violating single-sparticle
 production cross sections.
@@ -48,11 +48,12 @@ results. Always check for warnings and errors reported by the SLHA
 reader during the initialization stage. 
 
 <h3>SUSY Processes</h3>
+
 <note>Note 1:</note> Decays of SUSY particles are described
 separately <a href="#decays">below</a>. 
 
-<note>Note 2:</note> One special possibility is that the gluino or some squark(s) are
-sufficiently long-lived to hadronize. See 
+<note>Note 2:</note> One special possibility is that the gluino or 
+some squark(s) are sufficiently long-lived to hadronize. See 
 <aloc href="RHadrons">the R-hadrons page</aloc> for further details.
 
 <note>Note 3:</note> lepton- and photon-initial states are not yet available. 
@@ -136,7 +137,7 @@ are not yet included.
 
 <flag name="SUSY:gg2squarkantisquark" default="off">
 Pair production of a scalar quark together with a scalar antiquark by
-gluon annhilation via <ei>s</ei>-channel gluon exhange, <ei>t</ei>- and 
+gluon annihilation via <ei>s</ei>-channel gluon exchange, <ei>t</ei>- and 
 <ei>u</ei>-channel squark exchange, and the direct 4-point coupling. 
 The cross section expression follows <ref>Boz07</ref>. 
 Validation of the FLV and CPV cases has not yet been completed.
@@ -204,7 +205,7 @@ Validation of the FLV and CPV cases has not yet been completed.
 <flag name="SUSY:qqbar2chi+-chi0" default="off">
 Associated chargino-neutralino production by quark-antiquark
 annihilation. With four neutralino species, two chargino ones, and
-maintaining charge conjugate proceeses separate, this gives 16 
+maintaining charge conjugate processes separate, this gives 16 
 separate processes, codes 1221 - 1236. The cross section expressions 
 follow <ref>Boz07</ref>.
 Validation of the FLV and CPV cases has not yet been completed.
@@ -260,35 +261,31 @@ couplings must be input using the SLHA2 structure.
 
 Based on the parameters read in from the SLHA, PYTHIA 8 will normally 
 compute the decay modes of SUSY particles automatically, using the 
-<code>SusyResonanceDecays</code> class(es) included since
-version 8.150. Essentially all tree-level 2-body decays in the MSSM 
+<code>SusyResonanceDecays</code> class(es). Essentially all tree-level
+2-body decays in the MSSM  
 have been implemented this way, excepting so far only those involving
-Higgs bosons (either in the in- or out-state), gravitinos, and decays
-of sleptons. Available channels so far include:
+Higgs bosons (either in the in- or out-state) or gravitinos. 
+Available channels so far include:
 <ul>
 <li>~q &rarr; q + ~chi</li>
 <li>~q &rarr; ~q + W/Z</li>
 <li>~q &rarr; q + q (RPV UDD)</li>
 <li>~q &rarr; l + q (RPV LQD)</li>
 <li>~g &rarr; ~q + q</li>
-<li>~chi0 &rarr; ~chi0 + Z</li>
-<li>~chi0 &rarr; ~chi+ + W</li>
-<li>~chi0 &rarr; ~q + q</li>
-<li>~chi0 &rarr; ~l + l</li>
-<li>~chi+ &rarr; ~chi+ + Z</li>
-<li>~chi+ &rarr; ~chi0 + W</li>
-<li>~chi+ &rarr; ~q + q</li>
+<li>~chi &rarr; ~chi + Z/W</li>
+<li>~chi &rarr; ~q + q</li>
+<li>~chi &rarr; ~l/~nu + l/nu</li>
 <li>~chi0 &rarr; q + q + q (RPV UDD)</li>
+<li>~l/~nu &rarr; l/nu + ~chi</li>
+<li>~l/~nu &rarr; ~l/~nu + W/Z</li>
 </ul>
 All channels are still undergoing validation, so this
 implementation should be considered preliminary.
 Still missing but to be included in a forthcoming update
-are: 3-body decays of charginos (via RPV), 2-body decays of squarks and
-gauginos with Higgs as one of the decay products, the 2-body decay
-chargino &rarr; slepton neutrino / lepton sneutrino, and 2-body decays
-of sleptons. 
+are: 3-body decays of charginos (via RPV), and 2-body decays of squarks and
+gauginos with Higgs as one of the decay products. 
 
 </chapter>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->
 

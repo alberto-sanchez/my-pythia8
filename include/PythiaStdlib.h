@@ -1,5 +1,5 @@
 // PythiaStdlib.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -13,12 +13,14 @@
 // Stdlib header files for mathematics.
 #include <cmath>
 #include <cstdlib>
+#include <algorithm>
 
 // Stdlib header files for strings and containers.
 #include <string>
 #include <vector>
 #include <map>
 #include <deque>
+#include <set>
 
 // Stdlib header file for input and output.
 #include <iostream>
@@ -32,31 +34,43 @@
 #endif
 
 // By this declaration you do not need to use std:: qualifier everywhere.
-using namespace std;
+//using namespace std;
 
 // Alternatively you can specify exactly which std:: methods will be used.
-/*
+// Now made default so std does not spill outside namespace Pythia8.
 namespace Pythia8 {
+
 // Generic utilities and mathematical functions.
 using std::swap;
 using std::max;
 using std::min; 
 using std::abs; 
+using std::sort; 
+
 // Strings and containers.
+using std::pair; 
+using std::make_pair; 
 using std::string; 
 using std::vector; 
 using std::map; 
+using std::multimap; 
 using std::deque; 
+using std::set; 
+
 // Input/output streams.
 using std::cin; 
 using std::cout; 
 using std::cerr; 
 using std::istream; 
 using std::ostream; 
+using std::fstream; 
 using std::ifstream; 
 using std::ofstream; 
+using std::stringstream; 
 using std::istringstream; 
 using std::ostringstream; 
+using std::ios; 
+
 // Input/output formatting.
 using std::endl; 
 using std::fixed; 
@@ -64,9 +78,9 @@ using std::scientific;
 using std::left; 
 using std::right; 
 using std::setw; 
-using std::setprecision; 
+using std::setprecision;
+ 
 } // end namespace Pythia8
-*/
 
 namespace Pythia8 {
 

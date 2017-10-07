@@ -31,7 +31,7 @@ echo "<font color='red'>NO FILE SELECTED YET.. PLEASE DO SO </font><a href='Save
 
 When you have selected a set of hard processes for hadron beams, the 
 <?php $filepath = $_GET["filepath"];
-echo "<a href='MultipleInteractions.php?filepath=".$filepath."' target='page'>";?>multiple interactions</a> 
+echo "<a href='MultipartonInteractions.php?filepath=".$filepath."' target='page'>";?>multiparton interactions</a> 
 framework can add further interactions to build up a realistic
 underlying event. These further interactions can come from a wide
 variety of processes, and will occasionally be quite hard. They
@@ -144,7 +144,7 @@ A further process collection comes with a warning flag:
  &nbsp;&nbsp;(<code>default = <strong>off</strong></code>)<br/>
 The <i>q qbar -> b bbar</i> and <i>g g -> b bbar</i> processes.
 These are already included in the <code>TwoJets</code> sample above,
-so it would be doublecounting to include both, but we assume there
+so it would be double-counting to include both, but we assume there
 may be cases where the <i>b</i> subsample will be of special interest.
 This subsample does not include flavour-excitation or gluon-splitting 
 contributions to the <i>b</i> rate, however, so, depending
@@ -194,7 +194,7 @@ so that <i>P_1 = &lt;n&gt;</i> and
 
 <p/>
 Now further assume that the events actually are of two different 
-kinds <i>a</i> and <i>b</i>, occuring independently of each 
+kinds <i>a</i> and <i>b</i>, occurring independently of each 
 other, such that <i>&lt;n&gt; = &lt;n_a&gt; + &lt;n_b&gt;</i>. 
 It then follows that the probability of having one event of type 
 <i>a</i> (or <i>b</i>) and nothing else is 
@@ -254,7 +254,7 @@ chance for further interactions. (In PYTHIA this is the origin
 of the "pedestal effect", i.e. that events with a hard interaction
 have more underlying activity than the level found in minimum-bias 
 events.) When you specify a matter overlap profile in the
-multiple-interactions scenario, such an enhancement/depletion factor 
+multiparton-interactions scenario, such an enhancement/depletion factor 
 <i>f_impact</i> is chosen event-by-event and can be averaged
 during the course of the run. As an example, the double Gaussian
 form used in Tune A gives approximately
@@ -266,7 +266,7 @@ Experimentalists often instead use the notation
 <i>sigma_2ab = sigma_1a sigma_1b / sigma_eff</i>,
 from which we see that PYTHIA "predicts"
 <i>sigma_eff = sigma_ND / &lt;f_impact&gt;</i>.
-When the generation of multiple interactions is switched off it is 
+When the generation of multiparton interactions is switched off it is 
 not possible to calculate <i>&lt;f_impact&gt;</i> and therefore
 it is set to unity.
 
@@ -319,7 +319,7 @@ by the normalization factor
 f_1norm = &lt;f_impact&gt; (sigma_2b + sigma_2c) / sigma_ND
 </i><br/>
 here without a factor <i>1/2</i> (or else it would have been
-doublecounted). This gives the correct
+double-counted). This gives the correct
 <br/><i>
 (sigma_2b + sigma_2c) * sigma'_1 = sigma_1a * sigma_2b 
 + sigma_1a * sigma_2c + sigma_1c * sigma_2b + sigma_1c * sigma_2c/2
@@ -349,7 +349,7 @@ deliberation.
 <p/>
 The listing obtained with the <code>pythia.statistics()</code>
 already contain these corrections factors, i.e. cross sections
-are for the occurence of two interactions of the specified kinds. 
+are for the occurrence of two interactions of the specified kinds. 
 There is not a full tabulation of the matrix of all the possible    
 combinations of a specific first process together with a specific
 second one (but the information is there for the user to do that,
@@ -366,7 +366,7 @@ and that is the difference between the number of "selected" events
 and the number of "accepted" ones. Here is how that comes about.
 Originally the first and second process are selected completely
 independently. The generation (in)efficiency is reflected in the 
-different number of intially tried events for the first and second
+different number of initially tried events for the first and second
 process, leading to the same number of selected events. While
 acceptable on their own, the combination of the two processes may
 be unacceptable, however. It may be that the two processes added 
@@ -400,7 +400,7 @@ In the cross section calculation above, the <i>sigma'_1</i>
 cross sections are based on the number of accepted events, while 
 the <i>f_1norm</i> factor is evaluated based on the cross sections
 for selected events. That way the suppression by correlations
-between the two processes does not get to be doublecounted.
+between the two processes does not get to be double-counted.
 
 <p/>
 The <code>pythia.statistics()</code> listing contains two final
@@ -440,15 +440,15 @@ Most of the properties accessible by the
 echo "<a href='EventInformation.php?filepath=".$filepath."' target='page'>";?>pythia.info</a></code>
 methods refer to the first process, whether that happens to be the
 hardest or not. The code and <i>pT</i> scale of the second process
-are accessible by the <code>info.codeMI(1)</code> and 
-<code>info.pTMI(1)</code>, however. 
+are accessible by the <code>info.codeMPI(1)</code> and 
+<code>info.pTMPI(1)</code>, however. 
 
 <p/>
 The <code>sigmaGen()</code> and <code>sigmaErr()</code> methods provide 
 the cross section and its error for the event sample as a whole,
 combining the information from the two hard processes as described 
 above. In particular, the former should be used to give the 
-weight of the generated event sample. The statitical error estimate 
+weight of the generated event sample. The statistical error estimate 
 is somewhat cruder and gives a larger value than the 
 subprocess-by-subprocess one  employed in 
 <code>pythia.statistics()</code>, but this number is
@@ -541,4 +541,4 @@ fclose($handle);
 </body>
 </html>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->

@@ -42,7 +42,8 @@ cannot be run unless such an input has taken place.
 The SLHA input format can also be extended for use with more general BSM
 models, beyond SUSY. Information specific to  how to use the SLHA
 interface for generic BSM models is collected below,
-under <a href="#generic">Using SLHA for generic BSM Models</a>. 
+under <a href="#generic">Using SLHA for generic BSM Models</a>, with
+more elaborate explanations and examples in [<a href="Bibliography.php" target="page">Des11</a>]. 
 
 <p/>
 Most of the SUSY implementation in PYTHIA 8 is compatible with both the 
@@ -50,7 +51,10 @@ SLHA1 [<a href="Bibliography.php" target="page">Ska04</a>] and SLHA2 [<a href="B
 conventions (with some limitations for the NMSSM 
 in the latter case). Internally, PYTHIA 8 uses the 
 SLHA2 conventions and translates SLHA1 input to these when necessary. 
-See the section on SUSY Processes for more information.
+See the section on SUSY Processes and [<a href="Bibliography.php" target="page">Des11</a>] for more
+information. Note that PYTHIA assumes that a spectrum is either fully SHLA1 
+or fully SLHA2 compliant. Mixing of the two standards is discouraged, as 
+this can lead to ambiguities and inconsistencies.  
 
 <p/>
 When reading LHEF files, Pythia automatically looks for SLHA information
@@ -59,6 +63,14 @@ files. When running Pythia without LHEF input (or if reading an LHEF
 file that does not contain SLHA information in the header), a separate 
 file containing SLHA information may be specified using 
 <code>SLHA:file</code> (see below). 
+
+<p/>
+Normally the LHEF would be in uncompressed format, and thus human-readable
+if opened in a text editor. A possibility to read gzipped files has 
+been added, based on the Boost and zlib libraries, which therefore
+have to be linked appropriately in order for this option to work.
+See the <code>README</code> file in the main directory for details 
+on how to do this. 
 
 <p/>
 Finally, the SLHA input capability can of course also be used to input 
@@ -71,7 +83,11 @@ echo "<a href='ParticleData.php?filepath=".$filepath."' target='page'>";?>Partic
 and the <?php $filepath = $_GET["filepath"];
 echo "<a href='ParticleDataScheme.php?filepath=".$filepath."' target='page'>";?>scheme</a> to modify it). This 
 may at times not be desirable, so a few options can be used to curb the right 
-of SLHA to overwrite particle data.
+of SLHA to overwrite particle data. 
+Conversely, it is sometimes useful to allow the user to modify 
+eg a mass parameter relative to its value in the SLHA spectrum. 
+This is normally not permitted (the SLHA spectrum is normally self-consistent 
+and should not be modified), but an option for allowing it is provided.  
 
 <p/>
 The reading-in of information from SLHA or LHEF files is handled by the
@@ -115,17 +131,28 @@ switch off this flag then also SM particles are modified by SLHA input.
 <br/><br/><table><tr><td><strong>SLHA:minMassSM </td><td></td><td> <input type="text" name="3" value="100.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>100.0</strong></code>)</td></tr></table>
 This parameter provides an alternative possibility to ignore SLHA input 
 for all particles with identity codes below 1,000,000 (which mainly
-means SM particle, but also includes e.g. the Higgses in 
+means SM particle, but also includes e.g. the Higgs bosons in 
 two-Higgs-doublet scenarios) whose default masses in PYTHIA lie below 
 some threshold value, given by this parameter. The default value of 
 100.0 allows SLHA input to modify the top quark, but not, e.g., the 
 <i>Z^0</i> and <i>W^+-</i> bosons. 
   
 
+<br/><br/><strong>SLHA:allowUserOverride</strong>  <input type="radio" name="4" value="on"><strong>On</strong>
+<input type="radio" name="4" value="off" checked="checked"><strong>Off</strong>
+ &nbsp;&nbsp;(<code>default = <strong>off</strong></code>)<br/>
+Flag to set whether the user is allowed to modify the parameters read 
+from an SLHA spectrum. Is normally kept <code>off</code> to preserve the 
+internal self-consistency of SLHA spectra. If this flag is switched 
+<code>on</code>, the mass values read from the SLHA block MASS are 
+allowed to be modified by the user, using PYTHIA's standard 
+<code>readString</code> and related methods. 
+  
+
 <h3>SLHA DECAY Tables</h3>
 
-<br/><br/><strong>SLHA:useDecayTable</strong>  <input type="radio" name="4" value="on" checked="checked"><strong>On</strong>
-<input type="radio" name="4" value="off"><strong>Off</strong>
+<br/><br/><strong>SLHA:useDecayTable</strong>  <input type="radio" name="5" value="on" checked="checked"><strong>On</strong>
+<input type="radio" name="5" value="off"><strong>Off</strong>
  &nbsp;&nbsp;(<code>default = <strong>on</strong></code>)<br/>
 Switch to choose whether to read in SLHA <code>DECAY</code> tables or not. 
 If this switch is set to off, PYTHIA will ignore any decay tables found 
@@ -140,7 +167,7 @@ particle, or you may include an SLHA <code>DECAY</code> table for it,
 with the width set explicitly to zero.)
   
 
-<br/><br/><table><tr><td><strong>SLHA:minDecayDeltaM </td><td></td><td> <input type="text" name="5" value="1.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>1.0</strong></code>)</td></tr></table>
+<br/><br/><table><tr><td><strong>SLHA:minDecayDeltaM </td><td></td><td> <input type="text" name="6" value="1.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>1.0</strong></code>)</td></tr></table>
 This parameter sets the smallest allowed mass difference (in GeV,
 between the mass of the mother and the sum of the daughter masses) 
 for a decay mode in a DECAY table to be switched on inside PYTHIA. The
@@ -161,8 +188,8 @@ The following variables are used internally by PYTHIA as local copies
 of SLHA information. User changes will generally have no effect, since
 these variables will be reset by the SLHA reader during initialization.
 
-<br/><br/><strong>SLHA:NMSSM</strong>  <input type="radio" name="6" value="on"><strong>On</strong>
-<input type="radio" name="6" value="off" checked="checked"><strong>Off</strong>
+<br/><br/><strong>SLHA:NMSSM</strong>  <input type="radio" name="7" value="on"><strong>On</strong>
+<input type="radio" name="7" value="off" checked="checked"><strong>Off</strong>
  &nbsp;&nbsp;(<code>default = <strong>off</strong></code>)<br/>
 Corresponds to SLHA block MODSEL entry 3.
   
@@ -180,6 +207,8 @@ way, to generate isotropically distributed decays or even chains of
 such decays. (If you want something better than isotropic, sorry, you'll
 have to do some actual work ...)
 </p>
+
+</p>
 A more advanced further option is to make use of the possibility
 in the SLHA to include user-defined blocks with arbitrary
 names and contents. Obviously, standalone 
@@ -188,12 +217,13 @@ does not throw it away either, but instead stores the contents of user
 blocks as strings, which can be read back later, with the user
 having full control over the format used to read the individual entries. 
 </p>
+
 <p>
 The contents of both standard and user-defined SLHA blocks can be accessed 
 in any class inheriting from PYTHIA 8's <code>SigmaProcess</code>
 class (i.e., in particular, from any semi-internal process written by
-a user), through its SLHA pointer, <code>slhaPtr</code>, by using the following
-methods: 
+a user), through its SLHA pointer, <code>slhaPtr</code>, by using the 
+following methods: 
 <a name="method1"></a>
 <p/><strong> &nbsp;</strong> <br/>
   bool slhaPtr->getEntry(string blockName, double& val); 
@@ -209,10 +239,12 @@ methods:
   kndx, double& val); 
   
 </p>
+
 <p>
 This particular example assumes that the user wants to read the
-entries (without index, indexed, matrix-indexed, or 3-tensor-indexed, respectively)
-in the user-defined block <code>blockName</code>, and that it should be interpreted as
+entries (without index, indexed, matrix-indexed, or 3-tensor-indexed, 
+respectively) in the user-defined block <code>blockName</code>, 
+and that it should be interpreted as 
 a <code>double</code>. The last argument is templated, and hence if
 anything other than a <code>double</code> is desired to be read, the
 user has only to give the last argument a different type. 
@@ -226,6 +258,23 @@ responsibility to ensure complete consistency between the names and
 conventions used in the SLHA input, and those assumed in any
 user-written semi-internal process code. 
 </p>
+
+<p>
+Note that PYTHIA 8 always initializes at least 
+the SLHA blocks MASS and SMINPUTS, starting from its internal 
+SM parameters and particle data table values (updated to take into
+account user modifications). These blocks can therefore be accessed 
+using the <code>slhaPtr->getEntry()</code> methods even in the absence 
+of SLHA input. 
+Note: in the SMINPUTS block, PYTHIA outputs physically correct
+(i.e., measured) values of <i>GF</i>, <i>m_Z</i>, and 
+<i>alpha_EM(m_Z)</i>. However, if one attempts to compute, e.g., 
+the W mass, at one loop from these quantities, a value of 79 GeV results, 
+with a corresponding value for the weak mixing angle. We advise to 
+instead take the physically measured W mass from block MASS, and 
+recompute the EW parameters as best suited for the application at hand.
+</p>
+
 <input type="hidden" name="saved" value="1"/>
 
 <?php
@@ -256,19 +305,24 @@ if($_POST["3"] != "100.0")
 $data = "SLHA:minMassSM = ".$_POST["3"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["4"] != "on")
+if($_POST["4"] != "off")
 {
-$data = "SLHA:useDecayTable = ".$_POST["4"]."\n";
+$data = "SLHA:allowUserOverride = ".$_POST["4"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["5"] != "1.0")
+if($_POST["5"] != "on")
 {
-$data = "SLHA:minDecayDeltaM = ".$_POST["5"]."\n";
+$data = "SLHA:useDecayTable = ".$_POST["5"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["6"] != "off")
+if($_POST["6"] != "1.0")
 {
-$data = "SLHA:NMSSM = ".$_POST["6"]."\n";
+$data = "SLHA:minDecayDeltaM = ".$_POST["6"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["7"] != "off")
+{
+$data = "SLHA:NMSSM = ".$_POST["7"]."\n";
 fwrite($handle,$data);
 }
 fclose($handle);
@@ -278,6 +332,6 @@ fclose($handle);
 </body>
 </html>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->
 
 

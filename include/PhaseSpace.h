@@ -1,5 +1,5 @@
 // PhaseSpace.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -15,7 +15,7 @@
 #include "BeamParticle.h"
 #include "Info.h"
 #include "LesHouches.h"
-#include "MultipleInteractions.h"
+#include "MultipartonInteractions.h"
 #include "ParticleData.h"
 #include "PartonDistributions.h"
 #include "PythiaStdlib.h"
@@ -46,7 +46,7 @@ public:
 
   // Perform simple initialization and store pointers.
   void init(bool isFirst, SigmaProcess* sigmaProcessPtrIn, 
-    Info* infoPtrIn, Settings* settingsPtrIn, ParticleData* particleDataPtrIn,  
+    Info* infoPtrIn, Settings* settingsPtrIn, ParticleData* particleDataPtrIn,
     Rndm* rndmPtrIn, BeamParticle* beamAPtrIn, BeamParticle* beamBPtrIn, 
     Couplings* couplingsPtrIn, SigmaTotal* sigmaTotPtrIn, 
     UserHooks* userHooksPtrIn);
@@ -116,6 +116,9 @@ protected:
                       LEPTONXLOGMIN, LEPTONXLOGMAX, LEPTONTAUMIN,
                       SHATMINZ, PT2RATMINZ, WTCORRECTION[11];
 
+  // MBR constants: form factor appoximation with two exponents.
+  static const double FFA1, FFA2,FFB1, FFB2; 
+
   // Pointer to cross section. 
   SigmaProcess* sigmaProcessPtr; 
 
@@ -160,9 +163,10 @@ protected:
   bool   hasLeptonBeams, hasPointLeptons;
 
  // Cross section information.
-  bool   newSigmaMx, canModifySigma, canBiasSelection;
+  bool   newSigmaMx, canModifySigma, canBiasSelection, canBias2Sel;
   int    gmZmode;
-  double wtBW, sigmaNw, sigmaMx, sigmaPos, sigmaNeg, biasWt;
+  double bias2SelPow, bias2SelRef, wtBW, sigmaNw, sigmaMx, sigmaPos, 
+         sigmaNeg, biasWt;
 
   // Process-specific kinematics properties, almost always available.
   double mHatMin, mHatMax, sHatMin, sHatMax, pTHatMin, pTHatMax, 
@@ -184,7 +188,8 @@ protected:
   bool setupSampling123(bool is2, bool is3, ostream& os = cout); 
 
   // Select a trial kinematics phase space point.
-  bool trialKin123(bool is2, bool is3, bool inEvent = true, ostream& os = cout); 
+  bool trialKin123(bool is2, bool is3, bool inEvent = true, 
+    ostream& os = cout); 
 
   // Presence and properties of any s-channel resonances.
   int    idResA, idResB;
@@ -236,6 +241,12 @@ protected:
   // Do mass selection and find the associated weight.
   void   trialMass(int iM);
   double weightMass(int iM);
+
+  // The error function erf(x) should normally be in your math library,
+  // but if not uncomment this simple parametrization by Sergei Winitzki.
+  //double erf(double x) { double x2 = x * x; double kx2 = 0.147 * x2; 
+  //  double tmp = sqrt(1. - exp(-x2 * (4./M_PI + kx2) / (1. + kx2)));
+  //  return ((x >= 0.) ? tmp : -tmp); } 
 
 };
  
@@ -364,7 +375,7 @@ private:
 
   // Constants: could only be changed in the code itself.
   static const int    NTRY;
-  static const double EXPMAX, DIFFMASSMAX;
+  static const double EXPMAX, DIFFMASSMARGIN;
 
   // Initialization data, in constructor or read from Settings.
   bool   isDiffA, isDiffB;
@@ -375,13 +386,54 @@ private:
   double m3ElDiff, m4ElDiff, s1, s2, lambda12, lambda34, tLow, tUpp,
          cRes, sResXB, sResAX, sProton, bMin, bSlope, bSlope1, bSlope2, 
          probSlope1, xIntPF, xtCorPF, mp24DL, coefDL, tAux, tAux1, tAux2;
+    
+  // Parameters for MBR model.
+  double sdpmax, ddpmax, dymin0, dymax, amx, am1, am2, t;
+  double eps, alph, alph2, m2min, dyminSD, dyminDD, dyminSigSD, dyminSigDD;
+  
+};
+
+//==========================================================================
+
+// A derived class with 2 -> 3 kinematics set up for central diffractive 
+// scattering.
+
+class PhaseSpace2to3diffractive : public PhaseSpace {
+
+public:
+
+  // Constructor.
+  PhaseSpace2to3diffractive() {}
+
+  // Construct the trial or final event kinematics.
+  virtual bool setupSampling(); 
+  virtual bool trialKin(bool inEvent = true, bool = false); 
+  virtual bool finalKin(); 
+
+  // Are beam particles resolved in partons or scatter directly?
+  virtual bool isResolved() const {return false;}
+
+ private:
+  
+  // Constants: could only be changed in the code itself.
+  static const int    NTRY, NINTEG2;
+  static const double EXPMAX, DIFFMASSMIN, DIFFMASSMARGIN;
+    
+  // Local variables to calculate DPE kinematics.
+  int    PomFlux;
+  double epsilonPF, alphaPrimePF, s1, s2, m5min, s5min, tLow[2], tUpp[2], 
+         bMin[2], tAux[2], bSlope1, bSlope2, probSlope1[2], tAux1[2], 
+         tAux2[2], bSlope, xIntPF, xIntInvPF, xtCorPF, mp24DL, coefDL, 
+         epsMBR, alphMBR, m2minMBR, dyminMBR, dyminSigMBR, dyminInvMBR, 
+         dpepmax, t1, t2;
+  Vec4   p1, p2, p3, p4, p5;
 
 };
  
 //==========================================================================
 
 // A derived class for minumum bias events. Hardly does anything, since
-// the real action is taken care of by the MultipleInteractions class.
+// the real action is taken care of by the MultipartonInteractions class.
 
 class PhaseSpace2to2minbias : public PhaseSpace {
 

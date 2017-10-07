@@ -1,5 +1,5 @@
 // main20.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -28,8 +28,9 @@ int main() {
   // Open a file on which LHEF events should be stored, and write header.
   myLHA.openLHEF("weakbosons.lhe"); 
 
-  // Tevatron initialization. 
-  pythia.init( 2212, -2212, 1960.);
+  // LHC 8 TeV initialization. 
+  pythia.readString("Beams:eCM = 8000.");    
+  pythia.init();
 
   // Store initialization info in the LHAup object. 
   myLHA.setInit();
@@ -47,11 +48,12 @@ int main() {
     myLHA.setEvent();
 
     // Write out this event info on the file. 
+    // With optional argument (verbose =) false the file is smaller.
     myLHA.eventLHEF();
   }
 
   // Statistics: full printout.
-  pythia.statistics();
+  pythia.stat();
 
   // Update the cross section info based on Monte Carlo integration during run.
   myLHA.updateSigma();

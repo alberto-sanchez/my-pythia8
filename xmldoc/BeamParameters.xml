@@ -30,6 +30,7 @@ appropriate hard process.
 The PDG <code>id</code> code for the first incoming particle.
 Allowed codes include 
 <br/><ei>2212 = p</ei>, <ei>-2212 = pbar</ei>, 
+<br/><ei>2112 = n</ei>, <ei>-2112 = nbar</ei>, 
 <br/><ei>211 = pi^+</ei>, <ei>-211 = pi^-</ei>, <ei>111 = pi^0</ei>,  
 <br/><ei>990 = Pomeron</ei> (used in diffractive machinery;
 here mainly for debug purposes),
@@ -42,8 +43,10 @@ here mainly for debug purposes),
 The PDG <code>id</code> code for the second incoming particle.
 </modeopen>
  
-<modepick name="Beams:frameType" default="1" min="1" max="4">
-Choice of frame for the two colliding particles.
+<modepick name="Beams:frameType" default="1" min="1" max="5">
+Choice of frame for the two colliding particles. For options
+1 - 3 the beam identities are specified above, while they are
+obtained by the Les Houches information for options 4 and 5.
 <option value="1">the beams are colliding in their CM frame, 
 and therefore only the CM energy needs to be provided, see 
 <code>Beams:eCM</code> below.
@@ -57,7 +60,12 @@ three-momentum of each incoming particle needs to be specified, see
 <code>Beams:pxA</code> through <code>Beams:pzB</code> below.
 </option> 
 <option value="4">the beam and event information is stored in a 
-Les Houches Event File, see <code>Beams:LHEF</code> below.
+<aloc href="LesHouchesAccord">Les Houches Event File</aloc>, 
+see <code>Beams:LHEF</code> below.
+</option> 
+<option value="5">the beam and event information is obtained by a
+pointer to an <code><aloc href="LesHouchesAccord">LHAup</aloc></code> 
+class instance.  
 </option> 
 </modepick>
 
@@ -113,6 +121,33 @@ to be set if <code>Beams:frameType</code> = 3.
 The name of a Les Houches Event File,
 to be set if <code>Beams:frameType</code> = 4. 
 </word>
+
+<word name="Beams:LHEFheader" default="void">
+As some information in a Les Houches Event File init block is only known
+at the end of generation, some programs choose to output this as a
+separate file. If <code>Beams:LHEFheader</code> is given, information up
+till the end of the init block is read from this file, with
+the events themselves read as usual from the file given in
+<code>Beams:LHEF</code>.
+</word>
+
+<flag name="Beams:newLHEFsameInit" default="off">
+Allow to begin reading events from a new LHEF or or a new 
+<code>LHAup</code> instance without a completely new initialization. 
+Only useful when <code>Beams:frameType</code> = 4 or 5.
+</flag>
+
+<flag name="Beams:readLHEFheaders" default="on">
+Read in LHEF header blocks and store them in the
+<aloc href="EventInformation">Info</aloc> class. See also
+<aloc href="LesHouchesAccord">LHAupLHEF</aloc> for more information.
+</flag>
+
+<mode name="Beams:nSkipLHEFatInit" default="0">
+Skip the first <ei>nSkip</ei> events of the input stream 
+(cf. the <code>LHAup::skipEvent(nSkip)</code> method).
+Only used when <code>Beams:frameType</code> = 4 or 5.
+</flag>
 
 <h3>Beam momentum spread</h3>
 
@@ -267,4 +302,4 @@ The time <ei>t</ei> of the interaction vertex is centered at this value.
 
 </chapter>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->

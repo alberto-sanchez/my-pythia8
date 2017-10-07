@@ -1,5 +1,5 @@
 // HadronLevel.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -63,6 +63,10 @@ bool HadronLevel::init(Info* infoPtrIn, Settings& settings,
   // Particles that should decay or not before Bose-Einstein stage.
   widthSepBE      = settings.parm("BoseEinstein:widthSep");
 
+  // Hadron scattering --rjc
+  doHadronScatter = settings.flag("HadronScatter:scatter");
+  hsAfterDecay    = settings.flag("HadronScatter:afterDecay");
+
   // Initialize auxiliary fragmentation classes.
   flavSel.init(settings, rndmPtr);
   pTSel.init(settings, *particleDataPtr, rndmPtr);
@@ -83,6 +87,10 @@ bool HadronLevel::init(Info* infoPtrIn, Settings& settings,
 
   // Initialize BoseEinstein. 
   boseEinstein.init(infoPtr, settings, *particleDataPtr); 
+
+  // Initialize HadronScatter --rjc
+  if (doHadronScatter)
+    hadronScatter.init(infoPtr, settings, rndmPtr, particleDataPtr);
 
   // Initialize Hidden-Valley fragmentation, if necessary.
   useHiddenValley = hiddenvalleyFrag.init(infoPtr, settings, 
@@ -109,7 +117,8 @@ bool HadronLevel::next( Event& event) {
   if (!decayOctetOnia(event)) return false;
 
   // Possibility of hadronization inside decay, but then no BE second time.
-  bool moreToDo;
+  // Hadron scattering, first pass only --rjc
+  bool moreToDo, firstPass = true;
   bool doBoseEinsteinNow = doBoseEinstein;
   do {
     moreToDo = false;
@@ -144,6 +153,10 @@ bool HadronLevel::next( Event& event) {
       }
     }
 
+    // Hadron scattering --rjc
+    if (doHadronScatter && !hsAfterDecay && firstPass)
+      hadronScatter.scatter(event);
+
     // Second part: sequential decays of short-lived particles (incl. K0).
     if (doDecay) {
     
@@ -155,9 +168,13 @@ bool HadronLevel::next( Event& event) {
           && (decayer.mWidth() > widthSepBE || decayer.idAbs() == 311) ) {
           decays.decay( iDec, event); 
           if (decays.moreToDo()) moreToDo = true;
-	}
+        }
       } while (++iDec < event.size());
     }
+
+    // Hadron scattering --rjc
+    if (doHadronScatter && hsAfterDecay && firstPass)
+      hadronScatter.scatter(event);
 
     // Third part: include Bose-Einstein effects among current particles.
     if (doBoseEinsteinNow) {
@@ -246,7 +263,7 @@ bool HadronLevel::decayOctetOnia(Event& event) {
 // Trace colour flow in the event to form colour singlet subsystems.
 
 bool HadronLevel::findSinglets(Event& event) {
-
+  
   // Find a list of final partons and of all colour ends and gluons.
   iColEnd.resize(0);
   iAcolEnd.resize(0);
@@ -263,22 +280,34 @@ bool HadronLevel::findSinglets(Event& event) {
   iPartonAntiJun.resize(0);
 
   // Junctions: loop over them, and identify kind.
-  for (int iJun = 0; iJun < event.sizeJunction(); ++iJun) 
+  for (int iJun = 0; iJun < event.sizeJunction(); ++iJun)     
   if (event.remainsJunction(iJun)) {
     event.remainsJunction(iJun, false);
     int kindJun = event.kindJunction(iJun);
     iParton.resize(0);
 
-    // Loop over junction legs
+    // Loop over junction legs.
     for (int iCol = 0; iCol < 3; ++iCol) {
       int indxCol = event.colJunction(iJun, iCol);    
       iParton.push_back( -(10 + 10 * iJun + iCol) );
-      // Junctions: find color ends
+      // Junctions: find color ends.
       if (kindJun % 2 == 1 && !traceFromAcol(indxCol, event, iJun, iCol)) 
 	return false;       
-      // Antijunctions: find anticolor ends
+      // Antijunctions: find anticolor ends.
       if (kindJun % 2 == 0 && !traceFromCol(indxCol, event, iJun, iCol)) 
-	return false;
+	return false;      
+    }
+
+    // Reject triple- and higher-junction systems (physics not implemented).
+    int otherJun = 0;
+    for (int i = 0; i < int(iParton.size()); ++i) 
+    if (iParton[i] < 0 && abs(iParton[i]) / 10 != iJun + 1) {
+      if (otherJun == 0) otherJun = abs(iParton[i]) / 10; 
+      else if (abs(iParton[i]) / 10 != otherJun) {
+        infoPtr->errorMsg("Error in HadronLevel::findSinglets: "
+          "too many junction-junction connections"); 
+        return false;
+      }
     }
 
     // Keep in memory a junction hooked up with an antijunction,
@@ -388,7 +417,8 @@ bool HadronLevel::traceFromCol(int indxCol, Event& event, int iJun,
       break;
     }
 
-    // In a pinch, check list of end colours on other (anti)junction.
+    // In a pinch, check list of opposite-sign junction end colours.
+    // Store in iParton list as -(10 + 10 * iAntiJun + iAntiLeg).
     if (!hasFound && kindJun % 2 == 0 && event.sizeJunction() > 1)  
       for (int iAntiJun = 0; iAntiJun < event.sizeJunction(); ++iAntiJun) 
 	if (iAntiJun != iJun && event.kindJunction(iAntiJun) %2 == 1)
@@ -458,7 +488,8 @@ bool HadronLevel::traceFromAcol(int indxCol, Event& event, int iJun,
       break;
     }
 
-    // In a pinch, check list of colours on other (anti)junction.
+    // In a pinch, check list of opposite-sign junction end colours.
+    // Store in iParton list as -(10 + 10 * iAntiJun + iLeg).
     if (!hasFound && kindJun % 2 == 1 && event.sizeJunction() > 1) 
     for (int iAntiJun = 0; iAntiJun < event.sizeJunction(); ++iAntiJun) 
       if (iAntiJun != iJun && event.kindJunction(iAntiJun) % 2 == 0) 
@@ -824,7 +855,7 @@ bool HadronLevel::splitJunctionPair(Event& event) {
       * (2. * pLabJ[1] * pLabA[0]);
 
     // Case when either topology without junctions is the shorter one.
-    if (LambdaJA > min( Lambda00, Lambda01)) {      
+    if (LambdaJA > min( Lambda00, Lambda01)) {  
       vector<int>& iAntiMatch0 = (Lambda00 < Lambda01) 
         ? iAntiLeg0 : iAntiLeg1;
       vector<int>& iAntiMatch1 = (Lambda00 < Lambda01) 
@@ -868,38 +899,50 @@ bool HadronLevel::splitJunctionPair(Event& event) {
     double fracA1 = min(0.5, eShift / pInARF[0].e());
     Vec4 pFromAnti = fracA0 * pAntiLeg0 + fracA1 * pAntiLeg1; 
 
-    // Copy partons with scaled-down momenta and update legs.
-    int iNew = event.copy(iJunLeg0[1], 76);
-    event[iNew].rescale5(1. - fracJ0);
-    iJunLeg0[1] = iNew;
-    iNew = event.copy(iJunLeg1[1], 76);
-    event[iNew].rescale5(1. - fracJ1);
-    iJunLeg1[1] = iNew;
-    iNew = event.copy(iAntiLeg0[1], 76);
-    event[iNew].rescale5(1. - fracA0);
-    iAntiLeg0[1] = iNew;
-    iNew = event.copy(iAntiLeg1[1], 76);
-    event[iNew].rescale5(1. - fracA1);
-    iAntiLeg1[1] = iNew;
-
-   // Pick a new quark at random; for simplicity no diquarks.
+    // Pick a new quark at random; for simplicity no diquarks.
     int idQ = flavSel.pickLightQ();
 
-    // Update junction colours for new quark and antiquark.
-    int colQ = event.nextColTag();
-    int acolQ = event.nextColTag(); 
-    event.endColJunction(identJun - 1, legJun[0], colQ);
-    event.endColJunction(identAnti - 1, legAnti[0], acolQ);
-
-    // Store new quark and antiquark with momentum from other junction.
+    // Copy junction partons with scaled-down momenta and update legs.
     int mother1 = min(iJunLeg0[1], iJunLeg1[1]);
-    int mother2 = max(iJunLeg0[1], iJunLeg1[1]);
+    int mother2 = max(iJunLeg0[1], iJunLeg1[1]); 
+    int iNew1 = event.copy(iJunLeg0[1], 76);
+    event[iNew1].rescale5(1. - fracJ0);
+    iJunLeg0[1] = iNew1;
+    int iNew2 = event.copy(iJunLeg1[1], 76);
+    event[iNew2].rescale5(1. - fracJ1);
+    iJunLeg1[1] = iNew2;
+
+    // Update junction colour and store quark with antijunction momentum.
+    // Store history as 2 -> 3  step for consistency.
+    int colQ = event.nextColTag();
+    event.endColJunction(identJun - 1, legJun[0], colQ);
     int iNewJ = event.append( idQ, 76, mother1, mother2, 0, 0, 
       colQ, 0, pFromAnti, pFromAnti.mCalc() );
+    event[mother1].daughters( iNew1, iNewJ);
+    event[mother2].daughters( iNew1, iNewJ);
+    event[iNew1].mothers( mother1, mother2);    
+    event[iNew2].mothers( mother1, mother2);    
+
+    // Copy anti junction partons with scaled-down momenta and update legs.
     mother1 = min(iAntiLeg0[1], iAntiLeg1[1]);
     mother2 = max(iAntiLeg0[1], iAntiLeg1[1]);
+    iNew1 = event.copy(iAntiLeg0[1], 76);
+    event[iNew1].rescale5(1. - fracA0);
+    iAntiLeg0[1] = iNew1;
+    iNew2 = event.copy(iAntiLeg1[1], 76);
+    event[iNew2].rescale5(1. - fracA1);
+    iAntiLeg1[1] = iNew2;
+
+    // Update antijunction anticolour and store antiquark with junction 
+    // momentum. Store history as 2 -> 3  step for consistency. 
+    int acolQ = event.nextColTag(); 
+    event.endColJunction(identAnti - 1, legAnti[0], acolQ);
     int iNewA = event.append( -idQ, 76, mother1, mother2, 0, 0, 
       0, acolQ, pFromJun, pFromJun.mCalc() );
+    event[mother1].daughters( iNew1, iNewA);
+    event[mother2].daughters( iNew1, iNewA);
+    event[iNew1].mothers( mother1, mother2);    
+    event[iNew2].mothers( mother1, mother2);    
 
     // Bookkeep new quark and antiquark on third legs.
     if (legJun[0] == 0) iJunLegA[1] = iNewJ;

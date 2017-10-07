@@ -1,11 +1,12 @@
 // ResonanceWidths.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
 // Function definitions (not found in the header) for 
 // the ResonanceWidths class and classes derived from it.
 
+#include "ParticleData.h"
 #include "ResonanceWidths.h"
 #include "PythiaComplex.h"
 
@@ -41,6 +42,9 @@ bool ResonanceWidths::init(Info* infoPtrIn, Settings* settingsPtrIn,
   particleDataPtr = particleDataPtrIn;
   couplingsPtr    = couplingsPtrIn;
 
+  // Perform any model dependent initialisations (pure dummy in base class)
+  bool isInit = initBSM();
+  
   // Minimal decaying-resonance width. Minimal phase space for meMode = 103.
   minWidth     = settingsPtr->parm("ResonanceWidths:minWidth");
   minThreshold = settingsPtr->parm("ResonanceWidths:minThreshold");
@@ -80,12 +84,17 @@ bool ResonanceWidths::init(Info* infoPtrIn, Settings* settingsPtrIn,
   if (particlePtr == 0) infoPtr->errorMsg("Error in ResonanceWidths::init:"
       " unknown resonance identity code");   
 
-  // Initialize constants used for a resonance.
-  initConstants();
+  // Check if we are supposed to do the width calculation
+  // (can be false e.g. if SLHA decay table should take precedence instead)
+  bool allowCalcWidth = isInit && allowCalc();
+  if ( allowCalcWidth ) {
+    // Initialize constants used for a resonance.
+    initConstants();
 
-  // Calculate various common prefactors for the current mass.
-  mHat          = mRes;
-  calcPreFac(true);
+    // Calculate various common prefactors for the current mass.
+    mHat          = mRes;
+    calcPreFac(true);
+  }
 
   // Reset quantities to sum. Declare variables inside loop.
   double widTot = 0.; 
@@ -109,7 +118,7 @@ bool ResonanceWidths::init(Info* infoPtrIn, Settings* settingsPtrIn,
     }
 
     // Channels with meMode < 100 must be implemented in derived classes.
-    if (meMode < 100) {
+    if (meMode < 100 || (meMode == 103 && allowCalcWidth)) {
       
       // Read out information on channel: primarily use first two. 
       id1       = particlePtr->channel(i).product(0);
@@ -208,6 +217,20 @@ bool ResonanceWidths::init(Info* infoPtrIn, Settings* settingsPtrIn,
   GamMRat       = GammaRes / mRes;  
   openPos       = widPos / widTot;
   openNeg       = widNeg / widTot;
+
+  // Clip wings of Higgses.
+  bool isHiggs = (idRes == 25 || idRes == 35 ||idRes == 36 ||idRes == 37);   
+  bool clipHiggsWings = settingsPtr->flag("Higgs:clipWings");
+  if (isHiggs && clipHiggsWings) {
+    double mMinNow  = particlePtr->mMin();
+    double mMaxNow  = particlePtr->mMax();
+    double wingsFac = settingsPtr->parm("Higgs:wingsFac");
+    double mMinWing = mRes - wingsFac * GammaRes;
+    double mMaxWing = mRes + wingsFac * GammaRes;
+    if (mMinWing > mMinNow) particlePtr->setMMinNoChange(mMinWing);
+    if (mMaxWing < mMaxNow || mMaxNow < mMinNow) 
+      particlePtr->setMMaxNoChange(mMaxWing);
+  }
 
   // Done.
   return true;
@@ -391,11 +414,12 @@ double ResonanceWidths::numInt1BW(double mHatIn, double m1, double Gamma1,
     psNow         = sqrtpos( pow2(1. - mrNow1 - mrNow2) 
                     - 4. * mrNow1 * mrNow2);
     value         = 1.;
-    if (psMode == 1) value = psNow;
-    if (psMode == 2) value = psNow * psNow;
-    if (psMode == 3) value = pow3(psNow);
-    if (psMode == 5) value = psNow * 
-      (pow2(1. - mrNow1 - mrNow2) + 8. * mrNow1 * mrNow2);
+    if      (psMode == 1) value = psNow;
+    else if (psMode == 2) value = psNow * psNow;
+    else if (psMode == 3) value = pow3(psNow);
+    else if (psMode == 5) value = psNow 
+      * (pow2(1. - mrNow1 - mrNow2) + 8. * mrNow1 * mrNow2);
+    else if (psMode == 6) value = pow3(psNow);
     sum          += value;
 
   // End of  loop over integration points. Overall normalization.
@@ -417,7 +441,7 @@ double ResonanceWidths::numInt2BW(double mHatIn, double m1, double Gamma1,
   double mMin1, double m2, double Gamma2, double mMin2, int psMode) {
 
   // Check that phase space is open for integration.
-  if (mMin1 + mMin2 > mHatIn) return 0.;
+  if (mMin1 + mMin2 >= mHatIn) return 0.;
 
   // Precalculate coefficients for Breit-Wigner selection.
   double s1       = m1 * m1;
@@ -524,6 +548,7 @@ double ResonanceWidths::numInt2BW(double mHatIn, double m1, double Gamma1,
       else if (psMode == 3) value = pow3(psNow);
       else if (psMode == 5) value = psNow 
         * (pow2(1. - mrNow1 - mrNow2) + 8. * mrNow1 * mrNow2);
+      else if (psMode == 6) value = pow3(psNow);
       sum        += value * wtNow1 * wtNow2;
 
     // End of second and first loop over integration points.
@@ -704,6 +729,11 @@ void ResonanceTop::initConstants() {
   thetaWRat = 1. / (16. * couplingsPtr->sin2thetaW());
   m2W       = pow2(particleDataPtr->m0(24));
 
+  // Extra coupling factors for t -> H+ + b.
+  tanBeta   = settingsPtr->parm("HiggsHchg:tanBeta");
+  tan2Beta  = tanBeta * tanBeta;
+  mbRun     = particleDataPtr->mRun( 5, particleDataPtr->m0(6) ); 
+ 
 }
 
 //--------------------------------------------------------------------------
@@ -726,16 +756,24 @@ void ResonanceTop::calcPreFac(bool) {
 
 void ResonanceTop::calcWidth(bool) {
 
-  // Only contributions from W + quark.
-  if (id1Abs != 24 || id2Abs > 5) return; 
 
-  // Check that above threshold. Kinematical factor.
+  // Check that above threshold. 
   if (ps == 0.) return;
-  widNow    = preFac * ps 
+
+  // Contributions from W + quark.
+  if (id1Abs == 24 && id2Abs < 6) { 
+    widNow  = preFac * ps 
             * ( pow2(1. - mr2) + (1. + mr2) * mr1 - 2. * mr1 * mr1 );
 
-  // Combine with colour factor and CKM couplings.
-  widNow   *= colQ * couplingsPtr->V2CKMid(6, id2Abs);
+    // Combine with colour factor and CKM couplings.
+    widNow *= colQ * couplingsPtr->V2CKMid(6, id2Abs);
+
+  // Contributions from H+ + quark (so far only b).
+  } else if (id1Abs == 37 && id2Abs == 5) {     
+    widNow  = preFac * ps * ( (1. + mr2 - mr1) 
+            * (pow2(mbRun / mHat) * tan2Beta + 1. / tan2Beta) 
+            + 4. * mbRun * mf2 / pow2(mHat) ); 
+  }
 
 }
  
@@ -800,7 +838,9 @@ void ResonanceFour::calcWidth(bool) {
 // These are of technical nature, as described for each.
 
 // Minimal mass for W, Z, top in integration over respective Breit-Wigner.
-const double ResonanceH::MASSMIN = 10.;
+// Top constrainted by t -> W b decay, which is not seen in simple top BW.
+const double ResonanceH::MASSMINWZ = 10.;
+const double ResonanceH::MASSMINT  = 100.;
 
 // Number of widths above threshold where B-W integration not needed.
 const double ResonanceH::GAMMAMARGIN = 10.;
@@ -871,14 +911,21 @@ void ResonanceH::initConstants() {
 
   // Initialization of threshold kinematical factor by stepwise
   // numerical integration of H -> t tbar, Z0 Z0 and W+ W-. 
-  int psMode = (higgsType < 3) ? 3 : 1;       
+  int psModeT  = (higgsType < 3) ? 3 : 1;       
+  int psModeWZ = (higgsType < 3) ? 5 : 6; 
+  mLowT        = max( 2.02 * MASSMINT, 0.5 * mT);
+  mStepT       = 0.01 * (3. * mT - mLowT);    
+  mLowZ        = max( 2.02 * MASSMINWZ, 0.5 * mZ);
+  mStepZ       = 0.01 * (3. * mZ - mLowZ);    
+  mLowW        = max( 2.02 * MASSMINWZ, 0.5 * mW);
+  mStepW       = 0.01 * (3. * mW - mLowW);    
   for (int i = 0; i <= 100; ++i) { 
-    kinFacT[i] = numInt2BW( (0.5 + 0.025 * i) * mT, 
-                 mT, GammaT, MASSMIN, mT, GammaT, MASSMIN, psMode);
-    kinFacZ[i] = numInt2BW( (0.5 + 0.025 * i) * mZ,
-                 mZ, GammaZ, MASSMIN, mZ, GammaZ, MASSMIN, 5);
-    kinFacW[i] = numInt2BW( (0.5 + 0.025 * i) * mW,
-                 mW, GammaW, MASSMIN, mW, GammaW, MASSMIN, 5);
+    kinFacT[i] = numInt2BW( mLowT + i * mStepT, 
+                 mT, GammaT, MASSMINT,  mT, GammaT, MASSMINT,  psModeT);
+    kinFacZ[i] = numInt2BW( mLowZ + i * mStepZ,
+                 mZ, GammaZ, MASSMINWZ, mZ, GammaZ, MASSMINWZ, psModeWZ);
+    kinFacW[i] = numInt2BW( mLowW + i * mStepW,
+                 mW, GammaW, MASSMINWZ, mW, GammaW, MASSMINWZ, psModeWZ);
   }
 
 }
@@ -894,6 +941,7 @@ void ResonanceH::calcPreFac(bool) {
   alpS      = couplingsPtr->alphaS(mHat * mHat);
   colQ      = 3. * (1. + alpS / M_PI);
   preFac    = (alpEM / (8. * sin2tW)) * pow3(mHat) / pow2(mW); 
+
 }
 
 //--------------------------------------------------------------------------
@@ -914,15 +962,13 @@ void ResonanceH::calcWidth(bool) {
       kinFac = (higgsType < 3) ? pow3(ps) : ps;
     }
 
-    // Top near or below threshold: interpolate in table or extrapolate below.
-    else if (id1Abs == 6 && mHat > 0.5 * mT) {
-      double xTab = 40. * (mHat / mT - 0.5);
+    // Top near or below threshold: interpolate in table.
+    else if (id1Abs == 6 && mHat > mLowT) {
+      double xTab = (mHat - mLowT) / mStepT;
       int    iTab = max( 0, min( 99, int(xTab) ) );
       kinFac      = kinFacT[iTab] 
                   * pow( kinFacT[iTab + 1] / kinFacT[iTab], xTab - iTab);
     }
-    else if (id1Abs == 6) kinFac = kinFacT[0] 
-      * 2. / (1. + pow6(0.5 * mT / mHat));
 
     // Coupling from mass and from BSM deviation from SM.
     double coupFac = pow2(particleDataPtr->mRun(id1Abs, mHat) / mHat);
@@ -951,13 +997,13 @@ void ResonanceH::calcWidth(bool) {
   else if (id1Abs == 23 && id2Abs == 23) {
     // If Higgs heavy use on-shell expression, else interpolation in table
     if (mHat > 3. * mZ) kinFac = (1.  - 4. * mr1 + 12. * mr1 * mr1) * ps;
-    else if (mHat > 0.5 * mZ) {
-      double xTab = 40. * (mHat / mZ - 0.5);
+    else if (mHat > mLowZ) {
+      double xTab = (mHat - mLowZ) / mStepZ;
       int    iTab = max( 0, min( 99, int(xTab) ) );
       kinFac      = kinFacZ[iTab] 
                   * pow( kinFacZ[iTab + 1] / kinFacZ[iTab], xTab - iTab );
     }
-    else kinFac   = kinFacZ[0] * 2. / (1. + pow6(0.5 * mZ / mHat));
+    else kinFac   = 0.;
     // Prefactor, normally rescaled to mRes^2 * mHat rather than mHat^3.
     widNow        = 0.25 * preFac * pow2(coup2Z) * kinFac;
     if (!useCubicWidth) widNow *= pow2(mRes / mHat);   
@@ -967,13 +1013,13 @@ void ResonanceH::calcWidth(bool) {
   else if (id1Abs == 24 && id2Abs == 24) {
     // If Higgs heavy use on-shell expression, else interpolation in table.
     if (mHat > 3. * mW) kinFac = (1.  - 4. * mr1 + 12. * mr1 * mr1) * ps;
-    else if (mHat > 0.5 * mW) {
-      double xTab = 40. * (mHat / mW - 0.5);
+    else if (mHat > mLowW) {
+      double xTab = (mHat - mLowW) / mStepW;
       int    iTab = max( 0, min( 99, int(xTab) ) );
       kinFac      = kinFacW[iTab] 
                   * pow( kinFacW[iTab + 1] / kinFacW[iTab], xTab - iTab);
     }
-    else kinFac   = kinFacW[0] * 2. / (1. + pow6(0.5 * mW / mHat));
+    else kinFac   = 0.;
     // Prefactor, normally rescaled to mRes^2 * mHat rather than mHat^3.
     widNow        = 0.5 * preFac * pow2(coup2W) * kinFac;
     if (!useCubicWidth) widNow *= pow2(mRes / mHat);   
@@ -1662,17 +1708,22 @@ void ResonanceGraviton::initConstants() {
 
   // SMinBulk = off/on, use universal coupling (kappaMG) 
   // or individual (Gxx) between graviton and SM particles.
-  m_smbulk   = settingsPtr->flag("ExtraDimensionsG*:SMinBulk");
+  eDsmbulk   = settingsPtr->flag("ExtraDimensionsG*:SMinBulk");
+  eDvlvl = false;
+  if (eDsmbulk) eDvlvl = settingsPtr->flag("ExtraDimensionsG*:VLVL");
   kappaMG    = settingsPtr->parm("ExtraDimensionsG*:kappaMG");
-  for (int i = 0; i < 26; ++i) m_coupling[i] = 0.;
+  for (int i = 0; i < 27; ++i) eDcoupling[i] = 0.;
   double tmp_coup = settingsPtr->parm("ExtraDimensionsG*:Gqq");
-  for (int i = 1; i <= 4; ++i)  m_coupling[i] = tmp_coup;
-  m_coupling[5] = settingsPtr->parm("ExtraDimensionsG*:Gbb"); 
-  m_coupling[6] = settingsPtr->parm("ExtraDimensionsG*:Gtt");
+  for (int i = 1; i <= 4; ++i)  eDcoupling[i] = tmp_coup;
+  eDcoupling[5] = settingsPtr->parm("ExtraDimensionsG*:Gbb"); 
+  eDcoupling[6] = settingsPtr->parm("ExtraDimensionsG*:Gtt");
   tmp_coup = settingsPtr->parm("ExtraDimensionsG*:Gll");
-  for (int i = 11; i <= 16; ++i) m_coupling[i] = tmp_coup;
-  tmp_coup = settingsPtr->parm("ExtraDimensionsG*:GVV");
-  for (int i = 21; i <= 24; ++i) m_coupling[i] = tmp_coup; 
+  for (int i = 11; i <= 16; ++i) eDcoupling[i] = tmp_coup;
+  eDcoupling[21] = settingsPtr->parm("ExtraDimensionsG*:Ggg");
+  eDcoupling[22] = settingsPtr->parm("ExtraDimensionsG*:Ggmgm");
+  eDcoupling[23] = settingsPtr->parm("ExtraDimensionsG*:GZZ");
+  eDcoupling[24] = settingsPtr->parm("ExtraDimensionsG*:GWW");
+  eDcoupling[25] = settingsPtr->parm("ExtraDimensionsG*:Ghh");
 
 }
 
@@ -1702,21 +1753,32 @@ void ResonanceGraviton::calcWidth(bool) {
   if (id1Abs < 19) {
      widNow  = preFac * pow3(ps) * (1. + 8. * mr1 / 3.) / 320.;        
      if (id1Abs < 9) widNow *= colQ;
-  }
       
   // Widths to gluon and photon pair.
-  else if (id1Abs == 21) widNow = preFac / 20.;
-  else if (id1Abs == 22) widNow = preFac / 160.;
+  } else if (id1Abs == 21) {
+    widNow = preFac / 20.;
+  } else if (id1Abs == 22) {
+    widNow = preFac / 160.;
      
   // Widths to Z0 Z0 and W+ W- pair.
-  else if (id1Abs == 23 || id1Abs == 24) {
-    widNow  = preFac * ps * (13. / 12. + 14. * mr1 / 3. + 4. * mr1 * mr1) 
-            / 80.;
+  } else if (id1Abs == 23 || id1Abs == 24) {
+    // Longitudinal W/Z only.
+    if (eDvlvl) {
+      widNow = preFac * pow(ps,5) / 480.;
+    // Transverse W/Z contributions as well.
+    } else {
+      widNow  = preFac * ps * (13. / 12. + 14. * mr1 / 3. + 4. * mr1 * mr1) 
+              / 80.;
+    }
     if (id1Abs == 23) widNow *= 0.5;
+
+  // Widths to h h pair.
+  } else if (id1Abs == 25) {
+    widNow = preFac * pow(ps,5) / 960.;
   }
 
   // RS graviton coupling
-  if (m_smbulk) widNow *= 2. * pow2(m_coupling[min( id1Abs, 25)] * mHat);  
+  if (eDsmbulk) widNow *= 2. * pow2(eDcoupling[min( id1Abs, 26)] * mHat);  
   else          widNow *= pow2(kappaMG);
 
 }
@@ -1733,19 +1795,19 @@ void ResonanceGraviton::calcWidth(bool) {
 void ResonanceKKgluon::initConstants() {
 
   // KK-gluon gv/ga couplings and interference.
-  for (int i = 0; i < 10; ++i) { m_gv[i] = 0.; m_ga[i] = 0.; }
+  for (int i = 0; i < 10; ++i) { eDgv[i] = 0.; eDga[i] = 0.; }
   double tmp_gL = settingsPtr->parm("ExtraDimensionsG*:KKgqL");
   double tmp_gR = settingsPtr->parm("ExtraDimensionsG*:KKgqR");
   for (int i = 1; i <= 4; ++i) { 
-    m_gv[i] = 0.5 * (tmp_gL + tmp_gR);
-    m_ga[i] = 0.5 * (tmp_gL - tmp_gR); 
+    eDgv[i] = 0.5 * (tmp_gL + tmp_gR);
+    eDga[i] = 0.5 * (tmp_gL - tmp_gR); 
   }
   tmp_gL = settingsPtr->parm("ExtraDimensionsG*:KKgbL"); 
   tmp_gR = settingsPtr->parm("ExtraDimensionsG*:KKgbR"); 
-  m_gv[5] = 0.5 * (tmp_gL + tmp_gR); m_ga[5] = 0.5 * (tmp_gL - tmp_gR); 
+  eDgv[5] = 0.5 * (tmp_gL + tmp_gR); eDga[5] = 0.5 * (tmp_gL - tmp_gR); 
   tmp_gL = settingsPtr->parm("ExtraDimensionsG*:KKgtL"); 
   tmp_gR = settingsPtr->parm("ExtraDimensionsG*:KKgtR"); 
-  m_gv[6] = 0.5 * (tmp_gL + tmp_gR); m_ga[6] = 0.5 * (tmp_gL - tmp_gR); 
+  eDgv[6] = 0.5 * (tmp_gL + tmp_gR); eDga[6] = 0.5 * (tmp_gL - tmp_gR); 
   interfMode    = settingsPtr->mode("ExtraDimensionsG*:KKintMode");
 
 }
@@ -1766,10 +1828,10 @@ void ResonanceKKgluon::calcPreFac(bool calledFromInit) {
     int idInFlavAbs = abs(idInFlav);
     double sH = mHat * mHat;
     normSM   = 1;
-    normInt  = 2. * m_gv[min(idInFlavAbs, 9)] * sH * (sH - m2Res)
+    normInt  = 2. * eDgv[min(idInFlavAbs, 9)] * sH * (sH - m2Res)
               / ( pow2(sH - m2Res) + pow2(sH * GamMRat) );
-    normKK   = ( pow2(m_gv[min(idInFlavAbs, 9)]) 
-	       + pow2(m_ga[min(idInFlavAbs, 9)]) ) * sH * sH 
+    normKK   = ( pow2(eDgv[min(idInFlavAbs, 9)]) 
+	       + pow2(eDga[min(idInFlavAbs, 9)]) ) * sH * sH 
               / ( pow2(sH - m2Res) + pow2(sH * GamMRat) );
 
     // Optionally only keep g* or gKK term.
@@ -1792,19 +1854,19 @@ void ResonanceKKgluon::calcWidth(bool calledFromInit) {
   if (id1Abs > 9) return;
 
   if (calledFromInit) {
-    widNow = preFac * ps * (pow2(m_gv[min(id1Abs, 9)]) * (1. + 2.*mr1) 
-			 +  pow2(m_ga[min(id1Abs, 9)]) * (1. - 4.*mr1) );
+    widNow = preFac * ps * (pow2(eDgv[min(id1Abs, 9)]) * (1. + 2.*mr1) 
+			 +  pow2(eDga[min(id1Abs, 9)]) * (1. - 4.*mr1) );
   } else {
     // Relative outwidths: combine instate, propagator and outstate.
     widNow = normSM  * ps * (1. + 2. * mr1) 
-           + normInt * ps * m_gv[min(id1Abs, 9)] * (1. + 2. * mr1)
-           + normKK  * ps * (pow2(m_gv[min(id1Abs, 9)]) * (1. + 2.*mr1) 
-			  +  pow2(m_ga[min(id1Abs, 9)]) * (1. - 4.*mr1) );
+           + normInt * ps * eDgv[min(id1Abs, 9)] * (1. + 2. * mr1)
+           + normKK  * ps * (pow2(eDgv[min(id1Abs, 9)]) * (1. + 2.*mr1) 
+			  +  pow2(eDga[min(id1Abs, 9)]) * (1. - 4.*mr1) );
     widNow *= preFac;
   }
 
 } 
- 
+
 //==========================================================================
 
 // The ResonanceLeptoquark class.

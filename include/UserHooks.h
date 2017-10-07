@@ -1,5 +1,5 @@
 // UserHooks.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -12,7 +12,6 @@
 
 #include "Event.h"
 #include "PartonSystems.h"
-#include "PhaseSpace.h"
 #include "PythiaStdlib.h"
 #include "SigmaProcess.h"
 
@@ -32,7 +31,7 @@ class UserHooks {
 public:
 
   // Destructor.
-  virtual ~UserHooks() {selBias = 1.;}
+  virtual ~UserHooks() {}
 
   // Initialize pointers and workEvent. Note: not virtual.
   void initPtr( Info* infoPtrIn, Settings* settingsPtrIn, 
@@ -47,6 +46,9 @@ public:
     coupSMPtr = coupSMPtrIn; partonSystemsPtr = partonSystemsPtrIn;
     sigmaTotPtr = sigmaTotPtrIn;
     workEvent.init("(work event)", particleDataPtr);}
+
+  // Initialisation after beams have been set by Pythia::init()
+  virtual bool initAfterBeams() { return true; }
 
   // Possibility to modify cross section of process.
   virtual bool canModifySigma() {return false;}
@@ -72,7 +74,14 @@ public:
   // Usage: doVetoProcessLevel( process).
   virtual bool doVetoProcessLevel(Event& ) {return false;}
 
-  // Possibility to veto MI + ISR + FSR evolution and kill event, 
+  // Possibility to veto resonance decay chain.
+  virtual bool canVetoResonanceDecays() {return false;}
+
+  // Decide whether to veto current resonance decay chain or not, based on 
+  // process record. Usage: doVetoProcessLevel( process).
+  virtual bool doVetoResonanceDecays(Event& ) {return false;}
+
+  // Possibility to veto MPI + ISR + FSR evolution and kill event, 
   // making decision at a fixed pT scale. Useful for MLM-style matching.
   virtual bool canVetoPT() {return false;}  
 
@@ -81,11 +90,11 @@ public:
 
   // Decide whether to veto current event or not, based on event record.
   // Usage: doVetoPT( iPos, event), where iPos = 0: no emissions so far;
-  // iPos = 1/2/3 joint evolution, latest step was MI/ISR/FSR;
+  // iPos = 1/2/3 joint evolution, latest step was MPI/ISR/FSR;
   // iPos = 4: FSR only afterwards; iPos = 5: FSR in resonance decay. 
   virtual bool doVetoPT( int , const Event& ) {return false;} 
 
-  // Possibility to veto MI + ISR + FSR evolution and kill event, 
+  // Possibility to veto MPI + ISR + FSR evolution and kill event, 
   // making decision after fixed number of ISR or FSR steps.
   virtual bool canVetoStep() {return false;}
 
@@ -97,16 +106,29 @@ public:
   // nISR and nFSR number of emissions so far for hard interaction only.
   virtual bool doVetoStep( int , int , int , const Event& ) {return false;} 
 
-  // Possibility to veto MI + ISR + FSR evolution and kill event, 
-  // making decision after fixed number of MI steps.
-  virtual bool canVetoMIStep() {return false;}
+  // Possibility to veto MPI + ISR + FSR evolution and kill event, 
+  // making decision after fixed number of MPI steps.
+  virtual bool canVetoMPIStep() {return false;}
 
-  // Up to how many MI steps should be checked.
-  virtual int numberVetoMIStep() {return 1;}
+  // Up to how many MPI steps should be checked.
+  virtual int numberVetoMPIStep() {return 1;}
 
   // Decide whether to veto current event or not, based on event record.
-  // Usage: doVetoMIStep( nMI, event), where nMI is number of MI's so far.
-  virtual bool doVetoMIStep( int , const Event& ) {return false;} 
+  // Usage: doVetoMPIStep( nMPI, event), where nMPI is number of MPI's so far.
+  virtual bool doVetoMPIStep( int , const Event& ) {return false;} 
+   
+  // Possibility to veto event after ISR + FSR + MPI in parton level,
+  // but before beam remnants and resonance decays.
+  virtual bool canVetoPartonLevelEarly() {return false;}
+
+  // Decide whether to veto current partons or not, based on event record.
+  // Usage: doVetoPartonLevelEarly( event).
+  virtual bool doVetoPartonLevelEarly( const Event& ) {return false;} 
+
+  // Retry same ProcessLevel with a new PartonLevel after a veto in
+  // doVetoPT, doVetoStep, doVetoMPIStep or doVetoPartonLevelEarly
+  // if you overload this method to return true.
+  virtual bool retryPartonLevel() {return false;}
    
   // Possibility to veto event after parton-level selection.
   virtual bool canVetoPartonLevel() {return false;}
@@ -121,28 +143,43 @@ public:
   // Initial scale for TimeShower evolution. 
   // Usage: scaleResonance( iRes, event), where iRes is location
   // of decaying resonance in the event record. 
-  virtual double scaleResonance( const int, const Event& ) {return 0.;} 
+  virtual double scaleResonance( int, const Event& ) {return 0.;} 
 
   // Possibility to veto an emission in the ISR machinery.
   virtual bool canVetoISREmission() {return false;}
 
   // Decide whether to veto current emission or not, based on event record.
-  // Usage: doVetoISREmission( sizeOld, event) where sizeOld is size
-  // of event record before current emission-to-be-scrutinized was added. 
-  virtual bool doVetoISREmission( const int, const Event& ) {return false;} 
+  // Usage: doVetoISREmission( sizeOld, event, iSys) where sizeOld is size
+  // of event record before current emission-to-be-scrutinized was added,
+  // and iSys is the system of the radiation (according to PartonSystems).
+  virtual bool doVetoISREmission( int, const Event&, int ) {return false;} 
 
   // Possibility to veto an emission in the FSR machinery.
   virtual bool canVetoFSREmission() {return false;}
 
   // Decide whether to veto current emission or not, based on event record.
-  // Usage: doVetoFSREmission( sizeOld, event) where sizeOld is size
-  // of event record before current emission-to-be-scrutinized was added. 
-  virtual bool doVetoFSREmission( const int, const Event& ) {return false;} 
+  // Usage: doVetoFSREmission( sizeOld, event, iSys, inResonance) where 
+  // sizeOld is size of event record before current emission-to-be-scrutinized 
+  // was added, iSys is the system of the radiation (according to 
+  // PartonSystems), and inResonance is true if the emission takes place in a
+  // resonance decay.
+  virtual bool doVetoFSREmission( int, const Event&, int, bool = false )
+      {return false;} 
+
+  // Possibility to veto an MPI.
+  virtual bool canVetoMPIEmission() { return false; }
+
+  // Decide whether to veto an MPI based on event record.
+  // Usage: doVetoMPIEmission( sizeOld, event) where sizeOld
+  // is size of event record before the current MPI.
+  virtual bool doVetoMPIEmission(int, const Event &) { return false; }
 
 protected:
 
   // Constructor.
-  UserHooks() {}
+  UserHooks() : infoPtr(0), settingsPtr(0), particleDataPtr(0), rndmPtr(0),
+    beamAPtr(0), beamBPtr(0), beamPomAPtr(0), beamPomBPtr(0), coupSMPtr(0),
+    partonSystemsPtr(0), sigmaTotPtr(0), selBias(1.) {}
 
   // Pointer to various information on the generation.
   Info*          infoPtr;
@@ -172,7 +209,7 @@ protected:
   SigmaTotal*    sigmaTotPtr;
 
   // omitResonanceDecays omits resonance decay chains from process record.
-  void omitResonanceDecays(const Event& process); 
+  void omitResonanceDecays(const Event& process, bool finalOnly = false); 
 
   // subEvent extracts currently resolved partons in the hard process.
   void subEvent(const Event& event, bool isHardest = true); 
@@ -197,10 +234,10 @@ class SuppressSmallPT : public UserHooks {
 public:
 
   // Constructor.
-  SuppressSmallPT( double pT0timesMIIn = 1., int numberAlphaSIn = 0, 
-    bool useSameAlphaSasMIIn = true) {isInit = false; 
-    pT0timesMI = pT0timesMIIn; numberAlphaS = numberAlphaSIn; 
-    useSameAlphaSasMI = useSameAlphaSasMIIn;}
+  SuppressSmallPT( double pT0timesMPIIn = 1., int numberAlphaSIn = 0, 
+    bool useSameAlphaSasMPIIn = true) : pT20(0.) {isInit = false; 
+    pT0timesMPI = pT0timesMPIIn; numberAlphaS = numberAlphaSIn; 
+    useSameAlphaSasMPI = useSameAlphaSasMPIIn;}
 
   // Possibility to modify cross section of process.
   virtual bool canModifySigma() {return true;}
@@ -213,9 +250,9 @@ public:
 private:
 
   // Save input properties and the squared pT0 scale.
-  bool   isInit, useSameAlphaSasMI;
+  bool   isInit, useSameAlphaSasMPI;
   int    numberAlphaS;
-  double pT0timesMI, pT20;
+  double pT0timesMPI, pT20;
 
   // Alpha_strong calculation.
   AlphaStrong alphaS;

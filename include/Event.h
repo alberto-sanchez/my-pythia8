@@ -1,5 +1,5 @@
 // Event.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -35,48 +35,50 @@ public:
   // Constructors.
   Particle() : idSave(0), statusSave(0), mother1Save(0), mother2Save(0), 
     daughter1Save(0), daughter2Save(0), colSave(0), acolSave(0), 
-    pSave(Vec4(0.,0.,0.,0.)), mSave(0.), scaleSave(0.), 
+    pSave(Vec4(0.,0.,0.,0.)), mSave(0.), scaleSave(0.), polSave(9.), 
     hasVertexSave(false), vProdSave(Vec4(0.,0.,0.,0.)), tauSave(0.), 
     pdePtr(0), pdtPtr(0) { }  
   Particle(int idIn, int statusIn = 0, int mother1In = 0, 
     int mother2In = 0, int daughter1In = 0, int daughter2In = 0,
     int colIn = 0, int acolIn = 0, double pxIn = 0., double pyIn = 0., 
-    double pzIn = 0., double eIn = 0., double mIn = 0., double scaleIn = 0.) 
+    double pzIn = 0., double eIn = 0., double mIn = 0., 
+    double scaleIn = 0., double polIn = 9.) 
     : idSave(idIn), statusSave(statusIn), mother1Save(mother1In), 
     mother2Save(mother2In), daughter1Save(daughter1In), 
     daughter2Save(daughter2In), colSave(colIn), acolSave(acolIn), 
     pSave(Vec4(pxIn, pyIn, pzIn, eIn)), mSave(mIn), scaleSave(scaleIn), 
-    hasVertexSave(false), vProdSave(Vec4(0.,0.,0.,0.)), tauSave(0.), 
-    pdePtr(0), pdtPtr(0) { }  
+    polSave(polIn), hasVertexSave(false), vProdSave(Vec4(0.,0.,0.,0.)), 
+    tauSave(0.), pdePtr(0), pdtPtr(0) { }  
   Particle(int idIn, int statusIn, int mother1In, int mother2In, 
     int daughter1In, int daughter2In, int colIn, int acolIn, 
-    Vec4 pIn, double mIn = 0., double scaleIn = 0.) 
+    Vec4 pIn, double mIn = 0., double scaleIn = 0., double polIn = 9.) 
     : idSave(idIn), statusSave(statusIn), mother1Save(mother1In), 
     mother2Save(mother2In), daughter1Save(daughter1In), 
     daughter2Save(daughter2In), colSave(colIn), acolSave(acolIn), 
-    pSave(pIn), mSave(mIn), scaleSave(scaleIn), hasVertexSave(false), 
-    vProdSave(Vec4(0.,0.,0.,0.)), tauSave(0.), pdePtr(0), pdtPtr(0) { }  
+    pSave(pIn), mSave(mIn), scaleSave(scaleIn), polSave(polIn), 
+    hasVertexSave(false), vProdSave(Vec4(0.,0.,0.,0.)), tauSave(0.), 
+    pdePtr(0), pdtPtr(0) { }  
   Particle(const Particle& pt) : idSave(pt.idSave), 
     statusSave(pt.statusSave), mother1Save(pt.mother1Save), 
     mother2Save(pt.mother2Save), daughter1Save(pt.daughter1Save), 
     daughter2Save(pt.daughter2Save), colSave(pt.colSave), 
     acolSave(pt.acolSave), pSave(pt.pSave), mSave(pt.mSave), 
-    scaleSave(pt.scaleSave), hasVertexSave(pt.hasVertexSave), 
-    vProdSave(pt.vProdSave), tauSave(pt.tauSave), 
-    pdePtr(pt.pdePtr), pdtPtr(pt.pdtPtr) { } 
+    scaleSave(pt.scaleSave), polSave(pt.polSave), 
+    hasVertexSave(pt.hasVertexSave), vProdSave(pt.vProdSave), 
+    tauSave(pt.tauSave), pdePtr(pt.pdePtr), pdtPtr(pt.pdtPtr) { } 
   Particle& operator=(const Particle& pt) {if (this != &pt) {
     idSave = pt.idSave; statusSave = pt.statusSave; 
     mother1Save = pt.mother1Save; mother2Save = pt.mother2Save; 
     daughter1Save = pt.daughter1Save; daughter2Save = pt.daughter2Save; 
     colSave = pt.colSave; acolSave = pt.acolSave; pSave = pt.pSave; 
-    mSave = pt.mSave; scaleSave = pt.scaleSave; 
+    mSave = pt.mSave; scaleSave = pt.scaleSave; polSave = pt.polSave;
     hasVertexSave = pt.hasVertexSave; vProdSave = pt.vProdSave; 
     tauSave = pt.tauSave; pdePtr = pt.pdePtr; pdtPtr = pt.pdtPtr; } 
     return *this; } 
 
   // Member functions to set the ParticleData and ParticleDataEntry pointers.
   void setPDTPtr(ParticleData* pdtPtrIn) { pdtPtr = pdtPtrIn; setPDEPtr();}
-  void setPDEPtr() {pdePtr = (pdtPtr > 0) 
+  void setPDEPtr() {pdePtr = (pdtPtr != 0) 
     ? pdtPtr->particleDataEntryPtr( idSave) : 0;}
       
   // Member functions for input.
@@ -107,6 +109,7 @@ public:
   void e(double eIn) {pSave.e(eIn);}
   void m(double mIn) {mSave = mIn;}
   void scale(double scaleIn) {scaleSave = scaleIn;}
+  void pol(double polIn) {polSave = polIn;}
   void vProd(Vec4 vProdIn) {vProdSave = vProdIn; hasVertexSave = true;}
   void vProd(double xProdIn, double yProdIn, double zProdIn, double tProdIn)
     {vProdSave.p(xProdIn, yProdIn, zProdIn, tProdIn); hasVertexSave = true;}
@@ -132,6 +135,7 @@ public:
   double e()         const {return pSave.e();}
   double m()         const {return mSave;}
   double scale()     const {return scaleSave;}
+  double pol()       const {return polSave;}
   bool   hasVertex() const {return hasVertexSave;}
   Vec4   vProd()     const {return vProdSave;}
   double xProd()     const {return vProdSave.px();}
@@ -183,56 +187,56 @@ public:
 
   // Further output, based on a pointer to a ParticleDataEntry object.
   string name()      const {
-    return (pdePtr > 0) ? pdePtr->name(idSave) : " ";}
+    return (pdePtr != 0) ? pdePtr->name(idSave) : " ";}
   string nameWithStatus(int maxLen = 20) const;
   int    spinType()  const {
-    return (pdePtr > 0) ? pdePtr->spinType() : 0;}
+    return (pdePtr != 0) ? pdePtr->spinType() : 0;}
   int    chargeType() const {
-    return (pdePtr > 0) ? pdePtr->chargeType(idSave) : 0;}
+    return (pdePtr != 0) ? pdePtr->chargeType(idSave) : 0;}
   double charge()    const {
-    return (pdePtr > 0) ?  pdePtr->charge(idSave) : 0;}
+    return (pdePtr != 0) ?  pdePtr->charge(idSave) : 0;}
   bool   isCharged() const {
-    return (pdePtr > 0) ? (pdePtr->chargeType(idSave) != 0) : false;}
+    return (pdePtr != 0) ? (pdePtr->chargeType(idSave) != 0) : false;}
   bool   isNeutral() const {
-    return (pdePtr > 0) ? (pdePtr->chargeType(idSave) == 0) : false;}
+    return (pdePtr != 0) ? (pdePtr->chargeType(idSave) == 0) : false;}
   int    colType()   const {
-    return (pdePtr > 0) ? pdePtr->colType(idSave) : 0;}
+    return (pdePtr != 0) ? pdePtr->colType(idSave) : 0;}
   double m0()        const {
-    return (pdePtr > 0) ? pdePtr->m0() : 0.;}
+    return (pdePtr != 0) ? pdePtr->m0() : 0.;}
   double mWidth()    const {
-    return (pdePtr > 0) ? pdePtr->mWidth() : 0.;}
+    return (pdePtr != 0) ? pdePtr->mWidth() : 0.;}
   double mMin()      const {
-    return (pdePtr > 0) ? pdePtr->mMin() : 0.;}
+    return (pdePtr != 0) ? pdePtr->mMin() : 0.;}
   double mMax()      const {
-    return (pdePtr > 0) ? pdePtr->mMax() : 0.;}
+    return (pdePtr != 0) ? pdePtr->mMax() : 0.;}
   double mass()      const {
-    return (pdePtr > 0) ? pdePtr->mass() : 0.;}
+    return (pdePtr != 0) ? pdePtr->mass() : 0.;}
   double constituentMass() const {
-    return (pdePtr > 0) ? pdePtr->constituentMass() : 0.;}
+    return (pdePtr != 0) ? pdePtr->constituentMass() : 0.;}
   double tau0()      const {
-    return (pdePtr > 0) ? pdePtr->tau0() : 0.;}
+    return (pdePtr != 0) ? pdePtr->tau0() : 0.;}
   bool   mayDecay()  const {
-    return (pdePtr > 0) ? pdePtr->mayDecay() : false;}
+    return (pdePtr != 0) ? pdePtr->mayDecay() : false;}
   bool   canDecay()  const {
-    return (pdePtr > 0) ? pdePtr->canDecay() : false;}
+    return (pdePtr != 0) ? pdePtr->canDecay() : false;}
   bool   doExternalDecay() const {
-    return (pdePtr > 0) ? pdePtr->doExternalDecay() : false;}
+    return (pdePtr != 0) ? pdePtr->doExternalDecay() : false;}
   bool   isResonance() const {
-    return (pdePtr > 0) ? pdePtr->isResonance() : false;}
+    return (pdePtr != 0) ? pdePtr->isResonance() : false;}
   bool   isVisible() const {
-    return (pdePtr > 0) ? pdePtr->isVisible() : false;}
+    return (pdePtr != 0) ? pdePtr->isVisible() : false;}
   bool   isLepton()  const {
-    return  (pdePtr > 0) ? pdePtr->isLepton() : false;}
+    return (pdePtr != 0) ? pdePtr->isLepton() : false;}
   bool   isQuark()   const {
-    return  (pdePtr > 0) ? pdePtr->isQuark() : false;}
+    return (pdePtr != 0) ? pdePtr->isQuark() : false;}
   bool   isGluon()   const {
-    return (pdePtr > 0) ? pdePtr->isGluon() : false;}
+    return (pdePtr != 0) ? pdePtr->isGluon() : false;}
   bool   isDiquark()   const {
-    return  (pdePtr > 0) ? pdePtr->isDiquark() : false;}
+    return (pdePtr != 0) ? pdePtr->isDiquark() : false;}
   bool   isParton()   const {
-    return (pdePtr > 0) ? pdePtr->isParton() : false;}
+    return (pdePtr != 0) ? pdePtr->isParton() : false;}
   bool   isHadron()  const {
-    return (pdePtr > 0) ? pdePtr->isHadron() : false;}
+    return (pdePtr != 0) ? pdePtr->isHadron() : false;}
   ParticleDataEntry& particleDataEntry() const {return *pdePtr;}
 
   // Member functions that perform operations.
@@ -270,7 +274,7 @@ private:
   int    idSave, statusSave, mother1Save, mother2Save, daughter1Save, 
          daughter2Save, colSave, acolSave;
   Vec4   pSave;
-  double mSave, scaleSave;
+  double mSave, scaleSave, polSave;
   bool   hasVertexSave;
   Vec4   vProdSave;
   double tauSave;
@@ -281,8 +285,8 @@ private:
   // Event::restorePtrs() can be called to restore the missing information. 
   ParticleDataEntry* pdePtr;  //!
 
-  // Pointer to the whole particle data table. Used to update the above pointer 
-  // when id(...) changes identity. As above it should not be saved.
+  // Pointer to the whole particle data table. Used to update the above 
+  // pointer when id(...) changes identity. As above it should not be saved.
   ParticleData*      pdtPtr;  //!  
 
 };
@@ -353,9 +357,10 @@ class Event {
 public:
 
   // Constructors.
-  Event(int capacity = 100) {entry.reserve(capacity); startColTag = 100; 
-    headerList = "----------------------------------------"; 
-    particleDataPtr = 0;}
+  Event(int capacity = 100) : startColTag(100), maxColTag(100), 
+    savedSize(0), savedJunctionSize(0), scaleSave(0.), scaleSecondSave(0.),
+    headerList("----------------------------------------"), 
+    particleDataPtr(0) { entry.reserve(capacity); }
   Event& operator=(const Event& oldEvent);
 
   // Initialize header for event listing, particle data table, and colour.
@@ -375,6 +380,9 @@ public:
   Particle& operator[](int i) {return entry[i];}
   const Particle& operator[](int i) const {return entry[i];}
 
+  // Other way to access an element of event record.
+  Particle& at(int i) {return entry.at(i);} 
+
   // Event record size.
   int size() const {return entry.size();}
 
@@ -387,17 +395,18 @@ public:
   }
   int append(int id, int status, int mother1, int mother2, int daughter1, 
     int daughter2, int col, int acol, double px, double py, double pz, 
-    double e, double m = 0., double scaleIn = 0.) {entry.push_back( 
-    Particle(id, status, mother1, mother2, daughter1, daughter2, col, acol, 
-    px, py, pz, e, m, scaleIn) ); setPDTPtr();
+    double e, double m = 0., double scaleIn = 0., double polIn = 9.) {
+    entry.push_back( Particle(id, status, mother1, mother2, daughter1, 
+    daughter2, col, acol, px, py, pz, e, m, scaleIn, polIn) ); setPDTPtr();
     if (col > maxColTag) maxColTag = col;   
     if (acol > maxColTag) maxColTag = acol;
     return entry.size() - 1;
   }
   int append(int id, int status, int mother1, int mother2, int daughter1, 
     int daughter2, int col, int acol, Vec4 p, double m = 0., 
-    double scaleIn = 0.) {entry.push_back( Particle(id, status, mother1, 
-    mother2, daughter1, daughter2, col, acol, p, m, scaleIn) ); setPDTPtr();
+    double scaleIn = 0., double polIn = 9.) {
+    entry.push_back( Particle(id, status, mother1, mother2, daughter1, 
+    daughter2, col, acol, p, m, scaleIn, polIn) ); setPDTPtr();
     if (col > maxColTag) maxColTag = col;   
     if (acol > maxColTag) maxColTag = acol;
     return entry.size() - 1;
@@ -405,15 +414,16 @@ public:
 
   // Brief versions of append: no mothers and no daughters.
   int append(int id, int status, int col, int acol, double px, double py, 
-    double pz, double e, double m = 0.) {entry.push_back( Particle(id, 
-    status, 0, 0, 0, 0, col, acol, px, py, pz, e, m, 0.) ); setPDTPtr();
+    double pz, double e, double m = 0., double scaleIn = 0., 
+    double polIn = 9.) { entry.push_back( Particle(id, status, 0, 0, 0, 0, 
+    col, acol, px, py, pz, e, m, scaleIn, polIn) ); setPDTPtr(); 
     if (col > maxColTag) maxColTag = col;   
     if (acol > maxColTag) maxColTag = acol;
     return entry.size() - 1;
   }
-  int append(int id, int status, int col, int acol, Vec4 p, double m = 0.) 
-    {entry.push_back( Particle(id, status, 0, 0, 0, 0, col, acol, p, m, 0.) );
-    setPDTPtr(); 
+  int append(int id, int status, int col, int acol, Vec4 p, double m = 0., 
+    double scaleIn = 0., double polIn = 9.) {entry.push_back( Particle(id, 
+    status, 0, 0, 0, 0, col, acol, p, m, scaleIn, polIn) ); setPDTPtr(); 
     if (col > maxColTag) maxColTag = col;   
     if (acol > maxColTag) maxColTag = acol;
     return entry.size() - 1;
@@ -442,6 +452,9 @@ public:
     else {int newSize = max( 0, size() - nRemove); 
     entry.resize(newSize);} } 
 
+  // Undo the decay of a single particle (where daughters well-defined).
+  bool undoDecay(int i);
+
   // Restore all ParticleDataEntry* pointers in the Particle vector.
   // Useful when a persistent copy of the event record is read back in.
   void restorePtrs() { for (int i = 0; i < size(); ++i) setPDTPtr(i); } 
@@ -449,6 +462,7 @@ public:
   // Save or restore the size of the event record (throwing at the end).
   void saveSize() {savedSize = entry.size();}
   void restoreSize() {entry.resize(savedSize);}   
+  int  savedSizeValue() {return savedSize;}
 
   // Initialize and access colour tag information.
   void initColTag(int colTag = 0) {maxColTag = max( colTag,startColTag);}

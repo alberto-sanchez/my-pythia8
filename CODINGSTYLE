@@ -51,7 +51,7 @@ An incomplete list is as follows.
 
  8. Begin each code file with 
 // (filename) is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
     to establish the legal structure. Follow that with specific
@@ -219,6 +219,9 @@ An incomplete list is as follows.
     partonSystemsPtr, userHooksPtr, etc..The Settings database is normally
     only interrogated during initializations, so is usually passad as
     reference settings rather than pointer settingsPtr.
+
+44. Only use == and != for comparisons between two pointers,  
+    or a pointer and 0. Thus comparisons like (Xptr > 0) are forbidden.
 
 -----------------------------------------------------------------------
 

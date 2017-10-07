@@ -1,5 +1,5 @@
 // ParticleDecays.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -106,6 +106,7 @@ void ParticleDecays::init(Info* infoPtrIn, Settings& settings,
 
   // Allow showers in decays to qqbar/gg/ggg/gammagg.
   doFSRinDecays = settings.flag("ParticleDecays:FSRinDecays");
+  doGammaRad    = settings.flag("ParticleDecays:allowPhotonRadiation");
 
   // Use standard decays or dedicated tau decay package
   sophisticatedTau = settings.mode("ParticleDecays:sophisticatedTau");
@@ -127,6 +128,13 @@ bool ParticleDecays::decay( int iDec, Event& event) {
   hasPartons  = false;
   keepPartons = false;
   if (limitDecay && !checkVertex(decayer)) return true; 
+
+  // Do not allow resonance decays (beyond handling capability).
+  if (decayer.isResonance()) {
+    infoPtr->errorMsg("Warning in ParticleDecays::decay: "
+      "resonance left undecayed"); 
+    return true;
+  }
 
   // Fill the decaying particle in slot 0 of arrays.  
   idDec = decayer.id();
@@ -179,7 +187,7 @@ bool ParticleDecays::decay( int iDec, Event& event) {
   if (!doneExternally) {
 
     // Allow up to ten tries to pick a channel. 
-    if (!decDataPtr->preparePick(idDec)) return false;
+    if (!decDataPtr->preparePick(idDec, decayer.m())) return false;
     bool foundChannel = false;
     bool hasStored    = false;
     for (int iTryChannel = 0; iTryChannel < NTRYDECAY; ++iTryChannel) {
@@ -301,6 +309,11 @@ bool ParticleDecays::decay( int iDec, Event& event) {
   if (hasPartons && keepPartons && doFSRinDecays) 
     timesDecPtr->shower( iProd[1], iProd.back(), event, mProd[0]);
 
+  // Photon radiation implemented only for two-body decay to leptons.
+  else if (doGammaRad && mult == 2 && event[iProd[1]].isLepton() 
+  && event[iProd[2]].isLepton()) 
+    timesDecPtr->showerQED( iProd[1], iProd[2], event, mProd[0]);   
+
   // For Hidden Valley particles also allow leptons to shower.
   else if (event[iDec].idAbs() > 4900000 && event[iDec].idAbs() < 5000000 
   && doFSRinDecays && mult == 2 && event[iProd[1]].isLepton()) {
@@ -340,6 +353,7 @@ bool ParticleDecays::checkVertex(Particle& decayer) {
 bool ParticleDecays::oscillateB(Particle& decayer) {
 
   // Extract relevant information and decide.
+  if (!mixB) return false;
   double xBmix   = (abs(decayer.id()) == 511) ? xBdMix : xBsMix;
   double tau     = decayer.tau();
   double tau0    = decayer.tau0();
@@ -666,7 +680,7 @@ bool ParticleDecays::mGenerator(Event& event) {
       for (int i = mult - 1; i > 0; --i) {
         mInv[i] = mInv[i+1] + mProd[i] + (rndmOrd[i-1] - rndmOrd[i]) * mDiff; 
         wtPS   *= 0.5 * sqrtpos( (mInv[i] - mInv[i+1] - mProd[i]) 
-          * (mInv[i] + mInv[i+1] + mProd[i]) * (mInv[i] + mInv[i+1] - mProd[i]) 
+          * (mInv[i] + mInv[i+1] + mProd[i]) * (mInv[i] + mInv[i+1] - mProd[i])
           * (mInv[i] - mInv[i+1] + mProd[i]) ) / mInv[i];  
       }
 
@@ -976,8 +990,7 @@ bool ParticleDecays::pickHadrons() {
   if (nFix > 0 && nKnown + nPartons/2 > nFix) return false;
 
   // Initial values for loop to set new hadronic content.
-  int nFilled = nKnown + 1;
-  int nTotal, nNew, nSpec, nLeft;
+  int nFilled, nTotal, nNew, nSpec, nLeft;
   double mDiff;
   int nTry = 0;
   bool diquarkClash = false;
@@ -993,7 +1006,6 @@ bool ParticleDecays::pickHadrons() {
     idProd.resize(nFilled);
     mProd.resize(nFilled);      
     nTotal = nKnown;
-    nNew = 0;
     nSpec = 0;
     nLeft = nPartons;
     mDiff = mProd[0]; 

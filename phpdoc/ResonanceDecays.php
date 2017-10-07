@@ -36,7 +36,7 @@ between "resonances" and other "particles" made in PYTHIA.
 <li>
 The list of resonances contains <i>gamma^*/Z^0</i>, <i>W^+-</i>, top, 
 the Higgs, and essentially all new particles of Beyond-the-Standard-Model 
-physics: further Higgses, sfermions, gauginos, techniparticles, and so on. 
+physics: further Higgs bosons, sfermions, gauginos, techniparticles, and so on. 
 The partial widths to different decay channels are perturbatively
 calculable, given the parameters of the respective model, and branching
 ratios may be allowed to vary across a (reasonably broad) resonance peak.
@@ -77,7 +77,7 @@ produced in a hard process. On the other hand, photons can participate
 in shower evolution, and therefore a photon originally assumed
 massless can be assigned an arbitrarily high mass when it is allowed
 to branch into a fermion pair. In some cases this could lead to 
-doublecounting, e.g. between processes such as 
+double-counting, e.g. between processes such as 
 <i>f fbar -> (gamma^*/Z^0) (gamma^*/Z^0)</i>,
 <i>f fbar -> (gamma^*/Z^0) gamma</i> and 
 <i>f fbar -> gamma gamma</i>. Here it make sense to limit the
@@ -134,7 +134,7 @@ the relative rates of <i>H^0 -> W^+ W^-</i> and
 <p/>
 We remind that only those particles that Pythia treat as resonances 
 enjoy this property, and only those that are considered as part of the 
-hard process and its assocaited resonance decays.
+hard process and its associated resonance decays.
 
 <p/>
 There is one key restriction on resonances:
@@ -149,6 +149,26 @@ would be needed if coloured resonance particles were made stable, since
 the program would not necessarily know how to hadronize them, and 
 therefore fail at that stage.
   
+
+<p/>
+In spite of this technical parameter choice, it is possible to set 
+a lifetime for a resonance, and thereby to obtain displaced vertices.
+If a resonance is allowed to decay it will do so, irrespective of
+the location of the decay vertex. This is unlike 
+<?php $filepath = $_GET["filepath"];
+echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>normal particle decays</a>,
+where it is possible to define some region around the primary
+vertex within which all decays should happen, with particles
+leaving that region considered stable. The logic is that resonances 
+as a rule are too short-lived for secondary vertices,
+so if you pick a scenario with a long-lived but unstable resonance
+it is because you <i>want</i> to study secondary vertices. 
+How to interface those decays to a detector simulation program then
+is another story, to be solved separately. Do note that a special
+treatment is needed for coloured long-lived resonances, that form
+<?php $filepath = $_GET["filepath"];
+echo "<a href='Rhadrons.php?filepath=".$filepath."' target='page'>";?>R-hadrons</a>, and where charge and flavour
+may change between the production and decay vertices.   
 
 <h3>Special properties and methods for resonances</h3>
 
@@ -182,7 +202,7 @@ depending on how these were encoded. A further warning is that,
 if you use this facility for <i>Z^0</i> or <i>Z'^0</i> with 
 <i>gamma^*/Z^0</i> or <i>gamma^*/Z^0/Z'^0</i> interference on,
 then also the handling of this interference is questionable.
-So, if you need to use the width-rescaling option, be extremely cautios. 
+So, if you need to use the width-rescaling option, be extremely cautious. 
 
 <p/>
 If a resonance does not have a class of its own, with hardcoded equations 
@@ -378,5 +398,5 @@ fclose($handle);
 </body>
 </html>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->
 

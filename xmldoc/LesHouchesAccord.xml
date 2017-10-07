@@ -178,6 +178,13 @@ update the <code>xMax</code> value of the <code>i</code>'th process
 added with <code>addProcess</code> method.
 </method>
 
+<method name="void LHAup::setInfoHeader(string &key, string &val)">
+set the header <code>key</code> to have value <code>val</code>.
+This is a wrapper function to the
+<aloc href="EventInformation">Info::setHeader</aloc> function that
+should be used in any classes derived from LHAup.
+</method>
+
 <p/>
 Information is handed back by the following methods 
 (that normally you would not need to touch):
@@ -213,6 +220,13 @@ for the number of subprocesses.
 <methodmore name="double LHAup::xMax(i)"> 
 for process <code>i</code> in the range <code>0 &lt;= i &lt; 
 sizeProc()</code>.   
+
+</method>
+<method name="double LHAup::xSecSum()"> 
+</methodmore>
+<methodmore name="double LHAup::xErrSum()"> 
+the sum of the cross sections and errors (the latter added quadratically).
+Note that cross section errors are only meaningful for strategies +-3.
 </methodmore>
 
 <method name="void LHAup::listInit(ostream& os = cout)"> 
@@ -220,6 +234,9 @@ prints the above initialization information. This method is
 automatically called from <code>Pythia::init(...)</code>, 
 so would normally not need to be called directly by the user.
 </method>
+
+<p/>
+
 
 <h3>Event input</h3>
 
@@ -259,7 +276,7 @@ Inside a normal <code>setEvent(...)</code> call, information can be set
 by the following methods:
 <method name="void LHAup::setProcess( int idProcess, double weight, 
 double scale, double alphaQED, double alphaQCD)"> 
-tells which kind of process occured, with what weight, at what scale, 
+tells which kind of process occurred, with what weight, at what scale, 
 and which <ei>alpha_EM</ei> and <ei>alpha_strong</ei> were used
 (cf. <code>IDPRUP, XWTGUP, SCALUP, AQEDUP, AQCDUP</code>). This method 
 also resets the size of the particle list, and adds the empty zeroth 
@@ -267,10 +284,11 @@ line, so it has to be called before the <code>addParticle</code> method below.
 </method>
 <method name="void LHAup::addParticle( int id, int status, int mother1, 
 int mother2, int colourTag1, int colourTag2, double p_x, double p_y, 
-double p_z, double e, double m, double tau, double spin)"> 
+double p_z, double e, double m, double tau, double spin, double scale)"> 
 gives the properties of the next particle handed in (cf. <code>IDUP, ISTUP, 
 MOTHUP(1,..), MOTHUP(2,..), ICOLUP(1,..), ICOLUP(2,..),  PUP(J,..), 
-VTIMUP, SPINUP</code>) .
+VTIMUP, SPINUP</code>; while <code>scale</code> is a new optional property, 
+see further below) .
 </method>
 
 <p/>
@@ -327,43 +345,78 @@ of particles in the event, since the zeroth entry is kept empty
 <methodmore name="double LHAup::tau(int i)"> 
 </methodmore>
 <methodmore name="double LHAup::spin(int i)"> 
+</methodmore>
+<methodmore name="double LHAup::scale(int i)"> 
 for particle <code>i</code> in the range 
 <code>0 &lt;= i &lt; sizePart()</code>. (But again note that 
 <code>i = 0</code> is an empty line, so the true range begins at 1.)   
 </methodmore>
 
 <p/>
+From the information in the event record it is possible to set 
+the flavour and <ei>x</ei> values of the initiators 
+<method name="void LHAup::setIdX(int id1, int id2, double x1, double x2)"> 
+</method>
+
+<p/>
+This information is returned by the methods
+<method name="int LHAup::id1()">
+</method>
+<methodmore name="int LHAup::id2()">
+</methodmore>
+<methodmore name="double LHAup::x1()">
+</methodmore>
+<methodmore name="double LHAup::x2()"
+the flavour and <ei>x</ei> values of the two initiators. 
+</methodmore>
+
+<p/>
 In the LHEF description <ref>Alw06</ref> an extension to 
 include information on the parton densities of the colliding partons
 is suggested. This optional further information can be set by
-<method name="void LHAup::setPdf( int id1, int id2, double x1, double x2, 
-double scalePDF, double xpdf1, double xpdf2)">
+<method name="void LHAup::setPdf( int id1pdf, int id2pdf, double x1pdf, 
+double x2pdf, double scalePDF, double pdf1, double pdf2, bool pdfIsSet)">
 which gives the flavours , the <ei>x</ei> and the <ie>Q</ei> scale 
 (in GeV) at which the parton densities <ei>x*f_i(x, Q)</ei> have been
-evaluated.
+evaluated. The last argument is normally <code>true</code>.
 </method>
 
 <p/>
 This information is returned by the methods
 <method name="bool LHAup::pdfIsSet()">
 </method>
-<methodmore name="int LHAup::id1()">
+<methodmore name="int LHAup::id1pdf()">
 </methodmore>
-<methodmore name="int LHAup::id2()">
+<methodmore name="int LHAup::id2pdf()">
 </methodmore>
-<methodmore name="double LHAup::x1()">
+<methodmore name="double LHAup::x1pdf()">
 </methodmore>
-<methodmore name="double LHAup::x2()">
+<methodmore name="double LHAup::x2pdf()">
 </methodmore>
 <methodmore name="double LHAup::scalePDF()">
 </methodmore>
-<methodmore name="double LHAup::xpdf1()">
+<methodmore name="double LHAup::pdf1()">
 </methodmore>
-<methodmore name="double LHAup::xpdf2()">
+<methodmore name="double LHAup::pdf2()">
 where the first one tells whether this optional information has been set
 for the current event. (<code>setPdf(...)</code> must be called after the
 <code>setProcess(...)</code> call of the event for this to work.)
+Note that the flavour and <ei>x</ei> values usually but not always 
+agree with those obtained by the same methods without <code>pdf</code>
+in their names, see explanation in the 
+<aloc href="EventInformation">Event Information</aloc> description.
 </methodmore>
+
+<p/>
+As a further, currently completely non-standard feature, it is also
+possible to read in the separate scale values of all final particles.
+Currently such information should appear as a line begun by a single 
+hashtag character (#) and then sequentially the scale value of all 
+particles with status 1. Such scale values could be used e.g. to 
+restrict the maximum scale for shower evolutions for each parton
+separately. This information is returned by the method
+<code>double LHAup::scale(int i)</code>. When no such information 
+has been read from the LHEF, the scale defaults to -1.
 
 <p/>
 <method name="void LHAup::listEvent(ostream& os = cout)"> 
@@ -401,6 +454,17 @@ unknown, the cross section will not be corrected for the fraction of
 open channels, i.e. the procedure used for internal processes is not
 applied in this case.) 
 
+<p/>
+Even if PYTHIA can select resonance decay modes according to its 
+internal tables, there is normally no way for it to know which 
+decay angular correlations should exist in the simulated process.
+Therefore almost all decays are isotropic. The exceptions are Higgs and
+top decays, in the decay chains <ei>H -> WW/ZZ -> f fbar f' fbar'</ei> 
+and <ei>t -> b W -> b f fbar</ei>, where the process-independent 
+correlations implemented for internal processes are used. If part of 
+the decay chain has already been set, however (e.g. <ei>H -> WW/ZZ</ei> 
+or <ei>t -> b W</ei>), then decay is still isotropic.
+
 <h3>An interface to Les Houches Event Files</h3>
 
 The LHEF standard <ref>Alw06</ref> specifies a format where a single file 
@@ -413,8 +477,76 @@ Internally this name is then used to create an instance of the derived
 class <code>LHAupLHEF</code>, which can do the job of reading an LHEF.
 
 <p/>
+The LHEF reader can also read in and store header blocks. By default
+this option is switched on, but may be controlled through the
+<aloc href="BeamParameters">Beams:readLHEFheaders</aloc> flag if
+necessary. The information can later be read out through the
+<aloc href="EventInformation">Info</aloc> class for further processing.
+Due to the non-standard nature of the information in these blocks they
+are stored whole, and PYTHIA itself makes no further attempt to process
+their meaning.
+
+<p/>
+Because Les Houches Event files tend not to adhere strictly to XML
+conventions, to consistently read in header information, certain
+choices must be made. The primary goal is to make as much information
+available as possible. First, information sitting directly in the
+&lt;header&gt; block is stored under the key "base". Second, the tags
+starting and ending each sub block must be on their own line. Finally,
+the contents of comment blocks, &lt;!-- --&gt;, are still stored. The
+header keys are formed hierarchically from the names of the header
+blocks. This behaviour is illustrated in the following example:
+<pre>
+  &lt;header&gt;
+    BaseA
+    &lt;hblock1&gt;
+      1A
+      &lt;hblock11&gt;
+        11A &lt;hblock111&gt;
+        &lt;/hblock111&gt; 11B
+      &lt;/hblock11&gt;
+      1B
+    &lt;/hblock1&gt;
+    &lt;hblock2&gt;
+      2A
+      &lt;!-- 2B --&gt;
+    &lt;/hblock2&gt;
+    BaseB
+  &lt;/header&gt;
+</pre>
+which would lead to the following information being stored in the
+<aloc href="EventInformation">Info</aloc> class:
+<table border="1">
+  <tr> <th>Key</th> <th>Value</th> </tr>
+  <tr>
+    <td>base</td>
+    <td>BaseA<br/>BaseB</td>
+  </tr>
+  <tr>
+    <td>hblock1</td>
+    <td>1A<br/>1B</td>
+  </tr>
+  <tr>
+    <td>hblock1.hblock11</td>
+    <td>11A &lt;hblock111&gt;<br/>&lt;/hblock111&gt; 11B</td>
+  </tr>
+  <tr>
+    <td>hblock2</td>
+    <td>2A<br/>&lt;!-- 2B --&gt;</td>
+  </tr>
+</table> 
+<br/>
+<p/>
+Normally the LHEF would be in uncompressed format, and thus human-readable
+if opened in a text editor. A possibility to read gzipped files has 
+been added, based on the Boost and zlib libraries, which therefore
+have to be linked appropriately in order for this option to work.
+See the <code>README</code> file in the main directory for details 
+on how to do this. 
+
+<p/>
 An example how to generate events from an LHEF is found in 
-<code>main12.cc</code>. Note the use of 
+<code>main11.cc</code>. Note the use of 
 <code>Info::atEndOfFile()</code> to find out when the whole
 LHEF has been processed. 
 
@@ -429,7 +561,38 @@ It is assumed (but never checked) that the initialization information is
 identical, and that the new file simply contains further events of 
 exactly the same kind as the previous one. An example of this possibility, 
 and the option to mix with internal processes, is found in 
-<code>main13.cc</code>.
+<code>main12.cc</code>. A variant, based on input in a command file,
+is given in <code>main13.cc</code>.
+
+<p/>
+In C++, real numbers are printed with an 'E' to denote the exponent part, 
+e.g. 1.23E+04, and are read in accordingly. Other languages may use other
+letters, e.g. Fortran allows either 'E' or 'D'. A file using
+the latter convention would not be readable by the standard routines.
+In case you have such an "incorrectly formatted" file, a conversion to 
+a new corrected file could be done e.g. using <code>sed</code>, as a
+one-line command
+<pre>
+  sed -e 's/\([0-9]\.\{0,1\}\)[dD]\([+-]\{0,1\}[0-9]\)/\1E\2/g' old.lhe &gt; new.lhe
+</pre>
+This replaces a 'd' or 'D' with an 'E' only when it occurs in the combination
+<br/><ei>(digit) ('.' or absent) ('d' or 'D') ('+', '-' or absent) (digit)</ei>
+<br/>It will work on all parts of the file, also inside a 
+<code>&lt;header&gt;...&lt;/header&gt;</code> block. For conversion only 
+inside the <code>&lt;init&gt;...&lt;/init&gt;</code> and
+<code>&lt;event&gt;...&lt;/event&gt;</code> blocks, create a file 
+<code>convert.sed</code> containing
+<pre>
+  /&lt;init&gt;/,/&lt;\/init&gt;/bconv
+  /&lt;event&gt;/,/&lt\/event&gt;/bconv
+  b
+  :conv
+  s/\([0-9]\.\{0,1\}\)[dD]\([+-]\{0,1\}[0-9]\)/\1E\2/g
+</pre>
+and run it with
+<pre>
+  sed -f convert.sed old.lhe &gt; new.lhe
+</pre>
 
 <p/>
 The workhorses of the <code>LHAupLHEF</code> class are three methods
@@ -437,17 +600,12 @@ found in the base class, so as to allow them to be reused in other
 contexts. Specifically, it allows derived classes where one parton-level 
 configuration can be reused several times, e.g. in the context of 
 matrix-element-to-parton-shower matching (example in preparation).
-To begin with also a small utility routine.
+Also two small utility routines.
 
-<method name="bool LHAup::fileFound()"> 
-always returns true in the base class, but in <code>LHAupLHEF</code>
-it returns false if the LHEF provided in the constructor is not
-found and opened correctly.
-</method>
-
-<method name="bool LHAup::setInitLHEF(ifstream& is)">
+<method name="bool LHAup::setInitLHEF(ifstream& is, bool readHeaders = false)">
 read in and set all required initialization information from the 
-specified stream. Return false if it fails.
+specified stream. With second argument true it will also read and store
+header information, as described above. Return false if it fails.
 </method>
 
 <method name="bool LHAup::setNewEventLHEF(ifstream& is)">
@@ -463,8 +621,40 @@ process the same configuration several times. This method currently
 only returns true, i.e. any errors should be caught by the preceding 
 <code>setNewEventLHEF</code> call.
 </method>
- 
 
+<method name="bool LHAup::fileFound()"> 
+always returns true in the base class, but in <code>LHAupLHEF</code>
+it returns false if the LHEF provided in the constructor is not
+found and opened correctly.
+</method>
+
+<method name="void LHAup::setInfoHeader(const string &key, const string &val)"> 
+is used to send header information on to the <code>Info</code> class. 
+</method>
+
+<p/>
+A few other methods, most of them derived from the base class, 
+streamlines file opening and closing, e.g. if several LHE files are 
+to be read consecutively, without the need for a complete 
+reinitialization. This presupposes that the events are of the same 
+kind, only split e.g. to limit file sizes.
+
+<method name="bool LHAup::newEventFile(const char* fileIn)">
+close current event input file/stream and open a new one, to
+continue reading events of the same kind as before.
+</method>
+
+<method name="istream* LHAup::openFile(const char *fn, ifstream &ifs)">
+</method>
+<methodmore name="void LHAup::closeFile(istream *&is, ifstream &ifs)">
+open and close a file, also gzip files, where an intermediate
+decompression layer is needed.
+</methodmore>
+
+<method name="void LHAupLHEF::closeAllFiles()">
+close main event file (LHEF) and, if present, separate header file.
+</method>
+ 
 <h3>A runtime Fortran interface</h3>
 
 The runtime Fortran interface requires linking to an external Fortran
@@ -502,11 +692,11 @@ did not yet contain hard-process generation, and the LHEF standard
 did not yet exist. Nowadays it is more of a bother, since a full
 cross-platform support leads to many possible combinations. Therefore
 the support has been reduced in the current version. Only the 
-<code>main51.cc</code> example remains as an illustration, where the
+<code>main91.cc</code> example remains as an illustration, where the
 previously separate interface code 
 (<code>include/Pythia6Interface.h</code>) has been inserted in the 
 beginning. You also need to modify the <code>examples/Makefile</code> 
-to link <code>main51.cc</code> properly also to a PYTHIA 6.4 library
+to link <code>main91.cc</code> properly also to a PYTHIA 6.4 library
 version, see commented-out section for ideas how to to this.
 
 <h3>Methods for LHEF output</h3>
@@ -528,11 +718,13 @@ already have been set with the methods described in the "Initialization"
 section above.
 </method>
 
-<method name="bool LHAup::eventLHEF()">
+<method name="bool LHAup::eventLHEF(bool verbose = true)">
 Writes event information to the file above. Such information should
 already have been set with the methods described in the "Event input"
 section above. This call should be repeated once for each event to be 
-stored. 
+stored. By default the event information is lined up in columns.
+To save space, the alternative <code>verbose = false</code> only 
+leaves a single blank between the information fields.
 </method>
 
 <method name="bool LHAup::closeLHEF(bool updateInit = false)">
@@ -602,4 +794,4 @@ obtain complete events.
  
 </chapter>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->

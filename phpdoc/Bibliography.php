@@ -30,6 +30,10 @@ echo "<font color='red'>NO FILE SELECTED YET.. PLEASE DO SO </font><a href='Save
 <h2>Bibliography</h2>
 
 <dl>
+	
+<dt>Ali10</dt>
+<dd>S. Alioli, P. Nason, C. Oleari, E. Re, JHEP 1006 (2010) 043,
+[arXiv:1002.2581 [hep-ph]]</dd>
 
 <dt>All08</dt>
 <dd>B. Allanach et al., Comput. Phys.Commun. 180 (2009) 8
@@ -50,6 +54,9 @@ Z. Phys. C45 (1989) 109</dd>
 <dd>J. Alwall, M. Herquet, F. Maltoni, O. Mattelaer, T. Stelzer, 
 JHEP 1106 (2011) 128 [arXiv:1106.0522 [hep-ph]]</dd> 
 
+<dt>ATL12</dt>
+<dd>ATLAS Collaboration, ATL-PHYS-PUB-2012-003</dd> 
+
 <dt>And83</dt>
 <dd>B. Andersson, G. Gustafson, G. Ingelman and T. Sj&ouml;strand,
 Phys. Rep. 97 (1983) 31</dd>
@@ -59,11 +66,17 @@ Phys. Rep. 97 (1983) 31</dd>
 
 <dt>Ask10</dt> 
 <dd>S. Ask et al., Comput. Phys. Commun. 181 (2010) 1593
-[arXiv:0912.4233v1 [hep-ph]] 
-</dd>
+[arXiv:0912.4233v1 [hep-ph]] </dd>
+
+<dt>Ask11</dt>
+<dd>S. Ask, J.H. Collins, J.R. Forshaw, K. Joshi, A.D. Pilkington,
+JHEP 1201 (2012) 018 [arXiv:1108.2396 [hep-ph]] </dd>
 
 <dt>Azu05</dt> 
 <dd>G. Azuelos, P.-H. Beauchemin and C.P. Burgess, J. Phys. G31 (2005) 1</dd>
+
+<dt>Bar94</dt>
+<dd>E. Barberio and Z. Was, Comput. Phys.Commun. 79 (1994) 291
 
 <dt>Bar06</dt>
 <dd>M. Bargiotti, talk at the HERA4LHC workshop,
@@ -82,7 +95,8 @@ http://mbargiot.web.cern.ch/mbargiot/talks/
 Phys. Rev. Lett. 55 (1985) 2762</dd>
 
 <dt>Ben87</dt>
-<dd>M. Bengtsson and T. Sj&ouml;strand, Nucl. Phys. B289 (1987) 810</dd>
+<dd>M. Bengtsson and T. Sj&ouml;strand, Phys.Lett. B185 (1987) 435,
+Nucl. Phys. B289 (1987) 810</dd>
 
 <dt>Ber81</dt>
 <dd>F.A. Berends, R. Kleiss, P. De Causmaecker, R. Gastmans and T.T. Wu, 
@@ -95,6 +109,9 @@ Phys. Lett. 103B (1981) 124</dd>
 <dd>E. Berger, J. Collins, D. Soper and G. Sterman, Nucl. Phys. B286 
 (1987) 704;
 <br/>K. Streng, CERN-TH.4949 (1988)</dd>
+
+<dt>Ber12</dt>
+<dd>Particle Data Group, J. Beringer et al., Phys. Rev. D86 (2012) 010001</dd> 
 
 <dt>Bij01</dt> 
 <dd>J. Bijnens et al., Phys. Lett. B503 (2001) 341</dd>
@@ -144,6 +161,9 @@ JHEP 1104 (2011) 091 [arXiv:1102.3795 [hep-ph]]</dd>
 <dd>K. Cheung, W.-Y. Keung and T.-C. Yuan, 
 Phys. Rev. D76 (2007) 055003</dd>
 
+<dt>Cie12</dt>
+<dd>R. Ciesielski and K. Goulianos, arXiv:1205.1446 [hep-ph]</dd>
+
 <dt>Cor09</dt>
 <dd>R. Corke and T. Sj&ouml;strand, JHEP 1001 (2010) 035 
 [arXiv:0911.1909 [hep-ph]]</dd>
@@ -161,10 +181,14 @@ Phys. Rev. D76 (2007) 055003</dd>
 [arXiv:1101.5953 [hep-ph]] </dd>
 
 <dt>Dav01</dt> 
-<dd>H. Davoudiasl, J.L. Hewett, T.G. Rizzo, Phys. Rev. D63 (2001) 075004</dd>
+<dd>H. Davoudiasl, J.L. Hewett and T.G. Rizzo, Phys. Rev. D63 (2001) 075004</dd>
+
+<dt>Dav10</dt> 
+<dd>N. Davidson, T. Przedzinski and Z. Was, arXiv:1011.0937 [hep-ph]</dd>
 
 <dt>Des11</dt> 
-<dd>N. Desai and P. Skands, in preparation.</dd>
+<dd>N. Desai and P. Skands, Eur. Phys. J. C72 (2012) 2238 
+[arXiv:1109.5852 [hep-ph]]</dd>
 
 <dt>Dob01</dt>
 <dd>M. Dobbs and J.B. Hansen, Comput. Phys. Commun. 134 (2001) 41</dd>
@@ -182,6 +206,17 @@ Phys. Rev. D76 (2007) 055003</dd>
 <dd>E. Eichten, K. D. Lane and M. E. Peskin, Phys. Rev. Lett. 50 (1983) 811; 
 <br/>P. Chiappetta and M. Perrottet, CERN Yellow Report 90-10, Vol. II, 
 p. 806</dd>
+
+<dt>Fra11</dt>
+<dd>R. Franceschini, G.F. Giudice, P.P. Giardino, P. Lodone, A. Strumia, 
+JHEP 1105 (2011) 092 [arXiv:1101.4919 [hep-ph]] </dd>
+	
+<dt>Fre11</dt>
+<dd>R. Frederix, S. Frixione, V. Hirschi, F. Maltoni, R. Pittau, 
+P. Torrielli, Phys.Lett. B701 (2011) 427 [arXiv:1104.5613 [hep-ph]]</dd>  
+	
+<dt>Fri02</dt>
+<dd>S Frixione and B.R. Webber, JHEP 0206 (2002) 029 [hep-ph/0204244]</dd> 
  
 <dt>Glu95</dt>
 <dd>M. Gl&uuml;ck, E. Reya and A. Vogt, Z. Phys. C67 (1995) 433</dd>
@@ -194,6 +229,9 @@ p. 806</dd>
 
 <dt>Gre07</dt>
 <dd>D. Grellscheid and P. Richardson, arXiv:0810.1951 [hep-ph]</dd>
+
+<dt>Gun86</dt>
+<dd>J.F. Gunion and Z. Kunszt, Phys. Rev. D33 (1986) 665</dd>
 
 <dt>Gus86</dt>
 <dd>G. Gustafson, Phys. Lett. B175 (1986) 453;
@@ -211,6 +249,9 @@ p. 806</dd>
 <dt>Hew88</dt>
 <dd>J.L. Hewett and S. Pakvasa, Phys. Rev. D37 (1988) 3165</dd>
 
+<dt>Hew99</dt>
+<dd>J.L Hewett, Phys. Rev. Lett. 82 (1999) 4765 [hep-ph/9811356]</dd>
+
 <dt>Hew07</dt> 
 <dd>J. L. Hewett and T. G. Rizzo, JHEP 0712 (2007) 009</dd>
 
@@ -220,8 +261,10 @@ Nucl. Phys. B487 (1997) 27 and private communication;
 <br/>G. Barenboim, K. Huitu, J. Maalampi and M. Raidal, 
 Phys. Lett. B394 (1997) 132</dd>
 
-<dt>Ilt11</dt>
-<dd>P. Ilten, in preparation</dd>
+<dt>Ilt12</dt>
+<dd>P. Ilten, arXiv:1211.6730 [hep-ph], to appear in the proceedings of
+Tau2012, Nagoya, Japan, 17-21 September 2012
+ </dd>
 
 <dt>Ing85</dt>
 <dd>G.Ingelman and P. Schlein, Phys. Lett. B152 (1985) 256</dd>
@@ -268,8 +311,36 @@ Eur. Phys. J. C12 (2000) 375</dd>
 <dd>L. L&ouml;nnblad and T. Sj&ouml;strand, Phys. Lett. B351 (1995) 293, 
 Eur. Phys. J. C2 (1998) 165</dd>
 
+<dt>Lon01</dt>
+<dd> L. L&ouml;nnblad, JHEP 05 (2002) 046 [hep-ph/0112284]</dd>
+
+<dt>Lon11</dt>
+<dd>L. L&ouml;nnblad and S. Prestel, JHEP 03 (2012) 019 arXiv:1109.4829 
+[hep-ph]</dd> 
+
+<dt>Lon12</dt>
+<dd>L. L&ouml;nnblad and S. Prestel, arXiv:1211.4827 [hep-ph]</dd> 
+
+<dt>Lon13</dt>
+<dd>L. L&ouml;nnblad and S. Prestel, arXiv:1211.7278 [hep-ph]</dd> 
+
 <dt>Mac07</dt>
 <dd>R. Mackeprang and A. Rizzi, Eur. Phys. J. C50 (2007) 353</dd>
+
+<dt>Man02</dt>
+<dd>M. Mangano,
+<a href="http://www-cpd.fnal.gov/personal/mrenna/tuning/nov2002/mlm.pdf.gz">
+"The so-called MLM prescription for ME/PS matching."
+</a>, presented at the Fermilab ME/MC Tuning Workshop, October 4, 2002.
+</dd>
+
+<dt>Man03</dt>
+<dd>M. L. Mangano, M. Moretti, F. Piccinini, R. Pittau and A. D. Polosa,
+JHEP 0307 (2003) 001 [hep-ph/0206293]</dd>
+	
+<dt>Man07</dt>
+<dd>M.L. Mangano, M. Moretti, F. Piccinini, M. Treccani, 
+JHEP 0701 (2007) 013 [hep-ph/0611129]</dd> 
 
 <dt>Mar90</dt>
 <dd>G. Marsaglia, A. Zaman and W.-W. Tsang, 
@@ -286,6 +357,9 @@ Eur. Phys. J. C39 (2005) 155</dd>
 <dd>P. Nason et al., in "Standard model physics (and more) at the LHC",
 eds. G. Altarelli and M.L. Mangano, CERN 2000-004, p. 231
 [hep-ph/0003142]</dd> 
+
+<dt>Nas04</dt>
+<dd>P. Nason, JHEP 0411 (2004) 040 [hep-ph/0409146]</dd> 
 
 <dt>Nav10</dt>
 <dd>S. Navin, arXiv:1005.3894 [hep-ph]</dd> 
@@ -339,6 +413,10 @@ JHEP 05 (2006) 026 [hep-ph/0603175]</dd>
 <dt>Ska04</dt>
 <dd>P. Skands et al., JHEP 07 (2004) 036 [hep-ph/0311123]</dd> 
 
+<dt>Tul09</dt>
+<dd> J. Tully, Monte Carlo simulations of hard QCD radiation, Doctoral Thesis,
+Durham University (2009) </dd>
+
 <dt>Wha05</dt>
 <dd>M.R. Whalley, D. Bourilkov and R.C. Group,
 in `HERA and the LHC', eds. A. De Roeck and H. Jung,
@@ -353,4 +431,4 @@ J. Phys. G33 (2006) 1</dd>
 </body>
 </html>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->

@@ -1,10 +1,12 @@
 // UserHooks.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
 // Function definitions (not found in the header) for the UserHooks class.
 
+// Note: compilation crashes if PhaseSpace.h is moved to UserHooks.h.
+#include "PhaseSpace.h"
 #include "UserHooks.h"
 
 namespace Pythia8 {
@@ -127,7 +129,7 @@ double UserHooks::biasSelectionBy( const SigmaProcess* sigmaProcessPtr,
 
 // omitResonanceDecays omits resonance decay chains from process record.
 
-void UserHooks::omitResonanceDecays(const Event& process) {
+void UserHooks::omitResonanceDecays(const Event& process, bool finalOnly) {
 
   // Reset work event to be empty
   workEvent.clear(); 
@@ -138,12 +140,12 @@ void UserHooks::omitResonanceDecays(const Event& process) {
     bool isFinal = false;
     if (i < 3) doCopy = true;
 
-    // Daughters of beams should be copied.
+    // Daughters of beams should normally be copied.
     else {
       int iMother = process[i].mother1();
       if (iMother == 1 || iMother == 2) doCopy = true;
        
-      // Granddaughters of beams should be copied and are final.
+      // Granddaughters of beams should normally be copied and are final.
       else if (iMother > 2) {
         int iGrandMother =  process[iMother].mother1(); 
         if (iGrandMother == 1 || iGrandMother == 2) {
@@ -152,13 +154,21 @@ void UserHooks::omitResonanceDecays(const Event& process) {
         }  
       }
     }
+
+    // Optionally non-final are not copied.
+    if (finalOnly && !isFinal) doCopy = false;
    
     // Do copying and modify status/daughters of final.
     if (doCopy) {
       int iNew = workEvent.append( process[i]);
       if (isFinal) {
-        workEvent[iNew].statusPos();
+        workEvent[iNew].statusPos(); 
         workEvent[iNew].daughters( 0, 0);
+        // When final only : no mothers; position in full event as daughters. 
+        if (finalOnly) {  
+          workEvent[iNew].mothers( 0, 0);
+          workEvent[iNew].daughters( i, i);
+        }
       }
     }
   }
@@ -174,20 +184,37 @@ void UserHooks::subEvent(const Event& event, bool isHardest) {
   // Reset work event to be empty. 
   workEvent.clear();  
 
-  // Find which subsystem to study.
-  int iSys = 0;
-  if (!isHardest) iSys = partonSystemsPtr->sizeSys() - 1;
+  // At the PartonLevel final partons are bookkept by subsystem.
+  if (partonSystemsPtr->sizeSys() > 0) {
 
-  // Loop through all the final partons of the given subsystem.
-  for (int i = 0; i < partonSystemsPtr->sizeOut(iSys); ++i) {
-    int iOld = partonSystemsPtr->getOut( iSys, i);
+    // Find which subsystem to study.
+    int iSys = 0;
+    if (!isHardest) iSys = partonSystemsPtr->sizeSys() - 1;
 
-    // Copy partons to work event.
-    int iNew = workEvent.append( event[iOld]); 
+    // Loop through all the final partons of the given subsystem.
+    for (int i = 0; i < partonSystemsPtr->sizeOut(iSys); ++i) {
+      int iOld = partonSystemsPtr->getOut( iSys, i);
 
-    // No mothers. Position in full event as daughters.  
-    workEvent[iNew].mothers( 0, 0);
-    workEvent[iNew].daughters( iOld, iOld);
+      // Copy partons to work event.
+      int iNew = workEvent.append( event[iOld]); 
+
+      // No mothers. Position in full event as daughters.  
+      workEvent[iNew].mothers( 0, 0);
+      workEvent[iNew].daughters( iOld, iOld);
+    }
+
+  // At the ProcessLevel no subsystems have been defined.
+  } else {
+
+    // Loop through all partons, and copy all final ones.
+    for (int iOld = 0; iOld < event.size(); ++iOld) 
+    if (event[iOld].isFinal()) {
+      int iNew = workEvent.append( event[iOld]); 
+
+      // No mothers. Position in full event as daughters.  
+      workEvent[iNew].mothers( 0, 0);
+      workEvent[iNew].daughters( iOld, iOld);
+    }
   }
  
 }
@@ -206,22 +233,22 @@ double SuppressSmallPT::multiplySigmaBy( const SigmaProcess* sigmaProcessPtr,
   // Need to initialize first time this method is called.
   if (!isInit) {
     
-    // Calculate pT0 as for multiple interactions.
-    // Fudge factor allows offset relative to MI framework.
+    // Calculate pT0 as for multiparton interactions.
+    // Fudge factor allows offset relative to MPI framework.
     double eCM    = phaseSpacePtr->ecm();
-    double pT0Ref = settingsPtr->parm("MultipleInteractions:pT0Ref");
-    double ecmRef = settingsPtr->parm("MultipleInteractions:ecmRef");
-    double ecmPow = settingsPtr->parm("MultipleInteractions:ecmPow");
-    double pT0    = pT0timesMI * pT0Ref * pow(eCM / ecmRef, ecmPow);
+    double pT0Ref = settingsPtr->parm("MultipartonInteractions:pT0Ref");
+    double ecmRef = settingsPtr->parm("MultipartonInteractions:ecmRef");
+    double ecmPow = settingsPtr->parm("MultipartonInteractions:ecmPow");
+    double pT0    = pT0timesMPI * pT0Ref * pow(eCM / ecmRef, ecmPow);
     pT20          = pT0 * pT0;
   
-    // Initialize alpha_strong object as for multiple interactions,
+    // Initialize alpha_strong object as for multiparton interactions,
     // alternatively as for hard processes.
     double alphaSvalue;
     int    alphaSorder;    
-    if (useSameAlphaSasMI) {
-      alphaSvalue = settingsPtr->parm("MultipleInteractions:alphaSvalue");
-      alphaSorder = settingsPtr->mode("MultipleInteractions:alphaSorder");
+    if (useSameAlphaSasMPI) {
+      alphaSvalue = settingsPtr->parm("MultipartonInteractions:alphaSvalue");
+      alphaSorder = settingsPtr->mode("MultipartonInteractions:alphaSorder");
     } else {
       alphaSvalue = settingsPtr->parm("SigmaProcess:alphaSvalue");
       alphaSorder = settingsPtr->mode("SigmaProcess:alphaSorder");

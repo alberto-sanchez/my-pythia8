@@ -1,10 +1,10 @@
 // PartonLevel.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
 // This file contains the main class for parton-level event generation
-// PartonLevel: administrates showers, multiple interactions and remnants.
+// PartonLevel: administrates showers, multiparton interactions and remnants.
 
 #ifndef Pythia8_PartonLevel_H
 #define Pythia8_PartonLevel_H
@@ -14,7 +14,7 @@
 #include "BeamRemnants.h"
 #include "Event.h"
 #include "Info.h"
-#include "MultipleInteractions.h"
+#include "MultipartonInteractions.h"
 #include "ParticleData.h"
 #include "PartonSystems.h"
 #include "PythiaStdlib.h"
@@ -25,6 +25,7 @@
 #include "StandardModel.h"
 #include "TimeShower.h"
 #include "UserHooks.h"
+#include "MergingHooks.h"
 
 namespace Pythia8 {
  
@@ -48,24 +49,34 @@ public:
     Couplings* couplingsPtrIn, PartonSystems* partonSystemsPtrIn, 
     SigmaTotal* sigmaTotPtr, TimeShower* timesDecPtrIn, 
     TimeShower* timesPtrIn, SpaceShower* spacePtrIn, 
-    RHadrons* rHadronsPtrIn, UserHooks* userHooksPtrIn);
+    RHadrons* rHadronsPtrIn, UserHooks* userHooksPtrIn,
+    MergingHooks* mergingHooksPtr, bool useAsTrial);
  
   // Generate the next parton-level process.
   bool next( Event& process, Event& event); 
 
   // Perform showers in resonance decay chains. (For special cases.)
+  void setupShowerSys( Event& process, Event& event);
   bool resonanceShowers( Event& process, Event& event, bool skipForR); 
 
   // Tell whether failure was due to vetoing.
   bool hasVetoed() const {return doVeto;}
 
-  // Accumulate and print statistics.
-  void accumulate() {multiPtr->accumulate();}
+  // Accumulate, print and reset statistics.
+  void accumulate() {if (isResolved && !isDiff) multiPtr->accumulate();}
   void statistics(bool reset = false) {
-    if (doMI) multiMB.statistics(reset);}
+    if (doMPI) multiMB.statistics(reset);}
     // For now no separate statistics for diffraction??
-    //if (doMISDA && doDiffraction) multiSDA.statistics(reset); 
-    //if (doMISDB && doDiffraction) multiSDB.statistics(reset);}
+    //if (doMPISDA && doDiffraction) multiSDA.statistics(reset); 
+    //if (doMPISDB && doDiffraction) multiSDB.statistics(reset);}
+  void resetStatistics() { if (doMPI) multiMB.resetStatistics(); }
+
+  // Reset PartonLevel object for trial shower usage.
+  void resetTrial();
+  // Provide the pT scale of the last branching in the shower.
+  double pTLastInShower(){ return pTLastBranch; }
+  // Provide the type of the last branching in the shower.
+  int typeLastInShower(){ return typeLastBranch; }
 
 private: 
 
@@ -73,22 +84,24 @@ private:
   static const int NTRY;
 
   // Initialization data, mainly read from Settings.
-  bool   doMinBias, doDiffraction, doMI, doMIMB, doMISDA, doMISDB, doMIinit, 
-         doISR, doFSRduringProcess, doFSRafterProcess,  doFSRinResonances, 
-         doRemnants, doSecondHard, hasLeptonBeams, hasPointLeptons, 
-         canVetoPT, canVetoStep, canVetoMIStep, canSetScale, allowRH;
-  double mMinDiff, mWidthDiff;
+  bool   doMinBias, doDiffraction, doMPI, doMPIMB, doMPISDA, doMPISDB, 
+         doMPICD, doMPIinit, doISR, doFSRduringProcess, doFSRafterProcess,  
+         doFSRinResonances, doRemnants, doSecondHard, hasLeptonBeams, 
+         hasPointLeptons, canVetoPT, canVetoStep, canVetoMPIStep, 
+         canVetoEarly, canSetScale, allowRH;
+  double mMinDiff, mWidthDiff, pMaxDiff;
 
   // Event generation strategy. Number of steps. Maximum pT scales.
   bool   doVeto;
-  int    nMI, nISR, nFSRinProc, nFSRinRes, nISRhard, nFSRhard, 
-         typeLatest, nVetoStep, typeVetoStep, nVetoMIStep, iSysNow;
-  double pTsaveMI, pTsaveISR, pTsaveFSR, pTvetoPT;
+  int    nMPI, nISR, nFSRinProc, nFSRinRes, nISRhard, nFSRhard, 
+         typeLatest, nVetoStep, typeVetoStep, nVetoMPIStep, iSysNow;
+  double pTsaveMPI, pTsaveISR, pTsaveFSR, pTvetoPT;
 
   // Current event properties.
-  bool   isMinBias, isDiffA, isDiffB, isDiff, isSingleDiff, isDoubleDiff, 
-         isResolved, isResolvedA, isResolvedB;
-  int    sizeProcess, sizeEvent, nHardDone, nHardDoneRHad;
+  bool   isMinBias, isDiffA, isDiffB, isDiffC, isDiff, isSingleDiff, 
+         isDoubleDiff, isCentralDiff, isResolved, isResolvedA, 
+         isResolvedB, isResolvedC;
+  int    sizeProcess, sizeEvent, nHardDone, nHardDoneRHad, iDS;
   double eCMsave; 
   vector<bool> inRHadDecay;
   vector<int>  iPosBefShow;
@@ -128,15 +141,18 @@ private:
   // Pointer to spacelike showers.
   SpaceShower*   spacePtr;
 
-  // The generator classes for multiple interactions.
-  MultipleInteractions  multiMB;
-  MultipleInteractions  multiSDA;
-  MultipleInteractions  multiSDB;
-  MultipleInteractions* multiPtr;
+  // The generator classes for multiparton interactions.
+  MultipartonInteractions  multiMB;
+  MultipartonInteractions  multiSDA;
+  MultipartonInteractions  multiSDB;
+  MultipartonInteractions  multiCD;
+  MultipartonInteractions* multiPtr;
 
   // The generator class to construct beam-remnant kinematics. 
   BeamRemnants remnants;
-
+  // Separate instance for central diffraction.
+  BeamRemnants remnantsCD;
+  
   // The RHadrons class is used to fragment off and decay R-hadrons.
   RHadrons*    rHadronsPtr;
 
@@ -147,14 +163,25 @@ private:
   bool setupUnresolvedSys( Event& process, Event& event);
 
   // Set up the hard process, excluding subsequent resonance decays.
-  void setupHardSys( int iHardLoop, Event& process, Event& event);
+  void setupHardSys( Event& process, Event& event);
 
   // Resolved diffraction: pick whether to have it and set up for it.
-  void setupResolvedDiff( int iHardLoop, Event& process);
+  void setupResolvedDiff( Event& process);
 
   // Resolved diffraction: restore normal behaviour.
-  void leaveResolvedDiff( int iHardLoop, Event& event);
-  
+  void leaveResolvedDiff( int iHardLoop, Event& process, Event& event);
+
+  // Pointer to MergingHooks object for user interaction with the merging.
+  MergingHooks* mergingHooksPtr;
+  // Parameters to specify trial shower usage
+  bool doTrial;
+  int nTrialEmissions;
+  // Parameters to store to veto trial showers
+  double pTLastBranch;
+  int typeLastBranch;
+  // Parameters to specify merging usage
+  bool canRemoveEvent, canRemoveEmission;
+
 };
 
 //==========================================================================

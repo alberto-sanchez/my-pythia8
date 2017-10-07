@@ -45,7 +45,7 @@ Random numbers <code>R</code> uniformly distributed in
 </pre>
 There are also methods to generate according to an exponential, to 
 <i>x * exp(-x)</i>, to a Gaussian, or picked among a set of 
-possibilites, which make use of <code>flat()</code>.
+possibilities, which make use of <code>flat()</code>.
 
 <p/>
 If the random number generator is not initialized before, it will be
@@ -94,7 +94,7 @@ externally to the <code>Pythia</code> code.
 
 <p/>
 An example illustrating how to run with an external random number
-generator is provided in <code>main24.cc</code>.
+generator is provided in <code>main23.cc</code>.
 
 <h3>The methods</h3>
 
@@ -179,4 +179,4 @@ to give a random number between 0 and 1.
 </body>
 </html>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->

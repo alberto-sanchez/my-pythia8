@@ -1,5 +1,5 @@
 // Event.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -123,6 +123,9 @@ Event& Event::operator=( const Event& oldEvent) {
     // Reset all current info in the event.
     clear();
 
+    // Copy particle data table; needed for individual particles.
+    particleDataPtr     = oldEvent.particleDataPtr;
+
     // Copy all the particles one by one.
     for (int i = 0; i < oldEvent.size(); ++i) append( oldEvent[i] ); 
 
@@ -138,7 +141,6 @@ Event& Event::operator=( const Event& oldEvent) {
     scaleSave           = oldEvent.scaleSave;
     scaleSecondSave     = oldEvent.scaleSecondSave;
     headerList          = oldEvent.headerList;
-    particleDataPtr     = oldEvent.particleDataPtr;
 
   // Done.
   }
@@ -155,6 +157,10 @@ Event& Event::operator=( const Event& oldEvent) {
 // Zero: the new is a perfect carbon copy (maybe to be changed later). 
 
 int Event::copy(int iCopy, int newStatus) {    
+
+  // Protect against attempt to copy negative entries (e.g., junction codes)
+  // or entries beyond end of record.
+  if (iCopy < 0 || iCopy >= size()) return -1;
 
   // Simple carbon copy.
   entry.push_back(entry[iCopy]); 
@@ -193,7 +199,7 @@ void Event::list(ostream& os) const {
 }
 
 void Event::list(bool showScaleAndVertex, bool showMothersAndDaughters)
-const {
+  const {
   list(showScaleAndVertex, showMothersAndDaughters, cout);
 }
 
@@ -208,9 +214,9 @@ void Event::list(bool showScaleAndVertex, bool showMothersAndDaughters,
   os << "\n --------  PYTHIA Event Listing  " << headerList << "----------"
      << "-------------------------------------------------\n \n    no    "
      << "    id   name            status     mothers   daughters     colou"
-     << "rs      p_x        p_y        p_z         e          m \n";
+     << "rs      p_x        p_y        p_z         e          m \n"; 
   if (showScaleAndVertex) 
-    os << "                                    scale                      "
+    os << "                                    scale         pol          "
        << "                   xProd      yProd      zProd      tProd      "
        << " tau\n";  
 
@@ -233,13 +239,14 @@ void Event::list(bool showScaleAndVertex, bool showMothersAndDaughters,
        << setw(11) << pt.px() << setw(11) << pt.py() << setw(11) 
        << pt.pz() << setw(11) << pt.e() << setw(11) << pt.m() << "\n";
 
-    // Optional extra line for scale value and production vertex.
+    // Optional extra line for scale value, polarization and production vertex.
     if (showScaleAndVertex) 
       os << "                              " << setw(11) << pt.scale() 
-         << "                                    " << scientific 
-         << setprecision(3) << setw(11) << pt.xProd() << setw(11) 
-         << pt.yProd() << setw(11) << pt.zProd() << setw(11) 
-         << pt.tProd() << setw(11) << pt.tau() << "\n";
+         << " " << fixed << setprecision(3) << setw(11) << pt.pol()   
+         << "                        " << scientific << setprecision(3) 
+         << setw(11) << pt.xProd() << setw(11) << pt.yProd() 
+         << setw(11) << pt.zProd() << setw(11) << pt.tProd() 
+         << setw(11) << pt.tau() << "\n";
 
     // Optional extra line, giving a complete list of mothers and daughters.
     if (showMothersAndDaughters) {
@@ -258,6 +265,9 @@ void Event::list(bool showScaleAndVertex, bool showMothersAndDaughters,
       }
       if (linefill !=0) os << "\n";
     }
+
+    // Extra blank separation line when each particle spans more than one line.
+    if (showScaleAndVertex || showMothersAndDaughters) os << "\n";   
 
     // Statistics on momentum and charge.
     if (entry[i].status() > 0) {
@@ -282,6 +292,113 @@ void Event::list(bool showScaleAndVertex, bool showMothersAndDaughters,
 
 //--------------------------------------------------------------------------
 
+// Recursively remove the decay products of particle i, update it to be 
+// undecayed, and update all mother/daughter indices to be correct.
+// Warning: assumes that decay chains are nicely ordered. 
+
+bool Event::undoDecay(int i) {
+
+  // Do not remove daughters of a parton, i.e. entry carrying colour.
+  if (i < 0 || i >= int(entry.size())) return false;
+  if (entry[i].col() != 0 || entry[i].acol() != 0) return false;
+
+  // Find range of daughters to remove.
+  int dau1 = entry[i].daughter1();
+  if (dau1 == 0) return false; 
+  int dau2 = entry[i].daughter2();
+  if (dau2 == 0) dau2 = dau1;
+
+  // Refuse if any of the daughters have other mothers.
+  for (int j = dau1; j <= dau2; ++j) if (entry[j].mother1() != i 
+    || (entry[j].mother2() != i && entry[j].mother2() != 0) ) return false;
+
+  // Initialize range arrays for daughters and granddaughters.
+  vector<int> dauBeg, dauEnd;
+  dauBeg.push_back( dau1);
+  dauEnd.push_back( dau2); 
+
+  // Begin recursive search through all decay chains.
+  int iRange = 0;
+  do {
+    for (int j = dauBeg[iRange]; j <= dauEnd[iRange]; ++j) 
+    if (entry[j].status() < 0) {
+      
+      // Find new daughter range, if present.
+      dau1 = entry[j].daughter1();
+      if (dau1 == 0) return false; 
+      dau2 = entry[j].daughter2();
+      if (dau2 == 0) dau2 = dau1;
+       
+      // Check if the range duplicates or contradicts existing ones.
+      bool isNew = true;
+      for (int iR = 0; iR < int(dauBeg.size()); ++iR) {
+        if (dau1 == dauBeg[iR] && dau2 == dauEnd[iR]) isNew = false;
+        else if (dau1 >= dauBeg[iR] && dau1 <= dauEnd[iR]) return false;
+        else if (dau2 >= dauBeg[iR] && dau2 <= dauEnd[iR]) return false;
+      }
+
+      // Add new range where relevant. Keep ranges ordered.
+      if (isNew) {
+        dauBeg.push_back( dau1);
+        dauEnd.push_back( dau2);
+        for (int iR = int(dauBeg.size()) - 1; iR > 0; --iR) {
+          if (dauBeg[iR] < dauBeg[iR - 1]) {
+            swap( dauBeg[iR], dauBeg[iR - 1]);
+            swap( dauEnd[iR], dauEnd[iR - 1]);
+          } else break;
+        }
+      }
+
+    // End of recursive search all decay chains.  
+    }
+  } while (++iRange < int(dauBeg.size())); 
+
+  // Join adjacent ranges to reduce number of erase steps.
+  int iRJ = 0;
+  do {
+    if (dauEnd[iRJ] + 1 == dauBeg[iRJ + 1]) {
+      for (int iRB = iRJ + 1; iRB < int(dauBeg.size()) - 1; ++iRB)
+        dauBeg[iRB] = dauBeg[iRB + 1];
+      for (int iRE = iRJ; iRE < int(dauEnd.size()) - 1; ++iRE)
+        dauEnd[iRE] = dauEnd[iRE + 1];
+      dauBeg.pop_back();
+      dauEnd.pop_back();
+    } else ++iRJ;
+  } while (iRJ < int(dauBeg.size()) - 1);
+
+  // Iterate over relevant ranges, from bottom up.
+  for (int iR = int(dauBeg.size()) - 1; iR >= 0; --iR) {
+    dau1 = dauBeg[iR];
+    dau2 = dauEnd[iR];
+    int nRem = dau2 - dau1 + 1;
+
+    // Remove daughters in each range.
+    entry.erase( entry.begin() + dau1, entry.begin() + dau2 + 1);
+
+    // Update subsequent history to account for removed indices.
+    for (int j = 0; j < int(entry.size()); ++j) {
+      if (entry[j].mother1() > dau2)
+        entry[j].mother1( entry[j].mother1() - nRem );  
+      if (entry[j].mother2() > dau2)
+        entry[j].mother2( entry[j].mother2() - nRem );  
+      if (entry[j].daughter1() > dau2) 
+        entry[j].daughter1( entry[j].daughter1() - nRem );  
+      if (entry[j].daughter2() > dau2) 
+        entry[j].daughter2( entry[j].daughter2() - nRem ); 
+    }
+  } 
+
+  // Update mother that has been undecayed.
+  entry[i].statusPos();
+  entry[i].daughters();
+
+  // Done.
+  return true;
+
+}
+
+//--------------------------------------------------------------------------
+
 // Find complete list of mothers.
 
 vector<int> Event::motherList(int i) const {
@@ -302,7 +419,8 @@ vector<int> Event::motherList(int i) const {
   else if (mother2 == 0 || mother2 == mother1) mothers.push_back(mother1); 
 
   // A range of mothers from string fragmentation.
-  else if ( statusAbs > 80 &&  statusAbs < 90) 
+  else if ( (statusAbs >  80 && statusAbs <  90)  
+         || (statusAbs > 100 && statusAbs < 107) )  
     for (int iRange = mother1; iRange <= mother2; ++iRange) 
       mothers.push_back(iRange); 
 
@@ -349,7 +467,7 @@ vector<int> Event::daughterList(int i) const {
   // Special case for two incoming beams: attach further 
   // initiators and remnants that have beam as mother.
   if (entry[i].statusAbs() == 12 || entry[i].statusAbs() == 13)
-  for (int iDau = 3; iDau < size(); ++iDau) 
+  for (int iDau = i + 1; iDau < size(); ++iDau) 
   if (entry[iDau].mother1() == i) {
     bool isIn = false;
     for (int iIn = 0; iIn < int(daughters.size()); ++iIn) 

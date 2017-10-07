@@ -1,5 +1,5 @@
 // StandardModel.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -9,8 +9,9 @@
 #ifndef Pythia8_StandardModel_H
 #define Pythia8_StandardModel_H
 
-#include "ParticleData.h"
+#include "Basics.h"
 #include "PythiaStdlib.h"
+#include "Settings.h"
 
 namespace Pythia8 {
 
@@ -24,7 +25,10 @@ class AlphaStrong {
 public:
 
   // Constructors.
-  AlphaStrong() : isInit(false) {}
+  AlphaStrong() : isInit(false), lastCallToFull(false), order(0),
+    valueRef(0.), valueNow(0.), scale2Now(0.), Lambda3Save(0.), 
+    Lambda4Save(0.), Lambda5Save(0.), scale2Min(0.), Lambda3Save2(0.),
+    Lambda4Save2(0.), Lambda5Save2(0.), mc2(0.), mb2(0.) {}
   AlphaStrong(double valueIn, int orderIn = 1) { 
     init( valueIn, orderIn) ;}
 
@@ -53,9 +57,9 @@ private:
   // Data members.
   bool   lastCallToFull;
   int    order;
-  double valueRef, valueNow, scale2Now, scale2Min, Lambda3Save, 
-         Lambda4Save, Lambda5Save, Lambda3Save2, Lambda4Save2, 
-         Lambda5Save2, mc, mb, mZ, mc2, mb2;
+  double valueRef, valueNow, scale2Now, Lambda3Save, Lambda4Save, 
+         Lambda5Save, scale2Min, Lambda3Save2, Lambda4Save2, 
+         Lambda5Save2, mc2, mb2;
 
 };
 
@@ -115,10 +119,11 @@ public:
   // Return alpha_EM value.
   double alphaEM(double scale2) {return alphaEMlocal.alphaEM(scale2);}
 
-  // Return electroweak mixing angle.
+  // Return electroweak mixing angle and Fermi constant.
   double sin2thetaW() {return s2tW;}
   double cos2thetaW() {return c2tW;}
   double sin2thetaWbar() {return s2tWbar;}
+  double GF() {return GFermi;}
 
   // Return electroweak couplings of quarks and leptons.
   double ef(int idAbs) {return efSave[idAbs];}
@@ -154,17 +159,17 @@ protected:
   static const double efSave[20], afSave[20];
 
   // Couplings and VCKM matrix (index 0 not used).
-  double s2tW, c2tW, s2tWbar, vfSave[20], lfSave[20], rfSave[20], 
+  double s2tW, c2tW, s2tWbar, GFermi, vfSave[20], lfSave[20], rfSave[20], 
          ef2Save[20], vf2Save[20], af2Save[20], efvfSave[20], 
          vf2af2Save[20], VCKMsave[5][5], V2CKMsave[5][5], V2CKMout[20];
 
   // Pointer to the random number generator.
   Rndm*       rndmPtr;
 
-  // An AlphaStrong instance for general use (but not MI, ISR, FSR).
+  // An AlphaStrong instance for general use (but not MPI, ISR, FSR).
   AlphaStrong alphaSlocal;
 
-  // An AlphaEM instance for general use (but not MI, ISR, FSR).
+  // An AlphaEM instance for general use (but not MPI, ISR, FSR).
   AlphaEM     alphaEMlocal;
 
 };
@@ -177,7 +182,7 @@ class Couplings : public CoupSM {
 
 public:
   
-  Couplings(){}
+ Couplings() : isSUSY(false) {}
   bool isSUSY;
 
 };

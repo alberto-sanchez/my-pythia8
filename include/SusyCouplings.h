@@ -1,5 +1,5 @@
 // SusyCouplings.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // Main authors of this file: N. Desai, P. Skands
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
@@ -28,7 +28,7 @@ class CoupSUSY : public Couplings{
 public:
 
   // Constructor
-  CoupSUSY() {isInit=false; isNMSSM = false;isSUSY=true;}
+  CoupSUSY() {isInit=false; isNMSSM = false; isSUSY=true;}
 
   // Initialize
   void initSUSY(SusyLesHouches* slhaPtrIn, Settings* settingsPtrIn, 
@@ -116,8 +116,8 @@ public:
   complex LlvW[4], RlvW[4];
 
   // ~l~lZ couplings
-  double LslslZ[7][7],RslslZ[7][7];
-  double LsvsvZ[7][7],RsvsvZ[7][7];
+  complex LslslZ[7][7],RslslZ[7][7];
+  complex LsvsvZ[7][7],RsvsvZ[7][7];
 
   // ~l~vW couplings
   complex LslsvW[7][7], RslsvW[7][7];
@@ -160,7 +160,7 @@ public:
 
 private:
   // Debug flag
-  static const bool DEBUG;
+  static const bool DBSUSY;
 
 
   // Pointer to the settings database.

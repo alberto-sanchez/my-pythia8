@@ -1,5 +1,5 @@
 // ProcessContainer.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -55,9 +55,11 @@ public:
     UserHooks* userHooksPtr); 
 
   // Store or replace Les Houches pointer.
-  void setLHAPtr( LHAup* lhaUpPtrIn) {lhaUpPtr = lhaUpPtrIn;
-    if (sigmaProcessPtr > 0) sigmaProcessPtr->setLHAPtr(lhaUpPtr); 
-    if (phaseSpacePtr > 0) phaseSpacePtr->setLHAPtr(lhaUpPtr);}
+  void setLHAPtr( LHAup* lhaUpPtrIn,  ParticleData* particleDataPtrIn = 0) 
+    {lhaUpPtr = lhaUpPtrIn; 
+    if (particleDataPtrIn != 0) particleDataPtr = particleDataPtrIn;
+    if (sigmaProcessPtr != 0) sigmaProcessPtr->setLHAPtr(lhaUpPtr); 
+    if (phaseSpacePtr != 0) phaseSpacePtr->setLHAPtr(lhaUpPtr);}
 
   // Update the CM energy of the event.
   void newECM(double eCM) {phaseSpacePtr->newECM(eCM);}
@@ -65,14 +67,20 @@ public:
   // Generate a trial event; accepted or not.
   bool trialProcess(); 
   
+  // Pick flavours and colour flow of process.
+  bool constructState(); 
+  
   // Give the hard subprocess (with option for a second hard subprocess).
   bool constructProcess( Event& process, bool isHardest = true); 
+  
+  // Give the Les Houches decay chain for external resonance.
+  bool constructDecays( Event& process); 
 
   // Do resonance decays.
   bool decayResonances( Event& process); 
 
   // Accumulate statistics after user veto.
-  void accumulate() {++nAcc; wtAccSum += weightNow;}
+  void accumulate(); 
 
   // Reset statistics on events generated so far.
   void reset();
@@ -105,6 +113,14 @@ public:
  
   // Tell whether container is for Les Houches events.
   bool   isLHAContainer() const {return isLHA;}
+  int    lhaStrategy()    const {return lhaStrat;}
+
+  // Info on Les Houches events.
+  int    codeLHASize()       const {return codeLHA.size();}
+  int    subCodeLHA(int i)   const {return codeLHA[i];}
+  long   nTriedLHA(int i)    const {return nTryLHA[i];}
+  long   nSelectedLHA(int i) const {return nSelLHA[i];}
+  long   nAcceptedLHA(int i) const {return nAccLHA[i];}
 
   // When two hard processes set or get info whether process is matched.
   void   isSame( bool isSameIn) { isSameSave = isSameIn;}
@@ -134,12 +150,16 @@ private:
   // Pointer to ResonanceDecays object for sequential resonance decays.
   ResonanceDecays* resDecaysPtr;
 
+  // Pointer to userHooks object for user interaction with program.
+  UserHooks*       userHooksPtr;
+
   // Pointer to LHAup for generating external events.
   LHAup*           lhaUpPtr;
 
   // Info on process.
-  bool   isLHA, isMinBias, isResolved, isDiffA, isDiffB, isQCD3body,
-         allowNegSig, hasOctetOnium, isSameSave, increaseMaximum;
+  bool   isLHA, isMinBias, isResolved, isDiffA, isDiffB, isDiffC, isQCD3body,
+         allowNegSig, hasOctetOnium, isSameSave, increaseMaximum, 
+         canVetoResDecay;
   int    lhaStrat, lhaStratAbs;
 
   // Statistics on generation process. (Long integers just in case.)
@@ -147,6 +167,11 @@ private:
   long   nTry, nSel, nAcc, nTryStat;  
   double sigmaMx, sigmaSgn, sigmaSum, sigma2Sum, sigmaNeg, sigmaAvg, 
          sigmaFin, deltaFin, weightNow, wtAccSum;
+
+  // Statistics for Les Houches event classification.
+  vector<int> codeLHA;
+  vector<long> nTryLHA, nSelLHA, nAccLHA;
+  long nTryLast, nSelLast;
 
   // Estimate integrated cross section and its uncertainty. 
   void sigmaDelta();

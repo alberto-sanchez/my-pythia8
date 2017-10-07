@@ -1,5 +1,5 @@
 // TimeShower.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -20,6 +20,7 @@
 #include "Settings.h"
 #include "StandardModel.h"
 #include "UserHooks.h"
+#include "MergingHooks.h"
 
 namespace Pythia8 {
 
@@ -89,10 +90,11 @@ public:
   void initPtr(Info* infoPtrIn, Settings* settingsPtrIn, 
     ParticleData* particleDataPtrIn, Rndm* rndmPtrIn,
     CoupSM* coupSMPtrIn, PartonSystems* partonSystemsPtrIn, 
-    UserHooks* userHooksPtrIn) { infoPtr = infoPtrIn; 
-    settingsPtr = settingsPtrIn; particleDataPtr = particleDataPtrIn; 
-    rndmPtr = rndmPtrIn; coupSMPtr = coupSMPtrIn;
-    partonSystemsPtr = partonSystemsPtrIn; userHooksPtr = userHooksPtrIn;}
+    UserHooks* userHooksPtrIn, MergingHooks* mergingHooksPtrIn = 0) {
+    infoPtr = infoPtrIn; settingsPtr = settingsPtrIn; 
+    particleDataPtr = particleDataPtrIn; rndmPtr = rndmPtrIn; 
+    coupSMPtr = coupSMPtrIn; partonSystemsPtr = partonSystemsPtrIn; 
+    userHooksPtr = userHooksPtrIn; mergingHooksPtr = mergingHooksPtrIn;}
 
   // Initialize alphaStrong and related pTmin parameters.
   virtual void init( BeamParticle* beamAPtrIn = 0, 
@@ -114,13 +116,16 @@ public:
   virtual int shower( int iBeg, int iEnd, Event& event, double pTmax,
     int nBranchMax = 0);
 
+  // Top-level routine for QED radiation in hadronic decay to two leptons.
+  virtual int showerQED( int i1, int i2, Event& event, double pTmax);
+
   // Provide the pT scale of the last branching in the above shower.
   double pTLastInShower() {return pTLastBranch;}
 
   // Prepare system for evolution after each new interaction; identify ME.
   virtual void prepare( int iSys, Event& event, bool limitPTmaxIn = true);
 
-  // Update dipole list after a multiple interactions rescattering.
+  // Update dipole list after a multiparton interactions rescattering.
   virtual void rescatterUpdate( int iSys, Event& event);
 
   // Update dipole list after each ISR emission.  
@@ -182,23 +187,26 @@ private:
   // Initialization data, normally only set once.
   bool   doQCDshower, doQEDshowerByQ, doQEDshowerByL, doQEDshowerByGamma, 
          doMEcorrections, doMEafterFirst, doPhiPolAsym, doInterleave, 
-         allowBeamRecoil, dampenBeamRecoil, allowRescatter, canVetoEmission, 
-         doHVshower, brokenHVsym;
+         allowBeamRecoil, dampenBeamRecoil, recoilToColoured, 
+         allowRescatter, canVetoEmission, doHVshower, brokenHVsym,
+         globalRecoil, useLocalRecoilNow, doSecondHard;
   int    pTmaxMatch, pTdampMatch, alphaSorder, nGluonToQuark, 
-         alphaEMorder, nGammaToQuark, nGammaToLepton, nCHV, idHV;
-  double pTdampFudge, mc, mb, m2c, m2b, alphaSvalue, alphaS2pi, 
-         Lambda3flav, Lambda4flav, Lambda5flav, Lambda3flav2, Lambda4flav2, 
-         Lambda5flav2, pTcolCutMin, pTcolCut, pT2colCut, pTchgQCut, 
-         pT2chgQCut, pTchgLCut, pT2chgLCut, mMaxGamma, m2MaxGamma, 
-         octetOniumFraction, octetOniumColFac, mZ, gammaZ, thetaWRat,
-         CFHV, alphaHVfix, pThvCut, pT2hvCut, mHV, pTmaxFudgeMI;
+         alphaEMorder, nGammaToQuark, nGammaToLepton, nCHV, idHV,
+         nMaxGlobalRecoil;
+  double pTdampFudge, mc, mb, m2c, m2b, renormMultFac, factorMultFac,
+         alphaSvalue, alphaS2pi, Lambda3flav, Lambda4flav, Lambda5flav, 
+         Lambda3flav2, Lambda4flav2, Lambda5flav2, pTcolCutMin, pTcolCut, 
+         pT2colCut, pTchgQCut, pT2chgQCut, pTchgLCut, pT2chgLCut, 
+         mMaxGamma, m2MaxGamma, octetOniumFraction, octetOniumColFac, 
+         mZ, gammaZ, thetaWRat, CFHV, alphaHVfix, pThvCut, pT2hvCut, 
+         mHV, pTmaxFudgeMPI;
 
   // alphaStrong and alphaEM calculations.
   AlphaStrong alphaS;
   AlphaEM     alphaEM;
 
   // Some current values.
-  bool   dopTdamp;
+  bool   dopTlimit1, dopTlimit2, dopTdamp;
   double pT2damp, kRad, kEmt;
 
   // All dipole ends and a pointer to the selected hardest dipole end.
@@ -236,17 +244,20 @@ private:
 
   // Set up to calculate QCD ME correction with calcMEcorr.
   double findMEcorr(TimeDipoleEnd* dip, Particle& rad, Particle& partner, 
-   Particle& emt);
+   Particle& emt, bool cutEdge = true);
 
   // Calculate value of QCD ME correction.
   double calcMEcorr( int kind, int combiIn, double mixIn, double x1, 
-    double x2, double r1, double r2, double r3 = 0.);
+    double x2, double r1, double r2, double r3 = 0., bool cutEdge = true);
 
   // Find coefficient of azimuthal asymmetry from gluon polarization.
   void findAsymPol( Event& event, TimeDipoleEnd* dip);
 
   // Rescatter: propagate dipole recoil to internal lines connecting systems.
   bool rescatterPropagateRecoil( Event& event, Vec4& pNew);
+
+  // Pointer to MergingHooks object for NLO merging.
+  MergingHooks* mergingHooksPtr;
 
 };
 

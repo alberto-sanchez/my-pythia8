@@ -1,5 +1,5 @@
 // FragmentationSystems.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -56,17 +56,32 @@ bool ColConfig::insert( vector<int>& iPartonIn, Event& event) {
   Vec4 pSumIn;
   double mSumIn = 0.;
   bool hasJunctionIn = false;
+  int  nJunctionLegs = 0;
   for (int i = 0; i < int(iPartonIn.size()); ++i) {
     if (iPartonIn[i] < 0) { 
       hasJunctionIn = true; 
-      continue;
+      ++nJunctionLegs;
+    } else {
+      pSumIn += event[ iPartonIn[i] ].p();
+      if (!event[ iPartonIn[i] ].isGluon()) 
+	mSumIn += event[ iPartonIn[i] ].constituentMass();
     }
-    pSumIn += event[ iPartonIn[i] ].p();
-    if (!event[ iPartonIn[i] ].isGluon()) 
-      mSumIn += event[ iPartonIn[i] ].constituentMass();
   } 
   double massIn = pSumIn.mCalc(); 
   double massExcessIn = massIn - mSumIn;
+
+  // Check for rare triple- and higher junction systems (like J-Jbar-J)
+  if (nJunctionLegs >= 5) {
+    infoPtr->errorMsg("Error in ColConfig::insert: "
+      "junction topology too complicated; too many junction legs");
+    return false; 
+  }   
+  // Check that junction systems have at least three legs.
+  else if (nJunctionLegs > 0 && nJunctionLegs <= 2) {
+    infoPtr->errorMsg("Error in ColConfig::insert: "
+      "junction topology inconsistent; too few junction legs");
+    return false; 
+  }   
 
   // Check that momenta do not contain not-a-number.
   if (abs(massExcessIn) >= 0.);
@@ -131,6 +146,11 @@ bool ColConfig::insert( vector<int>& iPartonIn, Event& event) {
       int iNew = event.append( idNew, 73, min(iJoin1, iJoin2), 
         max(iJoin1, iJoin2), 0, 0, colNew, acolNew, pNew, pNew.mCalc() );
 
+      // Displaced lifetime/vertex; mothers should be same but prefer quark.
+      int iVtx = (event[iJoin1].isGluon()) ? iJoin2 : iJoin1;
+      event[iNew].tau( event[iVtx].tau() );
+      if (event[iVtx].hasVertex()) event[iNew].vProd( event[iVtx].vProd() );
+
       // Mark joined partons and reduce remaining system.
       event[iJoin1].statusNeg();
       event[iJoin2].statusNeg();
@@ -179,7 +199,7 @@ bool ColConfig::joinJunction( vector<int>& iPartonIn, Event& event,
 
   // Find four-momentum and endpoint quarks and masses on the three legs.
   Vec4   pLeg[3];
-  double mLeg[3];
+  double mLeg[3] = { 0., 0., 0.};
   int    idAbsLeg[3];
   int leg = -1;
   for (int i = 0; i < int(iPartonIn.size()); ++ i) {
@@ -219,7 +239,8 @@ bool ColConfig::joinJunction( vector<int>& iPartonIn, Event& event,
 
   // Nothing to do if no two legs have small invariant mass, and 
   // system as a whole is above MiniStringFragmentation threshold.
-  if (mMin > mJoinJunction && massExcessIn > mStringMin) return false;  
+  if (legA == -1 || (mMin > mJoinJunction && massExcessIn > mStringMin)) 
+    return false;  
 
   // Construct separate index arrays for the three legs.
   vector<int> iLegA, iLegB, iLegC;
@@ -295,6 +316,14 @@ bool ColConfig::joinJunction( vector<int>& iPartonIn, Event& event,
 // Collect all partons of singlet to be consecutively ordered.
 
 void ColConfig::collect(int iSub, Event& event, bool skipTrivial) {
+
+  // Check that all partons have positive energy.
+  for (int i = 0; i < singlets[iSub].size(); ++i) {
+    int iNow = singlets[iSub].iParton[i];
+    if (iNow > 0 && event[iNow].e() < 0.) 
+    infoPtr->errorMsg("Warning in ColConfig::collect: "
+      "negative-energy parton encountered");
+  }
 
   // Partons may already have been collected, e.g. at ministring collapse.
   if (singlets[iSub].isCollected) return;

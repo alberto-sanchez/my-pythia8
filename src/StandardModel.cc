@@ -1,5 +1,5 @@
 // StandardModel.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -37,13 +37,14 @@ const double AlphaStrong::SAFETYMARGIN2 = 1.33;
 
 void AlphaStrong::init( double valueIn, int orderIn) {
 
-  // Order of alpha_s evaluation.
+  // Order of alpha_s evaluation.Default values.
   valueRef = valueIn;
   order    = max( 0, min( 2, orderIn ) );
+  lastCallToFull = false;
+  Lambda3Save = Lambda4Save = Lambda5Save = scale2Min = 0.;
 
   // Fix alpha_s.
   if (order == 0) {
-    Lambda3Save = Lambda4Save = Lambda5Save = scale2Min = 0.;
 
   // First order alpha_s: match at flavour thresholds.
   } else if (order == 1) {
@@ -108,14 +109,14 @@ void AlphaStrong::init( double valueIn, int orderIn) {
   }
 
   // Save squares of mass and Lambda values as well.
-  mc2          = pow2(MC);
-  mb2          = pow2(MB);
   Lambda3Save2 = pow2(Lambda3Save);
   Lambda4Save2 = pow2(Lambda4Save);
   Lambda5Save2 = pow2(Lambda5Save);
+  mc2          = pow2(MC);
+  mb2          = pow2(MB);
   valueNow     = valueIn;
   scale2Now    = MZ * MZ;
-  isInit = true;
+  isInit       = true;
 
 }
 
@@ -225,20 +226,17 @@ double AlphaStrong::alphaS2OrdCorr( double scale2) {
   if (order < 2) return 1.; 
   
   // Second order correction term: differs by mass region.  
-  double Lambda2, b0, b1, b2;
+  double Lambda2, b1, b2;
   if (scale2 > mb2) {
     Lambda2 = Lambda5Save2;
-    b0      = 23.;
     b1      = 348. / 529.;       
     b2      = 224687. / 242208.;      
   } else if (scale2 > mc2) {     
     Lambda2 = Lambda4Save2;
-    b0      = 25.;
     b1      = 462. / 625.;
     b2      = 548575. / 426888.;
   } else {       
     Lambda2 = Lambda3Save2;
-    b0      = 27.;
     b1      = 64. / 81.;
     b2      = 938709. / 663552.;
   }
@@ -350,10 +348,11 @@ void CoupSM::init(Settings& settings, Rndm* rndmPtrIn) {
   int order = settings.mode("SigmaProcess:alphaEMorder");
   alphaEMlocal.init( order, &settings);
 
-  // Read in electroweak mixing angle.
-  s2tW = settings.parm("StandardModel:sin2thetaW");
-  c2tW = 1. - s2tW;
+  // Read in electroweak mixing angle and the Fermi constant.
+  s2tW    = settings.parm("StandardModel:sin2thetaW");
+  c2tW    = 1. - s2tW;
   s2tWbar = settings.parm("StandardModel:sin2thetaWbar");
+  GFermi  = settings.parm("StandardModel:GF");
 
   // Initialize electroweak couplings.
   for (int i = 0; i < 20; ++i) {  

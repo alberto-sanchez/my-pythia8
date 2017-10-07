@@ -1,5 +1,5 @@
 // RHadrons.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -300,7 +300,7 @@ bool RHadrons::produce( ColConfig& colConfig, Event& event) {
 
 bool RHadrons::decay( Event& event) {
 
-  // Loop over R-hadrons to decay.
+  // Loop over R-hadrons to decay. 
   for (iRHad = 0; iRHad < nRHad; ++iRHad) {
     int    iRNow  = iRHadron[iRHad]; 
     int    iRBef  = iBefRHad[iRHad];
@@ -339,8 +339,8 @@ bool RHadrons::decay( Event& event) {
 
     // Gluino: set mass sharing between two spectators.
     } else {
-      double m1Eff  = particleDataPtr->constituentMass(id1) + mOffsetCloudRH;  
-      double m2Eff  = particleDataPtr->constituentMass(id2) + mOffsetCloudRH;   
+      double m1Eff  = particleDataPtr->constituentMass(id1) + mOffsetCloudRH;
+      double m2Eff  = particleDataPtr->constituentMass(id2) + mOffsetCloudRH;
       double frac1 = (1. - fracR) * m1Eff / ( m1Eff + m2Eff); 
       double frac2 = (1. - fracR) * m2Eff / ( m1Eff + m2Eff); 
    
@@ -362,7 +362,13 @@ bool RHadrons::decay( Event& event) {
     event[iRNow].daughters( iR0, iR2);
     iAftRHad[iRHad] = iR0;
 
-  // End loop over R-hadron decays.
+    // Set secondary vertex for decay products, but no lifetime.
+    Vec4 vDec = event[iRNow].vProd() + event[iRNow].tau()
+              * event[iR0].p() / event[iR0].m();
+    for (int iRd = iR0; iRd <= iR2; ++iRd) event[iRd].vProd( vDec);
+
+  // End loop over R-hadron decays, based on velocity of squark.
+  
   }
 
   // Done.
@@ -449,6 +455,8 @@ bool RHadrons::splitOffJunction( ColConfig& colConfig, Event& event) {
 
     // Copy down recoling partons and boost their momenta.
     int iNewSP  = event.copy( iBef, 101);
+    event[iNewSP].mother2(0);
+    event[iBef].daughter1(iNewG);
     event[iNewSP].rotbst( MSP);
     leg1[iPosSP]   = iNewSP;
     if (iBefRHad[0] == iBef) iBefRHad[0] = iNewSP;
@@ -911,6 +919,10 @@ bool RHadrons::produceSquark( ColConfig& colConfig, Event& event) {
     for ( int i = iOldL + 1; i <= iEnd; ++i) iNewSys.push_back( i);
     colConfig.insert( iNewSys, event);
   }     
+
+  // Copy lifetime and vertex from sparticle to R-hadron.
+  event[iRNow].tau( event[iBef].tau() );
+  if (event[iBef].hasVertex()) event[iRNow].vProd( event[iBef].vProd() );
  
   // Done with production of a R-hadron from a squark.  
   return true;
@@ -1148,7 +1160,6 @@ bool RHadrons::produceGluino( ColConfig& colConfig, Event& event) {
         colR, acolR, pOldH + pOldL, (pOldH + pOldL).mCalc(), 0.);
 
       // Done with one-body case.
-      nBody   = 1;
       // Even if hoped-for, it was not possible to create a gluinoball.
       isGBall = false;
     }
@@ -1186,7 +1197,7 @@ bool RHadrons::produceGluino( ColConfig& colConfig, Event& event) {
     int colG  = event[iG1].col()  + event[iG2].col();  
     int acolG = event[iG1].acol() + event[iG2].acol();  
     Vec4 pG   = event[iG1].p()    + event[iG2].p(); 
-    int iG12  = event.append( 21, 105, iG1, iG2, 0, 0, colG, acolG, 
+    int iG12  = event.append( 21, 107, iG1, iG2, 0, 0, colG, acolG, 
       pG, pG.mCalc(), 0.);
 
     // Temporary gluons no longer needed, but new colour to avoid warnings.
@@ -1194,6 +1205,8 @@ bool RHadrons::produceGluino( ColConfig& colConfig, Event& event) {
     event[iG2].id( 21);
     event[iG1].statusNeg();
     event[iG2].statusNeg();
+    event[iG1].daughter1( iG12);
+    event[iG2].daughter1( iG12);
     int colBridge = event.nextColTag();
     if (event[iG1].col() == 0) {
       event[iG1].col(  colBridge);
@@ -1219,6 +1232,10 @@ bool RHadrons::produceGluino( ColConfig& colConfig, Event& event) {
     event[iG2].id( idQLeap);
     colConfig.insert( iNewSys2, event);
   }
+
+  // Copy lifetime and vertex from sparticle to R-hadron.
+  event[iGlui].tau( event[iBef].tau() );
+  if (event[iBef].hasVertex()) event[iGlui].vProd( event[iBef].vProd() );
  
   // Done with production of a R-hadron from a gluino.  
   return true;

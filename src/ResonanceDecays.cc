@@ -1,5 +1,5 @@
 // ResonanceDecays.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -66,7 +66,13 @@ bool ResonanceDecays::next( Event& process) {
       int idIn = process[decayer.mother1()].id();
 
       // Prepare decay selection.
-      decayer.particleDataEntry().preparePick(id0, m0, idIn);
+      if (!decayer.particleDataEntry().preparePick(id0, m0, idIn)) {
+        ostringstream osWarn;
+        osWarn << "for id = " << id0;
+        infoPtr->errorMsg("Error in ResonanceDecays::next:"
+          " no open decay channel", osWarn.str());         
+        return false;        
+      }
 
       // Pick a decay channel; allow up to ten tries.
       bool foundChannel = false;
@@ -93,8 +99,10 @@ bool ResonanceDecays::next( Event& process) {
 
       // Failed to find acceptable decays.
       if (!foundChannel) {
+        ostringstream osWarn;
+        osWarn << "for id = " << id0;
         infoPtr->errorMsg("Error in ResonanceDecays::next:"
-          " failed to find workable decay channel");         
+          " failed to find workable decay channel", osWarn.str());         
         return false;
       }
 
@@ -109,11 +117,20 @@ bool ResonanceDecays::next( Event& process) {
       // Append decay products to the process event record. Set lifetimes.
       int iFirst = process.size();
         for (int i = 1; i <= mult; ++i) {
-          int j = process.append( idProd[i], 23, iDec, 0, 0, 0, 
-          cols[i], acols[i], pProd[i], mProd[i], m0);
-          process[j].tau( process[j].tau0() * rndmPtr->exp() );	  
+          process.append( idProd[i], 23, iDec, 0, 0, 0, cols[i], acols[i], 
+            pProd[i], mProd[i], m0);
 	}
       int iLast = process.size() - 1;
+
+      // Set decay vertex when this is displaced.
+      if (process[iDec].hasVertex() || process[iDec].tau() > 0.) {
+        Vec4 vDec = process[iDec].vDec();
+        for (int i = iFirst; i <= iLast; ++i) process[i].vProd( vDec );
+      }
+
+      // Set lifetime of daughters.
+      for (int i = iFirst; i <= iLast; ++i) 
+        process[i].tau( process[i].tau0() * rndmPtr->exp() );
 
       // Modify mother status and daughters.
       decayer.status(-22);
@@ -269,10 +286,12 @@ bool ResonanceDecays::pickMasses() {
   int psMode      = 1 ; 
   if ( (idMother == 25 || idMother == 35) && idDau1 < 19 
     && idDau2 == idDau1 ) psMode = 3; 
-  if ( (idMother == 25 || idMother == 35 || idMother == 36)  
+  if ( (idMother == 25 || idMother == 35 )  
     && (idDau1 == 23 || idDau1 == 24) && idDau2 == idDau1 ) psMode = 5; 
+  if ( idMother == 36  
+    && (idDau1 == 23 || idDau1 == 24) && idDau2 == idDau1 ) psMode = 6; 
 
-  // Find allowed mass ranges
+  // Find allowed mass ranges. Ensure that they are not closed.
   double mRem     = mMother - mSum0 - MSAFETY;
   double mMax1    = min( mMaxBW[iBW1], mRem - mMinBW[iBW2] );
   double mMin1    = min( mMinBW[iBW1], mMax1 - MSAFETY);
@@ -280,31 +299,37 @@ bool ResonanceDecays::pickMasses() {
   double mMin2    = min( mMinBW[iBW2], mMax2 - MSAFETY);
    
   // At least one range must extend below half remaining mass.
+  if (mMin1 + mMin2 > mRem) return false;
   double mMid     = 0.5 * mRem;
-  bool   hasMid1  = (mMin1 < 0.5 * mRem);
-  bool   hasMid2  = (mMin2 < 0.5 * mRem);
+  bool   hasMid1  = (mMin1 < mMid);
+  bool   hasMid2  = (mMin2 < mMid);
   if (!hasMid1 && !hasMid2) return false;
 
   // Parameters for Breit-Wigner choice, with constrained mass range.
   double m2Nom1   = pow2( m0BW[iBW1] );
   double m2Max1   = mMax1 * mMax1;
   double m2Min1   = mMin1 * mMin1;
+  double m2Mid1   = min( mMid * mMid, m2Max1);
   double mmWid1   = m0BW[iBW1] * widthBW[iBW1]; 
   double atanMin1 = atan( (m2Min1 - m2Nom1) / mmWid1 );
   double atanMax1 = atan( (m2Max1 - m2Nom1) / mmWid1 );
-  double atanMid1 = (hasMid1) ? atan( (mMid*mMid - m2Nom1) / mmWid1 ) : 0.; 
+  double atanMid1 = (hasMid1) ? atan( (m2Mid1 - m2Nom1) / mmWid1 ) : 0.; 
   double m2Nom2   = pow2( m0BW[iBW2] );
-  double m2Max2   = mMax1 * mMax2;
-  double m2Min2   = mMin1 * mMin2;
+  double m2Max2   = mMax2 * mMax2;
+  double m2Min2   = mMin2 * mMin2;
+  double m2Mid2   = min( mMid * mMid, m2Max2);
   double mmWid2   = m0BW[iBW2] * widthBW[iBW2]; 
   double atanMin2 = atan( (m2Min2 - m2Nom2) / mmWid2 );
   double atanMax2 = atan( (m2Max2 - m2Nom2) / mmWid2 );
-  double atanMid2 = (hasMid2) ? atan( (mMid*mMid - m2Nom2) / mmWid2 ) : 0.; 
+  double atanMid2 = (hasMid2) ? atan( (m2Mid2 - m2Nom2) / mmWid2 ) : 0.; 
 
   // Relative weight to pick either below half remaining mass.
   double probLow1 = (hasMid1) ? 1. : 0.;
-  if (hasMid1 && hasMid2) probLow1 = (atanMid1 - atanMin1)
-    / ( (atanMid1 - atanMin1) + (atanMid2 - atanMin1) );
+  if (hasMid1 && hasMid2) {
+    double intLow1 = (atanMid1 - atanMin1) * (atanMax2 - atanMin2);
+    double intLow2 = (atanMax1 - atanMin1) * (atanMid2 - atanMin2);
+    probLow1 = intLow1 / (intLow1 + intLow2);
+  }
 
   // Maximum matrix element times phase space weight. 
   double m2Rem    = mRem * mRem;    
@@ -317,6 +342,7 @@ bool ResonanceDecays::pickMasses() {
   else if (psMode == 3) wtMax = pow3(psMax); 
   else if (psMode == 5) wtMax = psMax 
     * (pow2(1. - mr1 - mr2) + 8. * mr1 * mr2);
+  else if (psMode == 6) wtMax = pow3(psMax);
   
   // Retry mass according to Breit-Wigners, with simple threshold factor.
   double atanDif1, atanDif2, m2Now1, m2Now2, mNow1, mNow2, ps, wt;
@@ -324,9 +350,11 @@ bool ResonanceDecays::pickMasses() {
     if (iTryMasses == NTRYMASSES) return false;
  
     // Pick either below half remaining mass.    
+    bool pickLow1 = false;
     if (rndmPtr->flat() < probLow1) {
       atanDif1 = atanMid1 - atanMin1;
       atanDif2 = atanMax2 - atanMin2;
+      pickLow1 = true;
     } else {
       atanDif1 = atanMax1 - atanMin1;
       atanDif2 = atanMid2 - atanMin2;
@@ -335,6 +363,10 @@ bool ResonanceDecays::pickMasses() {
     m2Now2 = m2Nom2 + mmWid2 * tan(atanMin2 + rndmPtr->flat() * atanDif2);
     mNow1  = sqrt(m2Now1);
     mNow2  = sqrt(m2Now2);
+
+    // Check that intended mass ordering is fulfilled.
+    bool rejectRegion = (pickLow1) ? (mNow1 > mNow2) : (mNow2 > mNow1);
+    if (rejectRegion) continue;
 
     // Threshold weight.
     mr1    = m2Now1 / m2Rem;
@@ -348,6 +380,7 @@ bool ResonanceDecays::pickMasses() {
       else if (psMode == 3) wt = pow3(ps); 
       else if (psMode == 5) wt = ps 
         * (pow2(1. - mr1 - mr2) + 8. * mr1 * mr2);
+      else if (psMode == 6) wt = pow3(ps)*mr1*mr2;
     }
     if (wt > rndmPtr->flat() * wtMax) break;
   }
@@ -390,9 +423,13 @@ bool ResonanceDecays::pickColours(int iDec, Event& process) {
     else if (colTypeNow == -1) iAtriplet.push_back(i);
     else if (colTypeNow ==  2) iOctet.push_back(i);
     // Add two entries for sextets;
-    else if (colTypeNow ==  3) {iTriplet.push_back(i); iTriplet.push_back(i);}
-    else if (colTypeNow == -3) {iAtriplet.push_back(i); iAtriplet.push_back(i);}
-    else {
+    else if (colTypeNow ==  3) {
+      iTriplet.push_back(i); 
+      iTriplet.push_back(i);
+    } else if (colTypeNow == -3) {
+      iAtriplet.push_back(i); 
+      iAtriplet.push_back(i);
+    } else {
       infoPtr->errorMsg("Error in ResonanceDecays::pickColours:"
         " unknown colour type encountered");
       return false;
@@ -408,9 +445,11 @@ bool ResonanceDecays::pickColours(int iDec, Event& process) {
   else if (colType0 == -3) nAcol -= 2;
 
   // If net creation of three colours then find junction kind:
-  // mother is 1 = singlet, 3 = antitriplet, 5 = octet.
+  // mother is 1 = singlet, triplet, or sextet (no incoming RPV tags)
+  //           3 = antitriplet, octet, or antisextet (acol0 = incoming RPV tag)
+  //           5 = not applicable to decays (needs two incoming RPV tags)
   if (nCol - nAcol == 3) {
-    int kindJun = (col0 == 0) ? ((acol0 == 0) ? 1 : 3) : 5;
+    int kindJun = (colType0 == 0 || colType0 == 1 || colType0 == 3) ? 1 : 3;
 
     // Set colours in three junction legs and store junction. 
     int colJun[3];
@@ -443,9 +482,11 @@ bool ResonanceDecays::pickColours(int iDec, Event& process) {
   }
 
   // If net creation of three anticolours then find antijunction kind:
-  // mother is 2 = singlet, 4 = triplet, 6 = octet.
+  // mother is 2 = singlet, antitriplet, or antisextet (no incoming RPV tags)
+  //           4 = triplet, octet, or sextet (col0 = incoming RPV tag)
+  //           6 = not applicable to decays (needs two incoming RPV tags)
   if (nAcol - nCol == 3) {
-    int kindJun = (acol0 == 0) ? ((col0 == 0) ? 2 : 4) : 6;
+    int kindJun = (colType0 == 0 || colType0 == -1 || colType0 == -3) ? 2 : 4;
 
     // Set anticolours in three antijunction legs and store antijunction. 
     int acolJun[3];

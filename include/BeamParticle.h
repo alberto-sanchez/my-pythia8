@@ -1,5 +1,5 @@
 // BeamParticle.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -24,7 +24,7 @@ namespace Pythia8 {
 //==========================================================================
 
 // This class holds info on a parton resolved inside the incoming beam,
-// i.e. either an initiator (part of a hard or a multiple interaction)
+// i.e. either an initiator (part of a hard or a multiparton interaction)
 // or a remnant (part of the beam remnant treatment).
 
 // The companion code is -1 from onset and for g, is -2 for an unmatched 
@@ -110,7 +110,7 @@ private:
 //==========================================================================
 
 // This class holds info on a beam particle in the evolution of 
-// initial-state radiation and multiple interactions.
+// initial-state radiation and multiparton interactions.
 
 class BeamParticle {
 
@@ -124,6 +124,10 @@ public:
     Info* infoPtrIn, Settings& settings, ParticleData* particleDataPtrIn, 
     Rndm* rndmPtrIn, PDF* pdfInPtr, PDF* pdfHardInPtr, bool isUnresolvedIn, 
     StringFlav* flavSelPtrIn);
+
+  // Initialize only the two pdf pointers.
+  void initPDFPtr(PDF* pdfInPtr, PDF* pdfHardInPtr) {
+    pdfBeamPtr = pdfInPtr; pdfHardBeamPtr = pdfHardInPtr; }
 
   // For mesons like pi0 valence content varies from event to event.
   void newValenceContent();
@@ -146,7 +150,7 @@ public:
   bool isMeson() const {return isMesonBeam;}
   bool isBaryon() const {return isBaryonBeam;}
 
-  // Maximum x remaining after previous MI and ISR, plus safety margin.
+  // Maximum x remaining after previous MPI and ISR, plus safety margin.
   double xMax(int iSkip = -1);
 
   // Special hard-process parton distributions (can agree with standard ones).
@@ -163,12 +167,12 @@ public:
   double xfSea(int idIn, double x, double Q2) 
     {return pdfBeamPtr->xfSea(idIn, x, Q2);}
 
-  // Rescaled parton distributions, as needed for MI and ISR.
+  // Rescaled parton distributions, as needed for MPI and ISR.
   // For ISR also allow split valence/sea, and only return relevant part.
-  double xfMI(int idIn, double x, double Q2) 
+  double xfMPI(int idIn, double x, double Q2) 
     {return xfModified(-1, idIn, x, Q2);}
-  double xfISR(int indexMI, int idIn, double x, double Q2) 
-    {return xfModified( indexMI, idIn, x, Q2);}
+  double xfISR(int indexMPI, int idIn, double x, double Q2) 
+    {return xfModified( indexMPI, idIn, x, Q2);}
 
   // Decide whether chosen quark is valence, sea or companion.
   int pickValSeaComp();
@@ -178,6 +182,7 @@ public:
 
   // Overload index operator to access a resolved parton from the list.
   ResolvedParton& operator[](int i) {return resolved[i];}
+  const ResolvedParton& operator[](int i) const {return resolved[i];}
 
   // Total number of partons extracted from beam, and initiators only.
   int size() const {return resolved.size();}

@@ -1,5 +1,5 @@
 // PartonDistributions.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -95,7 +95,14 @@ public:
 
   // Allow extrapolation beyond boundaries. This is optional.
   void setExtrapolate(bool extrapol); 
-
+ 
+  // Find out the nSet number corresponding to a name and member.
+  // Returns -1 if no such LHAPDF set has been initialized.
+  static int findNSet(string setName, int member);
+  
+  // Return the lowest non-occupied nSet number.
+  static int freeNSet();
+   
 private:
 
   // Initialization of PDF set.
@@ -107,11 +114,12 @@ private:
   // Current set and pdf values.
   int    nSet;
   double xfArray[13];
+  bool   hasPhoton;
   double xPhoton;
 
-  // Keep track of latest initialized PDF, so does not have to repeat.
-  static string latestSetName;
-  static int    latestMember, latestNSet;   
+  // Keep track of what sets have been initialized in LHAPDFInterface.
+  // The key is the nSet index, the value is a pair (name, member number).
+  static map< int, pair<string, int> > initializedSets;
 
 };
  
@@ -130,7 +138,7 @@ public:
 private:
 
   // Update PDF values.
-  void xfUpdate(int id, double x, double Q2);
+  void xfUpdate(int , double x, double Q2);
 
   // Auxiliary routines used during the updating.
   double grvv (double x, double n, double ak, double bk, double a, 
@@ -157,7 +165,7 @@ public:
 private:
 
   // Update PDF values.
-  void xfUpdate(int id, double x, double Q2);
+  void xfUpdate(int , double x, double Q2);
 
 };
  
@@ -196,7 +204,7 @@ private:
   void init( int iFitIn, string xmlPath, Info* infoPtr);
 
   // Update PDF values.
-  void xfUpdate(int id, double x, double Q2);
+  void xfUpdate(int , double x, double Q2);
 
   // Evaluate PDF of one flavour species.
   double parton(int flavour,double x,double q);
@@ -279,7 +287,7 @@ private:
   static const double ALPHAEM, Q2MAX, Q20, A, B, C;
 
   // Update PDF values.
-  void xfUpdate(int id, double x, double Q2);
+  void xfUpdate(int , double x, double Q2);
 
   // phi function from Q2 integration.
   double phiFunc(double x, double Q);
@@ -304,7 +312,7 @@ public:
 private:
 
   // Update PDF values.
-  void xfUpdate(int id, double x, double Q2);
+  void xfUpdate(int , double x, double Q2);
 
 };
 
@@ -336,7 +344,7 @@ private:
   void init();
 
   // Update PDF values.
-  void xfUpdate(int id, double x, double);
+  void xfUpdate(int , double x, double);
 
 };
  
@@ -368,7 +376,7 @@ private:
   void init( int iFit, string xmlPath, Info* infoPtr);
 
   // Update PDF values.
-  void xfUpdate(int id, double x, double );
+  void xfUpdate(int , double x, double );
 
 };
  

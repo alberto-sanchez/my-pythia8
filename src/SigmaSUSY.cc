@@ -1,5 +1,5 @@
 // SigmaSUSY.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // Main authors of this file: N. Desai, P. Skands
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
@@ -246,17 +246,17 @@ double Sigma2qqbar2charchi0::sigmaHat() {
   // dbar u , d ubar : swap 1<->2 and t<->u
 
   int iGu = abs(id1)/2;
-  int iGd = abs(id2+1)/2;
+  int iGd = (abs(id2)+1)/2;
 
   if (idAbs1 % 2 != 0) {
     swapTU = true;
     iGu = abs(id2)/2;
-    iGd = abs(id1+1)/2;
+    iGd = (abs(id1)+1)/2;
   }
 
   // s-channel W contribution
   QuLL = conj(coupSUSYPtr->LudW[iGu][iGd]) 
-    * conj(coupSUSYPtr->OL[iNeut][abs(iChar)])
+    * conj(coupSUSYPtr->OL[iNeut][iChar])
     * propW / sqrt(2.0);
   QtLL = conj(coupSUSYPtr->LudW[iGu][iGd]) 
     * conj(coupSUSYPtr->OR[iNeut][iChar])
@@ -311,7 +311,6 @@ double Sigma2qqbar2charchi0::sigmaHat() {
 
   // Cross section, including colour factor.
   double sigma = sigma0 * weight;
-  if (idAbs1 < 9) sigma /= 3.; 
 
   // Answer.
   return sigma;    
@@ -417,10 +416,14 @@ double Sigma2qqbar2charchar::sigmaHat() {
       double ufac = 2.0 * (uH - pow2(msq));
 
       //u-ubar -> chi-chi+
-      QuLL += coupSUSYPtr->LsduX[ksq][iG2][i3] * conj(coupSUSYPtr->LsduX[ksq][iG1][i4]) / ufac;
-      QuRR += coupSUSYPtr->RsduX[ksq][iG2][i3] * conj(coupSUSYPtr->RsduX[ksq][iG1][i4]) / ufac;
-      QuLR += coupSUSYPtr->RsduX[ksq][iG2][i3] * conj(coupSUSYPtr->LsduX[ksq][iG1][i4]) / ufac;
-      QuRL += coupSUSYPtr->LsduX[ksq][iG2][i3] * conj(coupSUSYPtr->RsduX[ksq][iG1][i4]) / ufac;
+      QuLL += coupSUSYPtr->LsduX[ksq][iG2][i3] 
+            * conj(coupSUSYPtr->LsduX[ksq][iG1][i4]) / ufac;
+      QuRR += coupSUSYPtr->RsduX[ksq][iG2][i3] 
+            * conj(coupSUSYPtr->RsduX[ksq][iG1][i4]) / ufac;
+      QuLR += coupSUSYPtr->RsduX[ksq][iG2][i3] 
+            * conj(coupSUSYPtr->LsduX[ksq][iG1][i4]) / ufac;
+      QuRL += coupSUSYPtr->LsduX[ksq][iG2][i3] 
+            * conj(coupSUSYPtr->RsduX[ksq][iG1][i4]) / ufac;
 
 
     }else{
@@ -432,10 +435,14 @@ double Sigma2qqbar2charchar::sigmaHat() {
       double tfac = 2.0 * (tH - pow2(msq));
 
       //d-dbar -> chi-chi+
-      QtLL -= coupSUSYPtr->LsudX[ksq][iG1][i3] * conj(coupSUSYPtr->LsudX[ksq][iG2][i4]) / tfac;
-      QtRR -= coupSUSYPtr->RsudX[ksq][iG1][i3] * conj(coupSUSYPtr->RsudX[ksq][iG2][i4]) / tfac;
-      QtLR += coupSUSYPtr->LsudX[ksq][iG1][i3] * conj(coupSUSYPtr->RsudX[ksq][iG2][i4]) / tfac;
-      QtRL += coupSUSYPtr->RsudX[ksq][iG1][i3] * conj(coupSUSYPtr->LsudX[ksq][iG2][i4]) / tfac;
+      QtLL -= coupSUSYPtr->LsudX[ksq][iG1][i3] 
+            * conj(coupSUSYPtr->LsudX[ksq][iG2][i4]) / tfac;
+      QtRR -= coupSUSYPtr->RsudX[ksq][iG1][i3] 
+            * conj(coupSUSYPtr->RsudX[ksq][iG2][i4]) / tfac;
+      QtLR += coupSUSYPtr->LsudX[ksq][iG1][i3] 
+            * conj(coupSUSYPtr->RsudX[ksq][iG2][i4]) / tfac;
+      QtRL += coupSUSYPtr->RsudX[ksq][iG1][i3] 
+            * conj(coupSUSYPtr->LsudX[ksq][iG2][i4]) / tfac;
 
     }
   }
@@ -804,7 +811,7 @@ double Sigma2qq2squarksquark::sigmaHat() {
   if (!isUD && abs(id1) % 2 != abs(id3Sav) % 2) return 0.0;
 
   // Coded sigma is for ud -> ~q~q'. Swap t and u for du -> ~q~q'.
-  swapTU = (isUD and abs(id1) % 2 == 0); 
+  swapTU = (isUD && abs(id1) % 2 == 0); 
   int    idIn1A = (swapTU) ? abs(id2) : abs(id1);
   int    idIn2A = (swapTU) ? abs(id1) : abs(id2);
 
@@ -875,8 +882,8 @@ double Sigma2qq2squarksquark::sigmaHat() {
 	  * coupSUSYPtr->RsduX[iGen3][iGen1][l];
 
 	// Add to sum of t-channel charginos
-	sumCt += sigmaChar * real(Ckl[1][1] + Ckl[1][2] + Ckl[2][1] + Ckl[2][2])
-	  / tChar[k] / tChar[l];
+	sumCt += sigmaChar * real(Ckl[1][1] + Ckl[1][2] + Ckl[2][1] 
+               + Ckl[2][2]) / tChar[k] / tChar[l];
 
       }
     }
@@ -974,8 +981,8 @@ double Sigma2qq2squarksquark::sigmaHat() {
 	CNkl[2][1] *= uH*tH-s3*s4;
 	CNkl[2][2] *= sH*sqrt(m2Char[k]*m2Neut[l]);	
 	// Sum over polarizations
-	sumInterference += sigmaCharNeut * (CNkl[1][1] + CNkl[1][2] + CNkl[2][1]
-					    + CNkl[2][2]) / tChar[k] / uNeut[l];
+	sumInterference += sigmaCharNeut * (CNkl[1][1] + CNkl[1][2] 
+                         + CNkl[2][1] + CNkl[2][2]) / tChar[k] / uNeut[l];
       }
     }
 
@@ -1155,8 +1162,10 @@ double Sigma2qq2squarksquark::sigmaHat() {
 
       // Add to sums
       sumInterference += sigmaNeutGlu * 
-	( real(NGA[1][1] + NGA[1][2] + NGA[2][1] + NGA[2][2]) / tNeut[k] / uGlu
-	+ real(NGB[1][1] + NGB[1][2] + NGB[2][1] + NGB[2][2]) / uNeut[k] / tGlu );
+	( real(NGA[1][1] + NGA[1][2] + NGA[2][1] + NGA[2][2]) 
+        / tNeut[k] / uGlu
+	+ real(NGB[1][1] + NGB[1][2] + NGB[2][1] + NGB[2][2]) 
+        / uNeut[k] / tGlu );
     }
     
     // t-channel + u-channel Gluinos + t/u interference
@@ -1254,7 +1263,7 @@ void Sigma2qq2squarksquark::setIdColAcol() {
   }
 
   // Coded sigma is for ud -> ~q~q'. Swap t and u for du -> ~q~q'.
-  swapTU = (isUD and abs(id1) % 2 == 0); 
+  swapTU = (isUD && abs(id1) % 2 == 0); 
 
   // Select colour flow topology 
   // A: t-channel neutralino, t-channel chargino, or u-channel gluino
@@ -1361,7 +1370,7 @@ double Sigma2qqbar2squarkantisquark::sigmaHat() {
   bool onlyQCD = settingsPtr->flag("SUSY:qqbar2squarkantisquark:onlyQCD");
 
   // Coded UD sigma is for udbar -> ~u~d'*. Swap t<->u for dbaru -> ~u~d'*.
-  swapTU = (isUD and abs(id1) % 2 != 0); 
+  swapTU = (isUD && abs(id1) % 2 != 0); 
 
   // Coded QQ sigma is for qqbar -> ~q~q*. Swap t<->u for qbarq -> ~q~q*.
   if (!isUD && id1 < 0) swapTU = true;
@@ -1462,10 +1471,12 @@ double Sigma2qqbar2squarkantisquark::sigmaHat() {
       // gluon-gluino interference (strictly flavor-diagonal)
       if (abs(id3Sav) == abs(id4Sav) && abs(id1) == abs(id2)) {
 	double GG11, GG22;
-	GG11 = - facTU * 2./3. * real( conj(coupSUSYPtr->getLsqqG(iGen3,idIn1A))
-				       * coupSUSYPtr->getLsqqG(iGen4,idIn2A));
-	GG22 = - facTU * 2./3. * real( conj(coupSUSYPtr->getRsqqG(iGen3,idIn1A))
-				       * coupSUSYPtr->getRsqqG(iGen4,idIn2A)); 
+	GG11 = - facTU * 2./3. 
+             * real( conj(coupSUSYPtr->getLsqqG(iGen3,idIn1A))
+	     * coupSUSYPtr->getLsqqG(iGen4,idIn2A));
+	GG22 = - facTU * 2./3. 
+             * real( conj(coupSUSYPtr->getRsqqG(iGen3,idIn1A))
+	     * coupSUSYPtr->getRsqqG(iGen4,idIn2A)); 
 	// Sum over two contributing helicities
 	sumInterference += sigmaGlu / sH / tGlu
 	  * ( GG11 + GG22 );
@@ -1516,8 +1527,8 @@ double Sigma2qqbar2squarkantisquark::sigmaHat() {
       if (abs(id3Sav)%2 != 0) CsqZ = norm(coupSUSYPtr->LsdsdZ[iGen3][iGen4] 
 					  + coupSUSYPtr->RsdsdZ[iGen3][iGen4]);
       sumColS += sigmaEW * facTU / 16.0 / pow2(xW) / pow2(1.0-xW)
-	* norm(propZW) * CsqZ
-	* ( pow2(coupSUSYPtr->LqqZ[idIn1A]) + pow2(coupSUSYPtr->RqqZ[idIn1A]) );
+	* norm(propZW) * CsqZ * ( pow2(coupSUSYPtr->LqqZ[idIn1A]) 
+        + pow2(coupSUSYPtr->RqqZ[idIn1A]) );
 
       // Z/gluino interference (only for in-isospin = out-isospin)
       if (eQ == eSq) {
@@ -1960,7 +1971,7 @@ void Sigma1qq2antisquark::sigmaKin() {
   GammaRes = particleDataPtr->mWidth(abs(idRes));
   m2Res = pow2(mRes);
     
-  sigBW        = sH * GammaRes/ ( pow2(sH - m2Res) + pow2(mRes * GammaRes) );    
+  sigBW        = sH * GammaRes/ ( pow2(sH - m2Res) + pow2(mRes * GammaRes) );
   sigBW       *= 2.0/3.0/mRes;
 
   // Width out only includes open channels. 
@@ -1982,7 +1993,8 @@ double Sigma1qq2antisquark::sigmaHat() {
 
   //Covert from pdg-code to ~u_i/~d_i basis
   bool idown = (abs(idRes)%2 == 1) ? true : false;
-  int iC = (abs(idRes)/1000000 == 2) ? (abs(idRes)%10+1)/2 + 3: (abs(idRes)%10+1)/2; 
+  int iC = (abs(idRes)/1000000 == 2) 
+         ? (abs(idRes)%10+1)/2 + 3: (abs(idRes)%10+1)/2; 
 
   // UDD structure
   if (abs(id1)%2 == 0 && abs(id2)%2 == 0) return 0.0;  

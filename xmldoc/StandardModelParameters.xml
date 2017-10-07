@@ -18,7 +18,7 @@ For second-order matching an approximate iterative method is used.
  
 <p/>
 Since we allow <ei>alpha_strong</ei> to vary separately for 
-hard processes, timelike showers, spacelike showers and  multiple 
+hard processes, timelike showers, spacelike showers and  multiparton 
 interactions, the relevant values can be set in each of these classes. 
 The default behaviour is everywhere first-order running.
  
@@ -46,12 +46,12 @@ The <code>AlphaEM</code> class is used to generate a running
 value at the <ei>M_Z</ei> mass is matched to a low-energy behaviour
 with running starting at the electron mass threshold. The matching
 is done by fitting an effective running coefficient in the region
-betweeen the light-quark treshold and the charm/tau threshold. This
+between the light-quark threshold and the charm/tau threshold. This
 procedure is approximate, but good enough for our purposes. 
 
 <p/>
 Since we allow <ei>alpha_em</ei> to vary separately for 
-hard processes, timelike showers, spacelike showers and  multiple 
+hard processes, timelike showers, spacelike showers and  multiparton 
 interactions, the choice between using a fixed or a running 
 <ei>alpha_em</ei> can be made in each of these classes. 
 The default behaviour is everywhere first-order running.
@@ -91,11 +91,21 @@ of fermions to the <ei>Z^0</ei>, see below. Default is the MSbar value
 from <ref>Yao06</ref>.
 </parm>
 
-<parm name="StandardModel:sin2thetaWbar" default="0.2315" min="0.225" max="0.240">
+<parm name="StandardModel:sin2thetaWbar" default="0.2315" 
+min="0.225" max="0.240">
 The sine-squared of the weak mixing angle, as used to derive the vector 
 couplings of fermions to the <ei>Z^0</ei>, in the relation 
 <ei>v_f = a_f - 4 e_f sin^2(theta_W)bar</ei>. Default is the
 effective-angle value from <ref>Yao06</ref>.
+</parm>
+
+<p/>
+The Fermi constant is not much used in the currently coded matrix elements,
+since it is redundant, but it is available:
+
+<parm name="StandardModel:GF" default="1.16637e-5" 
+min="1.0e-5" max="1.3e-5">
+The Fermi coupling constant, in units of GeV<ei>^-2</ei>. 
 </parm>
 
 <h3>The quark weak-mixing matrix</h3>
@@ -152,7 +162,7 @@ and the quark mixing matrix mentioned above. This class is used especially
 in the calculation of cross sections and resonance widths, but could also
 be used elsewhere. Specifically, as already mentioned, there are separate 
 <code>AlphaStrong</code> and <code>AlphaEM</code> instances for timelike 
-and spacelike showers and for multiple interactions, while weak couplings 
+and spacelike showers and for multiparton interactions, while weak couplings 
 and the quark mixing matrix are only stored here. With the exception of the 
 first two methods below, which are for internal use, the subsequent ones
 could also be used externally.
@@ -206,6 +216,10 @@ the gauge-boson sector.
 <method name="double CoupSM::sin2thetaWbar()"> 
 the sine-squared of the weak mixing angle, as used to derive the vector 
 couplings of fermions to the <ei>Z^0</ei>.
+</method>
+
+<method name="double CoupSM::GF()"> 
+the Fermi constant of weak decays, in GeV<ei>^-2</ei>.
 </method>
 
 <method name="double CoupSM::ef(int idAbs)"> 
@@ -282,4 +296,4 @@ possibilities. Unambiguous choice for the lepton-neutrino sector.
 
 </chapter>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->

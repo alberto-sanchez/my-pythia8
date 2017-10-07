@@ -1,5 +1,5 @@
 // SigmaQCD.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -83,6 +83,24 @@ void Sigma0AB2XX::setIdColAcol() {
   setId( idA, idB, idX1, idX2);
   setColAcol( 0, 0, 0, 0, 0, 0, 0, 0);
 
+}
+
+//==========================================================================
+
+// Sigma0AB2AXB class.
+// Cross section for central scattering A B -> A X B.
+
+//--------------------------------------------------------------------------
+
+// Select identity, colour and anticolour.
+
+void Sigma0AB2AXB::setIdColAcol() {
+  
+  // Central diffractive state represented by rho_diffr0. Colours trivial.
+  int idX = 9900110; 
+  setId( idA, idB, idA, idB,idX);
+  setColAcol( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+  
 }
 
 //==========================================================================

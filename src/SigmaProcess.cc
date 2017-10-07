@@ -1,5 +1,5 @@
 // SigmaProcess.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -52,15 +52,15 @@ void SigmaProcess::init(Info* infoPtrIn, Settings* settingsPtrIn,
   slhaPtr         = slhaPtrIn;
 
   // Read out some properties of beams to allow shorthand.
-  idA             = (beamAPtr > 0) ? beamAPtr->id() : 0;
-  idB             = (beamBPtr > 0) ? beamBPtr->id() : 0;
-  mA              = (beamAPtr > 0) ? beamAPtr->m() : 0.;
-  mB              = (beamBPtr > 0) ? beamBPtr->m() : 0.;
-  isLeptonA       = (beamAPtr > 0) ? beamAPtr->isLepton() : false;
-  isLeptonB       = (beamBPtr > 0) ? beamBPtr->isLepton() : false;
+  idA             = (beamAPtr != 0) ? beamAPtr->id() : 0;
+  idB             = (beamBPtr != 0) ? beamBPtr->id() : 0;
+  mA              = (beamAPtr != 0) ? beamAPtr->m() : 0.;
+  mB              = (beamBPtr != 0) ? beamBPtr->m() : 0.;
+  isLeptonA       = (beamAPtr != 0) ? beamAPtr->isLepton() : false;
+  isLeptonB       = (beamBPtr != 0) ? beamBPtr->isLepton() : false;
   hasLeptonBeams  = isLeptonA || isLeptonB;
 
-  // K factor, multiplying resolved processes. (But not here for MI.)
+  // K factor, multiplying resolved processes. (But not here for MPI.)
   Kfactor         = settingsPtr->parm("SigmaProcess:Kfactor");
 
   // Maximum incoming quark flavour.
@@ -379,7 +379,7 @@ double SigmaProcess::sigmaPDF() {
 
 void SigmaProcess::pickInState(int id1in, int id2in) {
 
-  // Multiple interactions: partons already selected.
+  // Multiparton interactions: partons already selected.
   if (id1in != 0 && id2in != 0) {
     id1 = id1in;
     id2 = id2in;
@@ -483,32 +483,42 @@ double SigmaProcess::weightTopDecay( Event& process, int iResBeg,
 
 }
 
-
 //--------------------------------------------------------------------------
 
-// Evaluate weight for Z0/W+- decay distributions in H -> Z0/W+ Z0/W- -> 4f.
+// Evaluate weight for Z0/W+- decay distributions in H -> Z0/W+ Z0/W- -> 4f
+// and H -> gamma Z0 -> gamma f fbar.
 
 double SigmaProcess::weightHiggsDecay( Event& process, int iResBeg, 
   int iResEnd) {
 
-  // If not pair Z0 Z0 or W+ W- then return unit weight.
+  // If not pair Z0 Z0, W+ W- or gamma Z0 then return unit weight.
   if (iResEnd - iResBeg != 1) return 1.;
   int iZW1  = iResBeg;
   int iZW2  = iResBeg + 1;
   int idZW1 = process[iZW1].id();
   int idZW2 = process[iZW2].id();
-  if (idZW1 < 0) {
+  if (idZW1 < 0 || idZW2 == 22) {
     swap(iZW1, iZW2); 
     swap(idZW1, idZW2);
   } 
-  if ( (idZW1 != 23 || idZW2 != 23) && (idZW1 != 24 || idZW2 != -24) )
-    return 1.;
+  if ( (idZW1 != 23 || idZW2 != 23) && (idZW1 != 24 || idZW2 != -24) 
+    && (idZW1 != 22 || idZW2 != 23) ) return 1.;
 
   // If mother is not Higgs then return unit weight.
   int iH  = process[iZW1].mother1(); 
   if (iH <= 0) return 1.;
   int idH = process[iH].id();
   if (idH != 25 && idH != 35 && idH !=36) return 1.;
+
+  // H -> gamma Z0 -> gamma f fbar is 1 + cos^2(theta) in Z rest frame.
+  if (idZW1 == 22) {
+    int i5 = process[iZW2].daughter1();
+    int i6 = process[iZW2].daughter2();
+    double pgmZ = process[iZW1].p() * process[iZW2].p(); 
+    double pgm5 = process[iZW1].p() * process[i5].p(); 
+    double pgm6 = process[iZW1].p() * process[i6].p(); 
+    return (pow2(pgm5) + pow2(pgm6)) / pow2(pgmZ);    
+  }
 
   // Parameters depend on Higgs type: H0(H_1), H^0(H_2) or A^0(H_3).
   int    higgsParity = higgsH1parity; 
@@ -803,9 +813,9 @@ void Sigma2Process::store2Kin( double x1in, double x2in, double sHin,
 
 //--------------------------------------------------------------------------
 
-// As above, special kinematics for multiple interactions. 
+// As above, special kinematics for multiparton interactions. 
 
-void Sigma2Process::store2KinMI( double x1in, double x2in,
+void Sigma2Process::store2KinMPI( double x1in, double x2in,
   double sHin, double tHin, double uHin, double alpSin, double alpEMin,
   bool needMasses, double m3in, double m4in) {
 
@@ -861,9 +871,9 @@ void Sigma2Process::store2KinMI( double x1in, double x2in,
 
 //--------------------------------------------------------------------------
 
-// Perform kinematics for a Multiple Interaction, including a rescattering.
+// Perform kinematics for a multiparton interaction, including a rescattering.
 
-bool Sigma2Process::final2KinMI( int i1Res, int i2Res, Vec4 p1Res, Vec4 p2Res,
+bool Sigma2Process::final2KinMPI( int i1Res, int i2Res, Vec4 p1Res, Vec4 p2Res,
   double m1Res, double m2Res) {
 
   // Have to set flavours and colours.
@@ -913,7 +923,7 @@ bool Sigma2Process::final2KinMI( int i1Res, int i2Res, Vec4 p1Res, Vec4 p2Res,
     colSave[4], acolSave[4], -pX, -pY,   -pZ,   e4,    m4, scale);
 
   // Boost particles from subprocess rest frame to event rest frame.
-  // Normal multiple interaction: only longitudinal boost.
+  // Normal multiparton interaction: only longitudinal boost.
   if (i1Res == 0 && i2Res == 0) {
     double betaZ = (x1Save - x2Save) / (x1Save + x2Save);
     for (int i = 1; i <= 4; ++i) parton[i].bst(0., 0., betaZ);
@@ -1221,6 +1231,32 @@ bool Sigma3Process::setupForME() {
 // The SigmaLHAProcess class.
 // Wrapper for Les Houches Accord external input; derived from SigmaProcess.
 // Note: arbitrary subdivision into PhaseSpaceLHA and SigmaLHAProcess tasks.
+
+//--------------------------------------------------------------------------
+
+// Evaluate weight for decay angles.
+
+double SigmaLHAProcess::weightDecay( Event& process, int iResBeg,
+  int iResEnd) {
+
+  // Do nothing if decays present already at input.
+  if (iResBeg < process.savedSizeValue()) return 1.;
+
+  // Identity of mother of decaying reseonance(s).
+  int idMother = process[process[iResBeg].mother1()].idAbs();
+
+  // For Higgs decay hand over to standard routine.
+  if (idMother == 25 || idMother == 35 || idMother == 36) 
+    return weightHiggsDecay( process, iResBeg, iResEnd);
+
+  // For top decay hand over to standard routine.
+  if (idMother == 6) 
+    return weightTopDecay( process, iResBeg, iResEnd);
+
+  // Else done.
+  return 1.; 
+
+}
 
 //--------------------------------------------------------------------------
 

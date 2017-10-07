@@ -40,7 +40,7 @@ produced by the hard process. Additional sources of photons
 include parton showers and hadron decays. A <i>pT</i> cut
 is required to stay away from the unphysical low-<i>pT</i> region.
 An eikonalized description, intended to be valid at all <i>pT</i>,
-is included as part of the multiple-interactions framework.
+is included as part of the multiparton-interactions framework.
 
 <br/><br/><strong>PromptPhoton:all</strong>  <input type="radio" name="1" value="on"><strong>On</strong>
 <input type="radio" name="1" value="off" checked="checked"><strong>Off</strong>
@@ -95,7 +95,7 @@ Code 205.
   
 
 <br/><br/><table><tr><td><strong>PromptPhoton:nQuarkLoop  </td><td></td><td> <input type="text" name="7" value="5" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>5</strong></code>; <code>minimum = 3</code>; <code>maximum = 6</code>)</td></tr></table>
-Number of quark flavours included in the box graphs resposible for 
+Number of quark flavours included in the box graphs responsible for 
 <i>g g -> g gamma</i> and <i>g g-> gamma gamma</i> processes.
 Owing to the complexity if the massive expressions, quarks are treated 
 as massless. The default value should be applicable in the range of 
@@ -130,7 +130,7 @@ is purely dictated by what is set for the <ei>Z^0</ei>.
 <h4>Boson exchange</h4>
 
 The two processes in this subgroup is included as part of the 
-multiple-interactions framework.
+multiparton-interactions framework.
 
 <br/><br/><strong>WeakBosonExchange:all</strong>  <input type="radio" name="9" value="on"><strong>On</strong>
 <input type="radio" name="9" value="off" checked="checked"><strong>Off</strong>
@@ -185,15 +185,22 @@ Code 222.
  &nbsp;&nbsp;(<code>default = <strong>off</strong></code>)<br/>
 Scattering <i>f fbar -> gamma^* -> f' fbar'</i>. Subset of 
 process 221, but written as a <i>2 -> 2</i> process, so that 
-<i>pT</i> can be used as ordering variable, e.g. in multiple 
+<i>pT</i> can be used as ordering variable, e.g. in multiparton 
 interactions. Hardcoded for the final state being either of the 
 five quark flavours or three lepton ones. Not included in the 
 <code>WeakSingleBoson:all</code> set, but included in the 
-multiple-interactions framework. 
+multiparton-interactions framework. 
 Code 223.
   
 
 <h4>Boson pair</h4>
+
+Note that, in the decay of the two vector bosons produced by an 
+<i>f fbar -> V V</i> process, the full four-fermion correlations 
+from the leading-order <i>f fbar -> V V -> 4f</i> matrix elements 
+are included [<a href="Bibliography.php" target="page">Gun86</a>] (with some extensions by the authors).
+The matrix elements are provided in the double-resonant approach, i.e. 
+excludes graph like <i>f fbar -> V -> f fbar -> f fbar V -> 4f</i>.
 
 <br/><br/><strong>WeakDoubleBoson:all</strong>  <input type="radio" name="16" value="on"><strong>On</strong>
 <input type="radio" name="16" value="off" checked="checked"><strong>Off</strong>
@@ -234,7 +241,7 @@ gauge boson, i.e. a <i>gamma^*/Z^0</i> or a <i>W^+-</i>, in
 association with a parton, i.e. a quark, gluon, photon or lepton.
 These processes give first-order corrections to the ones in the
 <code>WeakSingleBoson</code> class, and both sets cannot be used
-simultaneously without unphysical doublecounting. The current class
+simultaneously without unphysical double-counting. The current class
 should only be used to study the high-<i>pT</i> tail of the 
 gauge-boson production processes (for LHC applications at least
 <i>pT</i> > 20 GeV), while the ones in <code>WeakSingleBoson</code> 
@@ -550,5 +557,5 @@ fclose($handle);
 </body>
 </html>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->
 

@@ -1,5 +1,5 @@
 // SigmaLeftRightSym.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -199,7 +199,6 @@ void Sigma1ffbar2WRight::sigmaKin() {
 
   // Loop over all W_R^+- decay channels. 
   for (int i = 0; i < particlePtr->sizeChannels(); ++i) {
-    widNow = 0.;
     id1Now      = particlePtr->channel(i).product(0);
     id2Now      = particlePtr->channel(i).product(1);
     id1Abs      = abs(id1Now);
@@ -414,7 +413,8 @@ double Sigma1ll2Hchgchg::weightDecay( Event& process, int iResBeg,
 //==========================================================================
 
 // Sigma2lgm2Hchgchgl class.
-// Cross section for l l -> H_L^++-- or H_R^++-- (doubly charged Higgs).
+// Cross section for l gamma -> H_L^++-- l or H_R^++-- l 
+// (doubly charged Higgs).
 
 //--------------------------------------------------------------------------
 
@@ -615,7 +615,8 @@ double Sigma3ff2HchgchgfftWW::sigmaHat() {
 
   // Basic cross section. CKM factors for final states.
   double sigma = (id2 == id1 && id1Abs > 10) ? sigma0TU : sigma0T;
-  sigma       *= couplingsPtr->V2CKMsum(id1Abs) * couplingsPtr->V2CKMsum(id2Abs);
+  sigma       *= couplingsPtr->V2CKMsum(id1Abs) 
+               * couplingsPtr->V2CKMsum(id2Abs);
 
   // Secondary width for H0.
   sigma       *= (chg1 + chg2 == 2) ? openFracPos : openFracNeg;
@@ -733,7 +734,7 @@ double Sigma2ffbar2HchgchgHchgchg::sigmaHat() {
   double vi      = couplingsPtr->vf(idAbs); 
   double ai      = couplingsPtr->af(idAbs); 
 
-  // Part via gamma^*/Z^0 propagator.No Z^0 coupling to H_R.
+  // Part via gamma^*/Z^0 propagator. No Z^0 coupling to H_R.
   double resProp = 1. / ( pow2(sH - m2Res) + pow2(sH * GamMRat) );
   double sigma   = 8. * pow2(alpEM) * ei*ei / sH2;
   if (leftRight == 1) sigma += 8. * pow2(alpEM) 

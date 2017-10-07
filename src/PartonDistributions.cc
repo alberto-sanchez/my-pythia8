@@ -1,5 +1,5 @@
 // PartonDistributions.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -75,6 +75,22 @@ double PDF::xf(int id, double x, double Q2) {
     if (idAbs == 22) return max(0., xgamma);
     return 0.;
 
+  // Baryon beams: n and nbar by isospin conjugation of p and pbar.
+  } else if (idBeamAbs == 2112) { 
+    int idNow = (idBeam > 0) ? id : -id;
+    int idAbs = abs(id);
+    if (idNow ==  0 || idAbs == 21) return max(0., xg);  
+    if (idNow ==  1) return max(0., xu);
+    if (idNow == -1) return max(0., xubar);
+    if (idNow ==  2) return max(0., xd);
+    if (idNow == -2) return max(0., xdbar);
+    if (idNow ==  3) return max(0., xs);
+    if (idNow == -3) return max(0., xsbar);
+    if (idAbs ==  4) return max(0., xc);
+    if (idAbs ==  5) return max(0., xb);
+    if (idAbs == 22) return max(0., xgamma);
+    return 0.;
+
   // Diagonal meson beams: only pi0, Pomeron for now.
   } else if (idBeam == 111 || idBeam == 990) { 
     int idAbs = abs(id);
@@ -109,11 +125,16 @@ double PDF::xfVal(int id, double x, double Q2) {
   if ( (abs(idSav) != abs(id) && idSav != 9) || x != xSav || Q2 != Q2Sav) 
     {idSav = id; xfUpdate(id, x, Q2); xSav = x; Q2Sav = Q2;}
 
-  // Baryon and nondiagonal meson beams: only p, pbar, pi+, pi- for now.
+  // Baryon and nondiagonal meson beams: only p, pbar, n, nbar, pi+, pi-.
   if (idBeamAbs == 2212) { 
     int idNow = (idBeam > 0) ? id : -id;
     if (idNow == 1) return max(0., xdVal);
     if (idNow == 2) return max(0., xuVal);
+    return 0.;
+  } else if (idBeamAbs == 2112) { 
+    int idNow = (idBeam > 0) ? id : -id;
+    if (idNow == 1) return max(0., xuVal);
+    if (idNow == 2) return max(0., xdVal);
     return 0.;
   } else if (idBeamAbs == 211) {
     int idNow = (idBeam > 0) ? id : -id;
@@ -155,6 +176,11 @@ double PDF::xfSea(int id, double x, double Q2) {
       if (idNow == -1) return max(0., xdbar);
       if (idNow ==  2) return max(0., xuSea);
       if (idNow == -2) return max(0., xubar);
+    } else if (idBeamAbs == 2112) { 
+      if (idNow ==  1) return max(0., xuSea);
+      if (idNow == -1) return max(0., xubar);
+      if (idNow ==  2) return max(0., xdSea);
+      if (idNow == -2) return max(0., xdbar);
     } else {
       if (idAbs <=  2) return max(0., xuSea);       
     }
@@ -179,21 +205,53 @@ double PDF::xfSea(int id, double x, double Q2) {
 
 //--------------------------------------------------------------------------
  
-// Definitions of static variables.
+// Define static member of the LHAPDF class.
+  
+map< int, pair<string, int> > LHAPDF::initializedSets;
 
-string LHAPDF::latestSetName = " ";
-int    LHAPDF::latestMember  = -1;
-int    LHAPDF::latestNSet    = 0;
+//--------------------------------------------------------------------------
+
+// Static method to find the nSet number corresponding to a name and member.
+// Returns -1 if no such LHAPDF set has been initialized.
+ 
+int LHAPDF::findNSet(string setName, int member) {
+  for (map<int, pair<string, int> >::const_iterator
+       i = initializedSets.begin(); i != initializedSets.end(); ++i) {
+    int    iSet    = i->first;
+    string iName   = i->second.first;
+    int    iMember = i->second.second;
+    if (iName == setName && iMember == member) return iSet;
+  }
+  return -1;
+}
+
+//--------------------------------------------------------------------------
+ 
+// Static method to return the lowest non-occupied nSet number.
+
+int LHAPDF::freeNSet() {
+  for (int iSet = 1; iSet <= int(initializedSets.size()); ++iSet) {
+    if (initializedSets.find(iSet) == initializedSets.end()) return iSet;
+  }
+  return initializedSets.size() + 1;
+}
 
 //--------------------------------------------------------------------------
 
 // Initialize a parton density function from LHAPDF.
 
 void LHAPDF::init(string setName, int member, Info* infoPtr) {
-
-  // If already initialized then need not do anything.
-  if (setName == latestSetName && member == latestMember 
-    && nSet == latestNSet) return;
+  
+  // Determine whether the pdf set contains the photon or not
+  // (so far only MRST2004qed).
+  if (setName == "MRST2004qed.LHgrid") hasPhoton = true;
+  else                                 hasPhoton = false;
+  
+  // If already initialized then need not do anything further.
+  pair<string, int> initializedNameMember = initializedSets[nSet];
+  string initializedSetName   = initializedNameMember.first;
+  int    initializedMember    = initializedNameMember.second;  
+  if (setName == initializedSetName && member == initializedMember) return;
 
   // Initialize set. If first character is '/' then assume that name 
   // is given with path, else not.
@@ -203,7 +261,7 @@ void LHAPDF::init(string setName, int member, Info* infoPtr) {
   // Check that not dummy library was linked and put nSet negative.
   isSet = (nSet >= 0); 
   if (!isSet) {
-    if (infoPtr > 0) infoPtr->errorMsg("Error from LHAPDF::init: "
+    if (infoPtr != 0) infoPtr->errorMsg("Error from LHAPDF::init: "
       "you try to use LHAPDF but did not link it");  
     else cout << " Error from LHAPDF::init: you try to use LHAPDF "
       << "but did not link it" << endl;  
@@ -213,13 +271,11 @@ void LHAPDF::init(string setName, int member, Info* infoPtr) {
   LHAPDFInterface::initPDFM(nSet, member);
 
   // Do not collect statistics on under/overflow to save time and space.
-   LHAPDFInterface::setPDFparm( "NOSTAT" );
-   LHAPDFInterface::setPDFparm( "LOWKEY" );
-
+  LHAPDFInterface::setPDFparm( "NOSTAT" );
+  LHAPDFInterface::setPDFparm( "LOWKEY" );
+  
   // Save values to avoid unnecessary reinitializations.
-  latestSetName = setName;
-  latestMember  = member;
-  latestNSet    = nSet;
+  if (nSet > 0) initializedSets[nSet] = make_pair(setName, member);
 
 }
 
@@ -242,11 +298,11 @@ void LHAPDF::xfUpdate(int , double x, double Q2) {
   // Let LHAPDF do the evaluation of parton densities.
   double Q = sqrt( max( 0., Q2));
 
-  // Use special call if photon included in proton (so far only MRST2004qed)
-  if (latestSetName == "MRST2004qed.LHgrid" ) {
+  // Use special call if photon included in proton.
+  if (hasPhoton) {
     LHAPDFInterface::evolvePDFPHOTONM( nSet, x, Q, xfArray, xPhoton);
   } 
-  // Else use default LHAPDF call
+  // Else use default LHAPDF call.
   else {
     LHAPDFInterface::evolvePDFM( nSet, x, Q, xfArray);
     xPhoton=0.0;
@@ -281,7 +337,7 @@ void LHAPDF::xfUpdate(int , double x, double Q2) {
 // in parametrized form. Authors: M. Glueck, E. Reya and A. Vogt.
 // Ref: M. Glueck, E. Reya and A. Vogt, Z.Phys. C67 (1995) 433.
 
-void GRV94L::xfUpdate(int id, double x, double Q2) {
+void GRV94L::xfUpdate(int , double x, double Q2) {
  
   // Common expressions. Constrain Q2 for which parametrization is valid.
   double mu2  = 0.23;
@@ -402,9 +458,8 @@ void GRV94L::xfUpdate(int id, double x, double Q2) {
   xdVal = dv;
   xdSea = xdbar;
 
-  // idSav = 9 to indicate that all flavours reset. id change dummy. 
+  // idSav = 9 to indicate that all flavours reset. 
   idSav = 9;
-  id   = 0;
 
 } 
 
@@ -456,7 +511,7 @@ double GRV94L::grvs (double x, double s, double sth, double al, double be,
 // evolved parton distributions is 1E-6 < x < 1, 1.1 GeV < Q < 10 TeV. 
 // In the current implementation, densities are frozen at borders.
 
-void CTEQ5L::xfUpdate(int id, double x, double Q2) {
+void CTEQ5L::xfUpdate(int , double x, double Q2) {
 
   // Constrain x and Q2 to range for which parametrization is valid.
   double Q = sqrt( max( 1., min( 1e8, Q2) ) );
@@ -599,9 +654,8 @@ void CTEQ5L::xfUpdate(int id, double x, double Q2) {
   xdVal = xd - xdbar;
   xdSea = xdbar;
 
-  // idSav = 9 to indicate that all flavours reset. id change is dummy here. 
+  // idSav = 9 to indicate that all flavours reset.
   idSav = 9;
-  id    = 0;
 
 }
  
@@ -694,7 +748,7 @@ void MSTWpdf::init(int iFitIn, string xmlPath, Info* infoPtr) {
   // Open data file.
   ifstream data_file( (xmlPath + fileName).c_str() );
   if (!data_file.good()) {
-    if (infoPtr > 0) infoPtr->errorMsg("Error from MSTWpdf::init: "
+    if (infoPtr != 0) infoPtr->errorMsg("Error from MSTWpdf::init: "
       "did not find parametrization file ", fileName);  
     else cout << " Error from MSTWpdf::init: "
       << "did not find parametrization file " << fileName << endl;  
@@ -730,14 +784,14 @@ void MSTWpdf::init(int iFitIn, string xmlPath, Info* infoPtr) {
 
   // Check that the heavy quark masses are sensible.
   if (mc2 < qq[3] || mc2 > qq[6]) {
-    if (infoPtr > 0) infoPtr->errorMsg("Error from MSTWpdf::init: "
+    if (infoPtr != 0) infoPtr->errorMsg("Error from MSTWpdf::init: "
       "invalid mCharm");  
     else cout << " Error from MSTWpdf::init: invalid mCharm" << endl;  
     isSet = false;
     return;
   }
   if (mb2 < qq[13] || mb2 > qq[16]) {
-    if (infoPtr > 0) infoPtr->errorMsg("Error from MSTWpdf::init: "
+    if (infoPtr != 0) infoPtr->errorMsg("Error from MSTWpdf::init: "
       "invalid mBottom");  
     else cout << " Error from MSTWpdf::init: invalid mBottom" << endl;  
     isSet = false;
@@ -748,7 +802,7 @@ void MSTWpdf::init(int iFitIn, string xmlPath, Info* infoPtr) {
   // with future grids where, for example, a photon distribution
   // might be provided (cf. the MRST2004QED PDFs).
   if (nExtraFlavours < 0 || nExtraFlavours > 1) {
-    if (infoPtr > 0) infoPtr->errorMsg("Error from MSTWpdf::init: "
+    if (infoPtr != 0) infoPtr->errorMsg("Error from MSTWpdf::init: "
       "invalid nExtraFlavours");  
     else cout << " Error from MSTWpdf::init: invalid nExtraFlavours" << endl;  
     isSet = false;
@@ -773,7 +827,7 @@ void MSTWpdf::init(int iFitIn, string xmlPath, Info* infoPtr) {
       else
 	f[12][n][m] = 0.; // photon
       if (data_file.eof()) {
-        if (infoPtr > 0) infoPtr->errorMsg("Error from MSTWpdf::init: "
+        if (infoPtr != 0) infoPtr->errorMsg("Error from MSTWpdf::init: "
           "failed to read in data file");  
         else cout << " Error from MSTWpdf::init: failed to read in data file" 
           << endl;  
@@ -785,7 +839,7 @@ void MSTWpdf::init(int iFitIn, string xmlPath, Info* infoPtr) {
   // Check that ALL the file contents have been read in.
   data_file >> dtemp;
   if (!data_file.eof()) {
-    if (infoPtr > 0) infoPtr->errorMsg("Error from MSTWpdf::init: "
+    if (infoPtr != 0) infoPtr->errorMsg("Error from MSTWpdf::init: "
       "failed to read in data file");  
     else cout << " Error from MSTWpdf::init: failed to read in data file" 
       << endl;  
@@ -947,7 +1001,7 @@ void MSTWpdf::init(int iFitIn, string xmlPath, Info* infoPtr) {
 
 // Update PDF values.
 
-void MSTWpdf::xfUpdate(int id, double x, double Q2) {
+void MSTWpdf::xfUpdate(int , double x, double Q2) {
 
   // Update using MSTW routine.
   double q    = sqrtpos(Q2); 
@@ -992,9 +1046,8 @@ void MSTWpdf::xfUpdate(int id, double x, double Q2) {
   xdVal  = dnv;
   xdSea  = xdbar;
 
-  // idSav = 9 to indicate that all flavours reset. id change dummy. 
+  // idSav = 9 to indicate that all flavours reset.
   idSav  = 9;
-  id     = 0;
 
 } 
 
@@ -1284,7 +1337,7 @@ void CTEQ6pdf::init(int iFitIn, string xmlPath, Info* infoPtr) {
   // Open data file.
   ifstream pdfgrid( (xmlPath + fileName).c_str() );
   if (!pdfgrid.good()) {
-    if (infoPtr > 0) infoPtr->errorMsg("Error from CTEQ6pdf::init: "
+    if (infoPtr != 0) infoPtr->errorMsg("Error from CTEQ6pdf::init: "
       "did not find parametrization file ", fileName);  
     else cout << " Error from CTEQ6pdf::init: "
       << "did not find parametrization file " << fileName << endl;  
@@ -1405,7 +1458,7 @@ void CTEQ6pdf::init(int iFitIn, string xmlPath, Info* infoPtr) {
 
 // Update PDF values.
 
-void CTEQ6pdf::xfUpdate(int id, double x, double Q2) {
+void CTEQ6pdf::xfUpdate(int , double x, double Q2) {
 
   // Update using CTEQ6 routine, within allowed (x, q) range.
   double xEps = max( xMinEps, x);
@@ -1441,9 +1494,8 @@ void CTEQ6pdf::xfUpdate(int id, double x, double Q2) {
   xdVal  = dnv;
   xdSea  = dsea;
 
-  // idSav = 9 to indicate that all flavours reset. id change dummy. 
+  // idSav = 9 to indicate that all flavours reset.  
   idSav  = 9;
-  id     = 0;
 
 } 
 
@@ -1668,7 +1720,7 @@ const double ProtonPoint::C       = 0.028;
 
 // Gives a generic Q2-independent equivalent photon spectrum.
 
-void ProtonPoint::xfUpdate(int id, double x, double /*Q2*/ ) {
+void ProtonPoint::xfUpdate(int , double x, double /*Q2*/ ) {
 
   // Photon spectrum
   double tmpQ2Min = 0.88 * pow2(x);
@@ -1677,7 +1729,8 @@ void ProtonPoint::xfUpdate(int id, double x, double /*Q2*/ ) {
 
   double fgm = 0;
   if (phiMax < phiMin && m_infoPtr != 0) {
-    m_infoPtr->errorMsg("Error from ProtonPoint::xfUpdate: phiMax - phiMin < 0!");
+    m_infoPtr->errorMsg("Error from ProtonPoint::xfUpdate: "
+      "phiMax - phiMin < 0!");
   } else {
     // Corresponds to: x*f(x)
     fgm = (ALPHAEM / M_PI) * (1 - x) * (phiMax - phiMin);
@@ -1701,9 +1754,8 @@ void ProtonPoint::xfUpdate(int id, double x, double /*Q2*/ ) {
   xdVal = 0.;
   xdSea = 0;
 
-  // idSav = 9 to indicate that all flavours reset. id change dummy. 
+  // idSav = 9 to indicate that all flavours reset.
   idSav = 9;
-  id    = 0;
 
 }
 
@@ -1737,7 +1789,7 @@ double ProtonPoint::phiFunc(double x, double Q) {
 // Ref: M. Glueck, E. Reya and A. Vogt, Z. Phys. C53 (1992) 651.
 // Allowed variable range: 0.25 GeV^2 < Q^2 < 10^8 GeV^2 and 10^-5 < x < 1.
 
-void GRVpiL::xfUpdate(int id, double x, double Q2) {
+void GRVpiL::xfUpdate(int , double x, double Q2) {
  
   // Common expressions. Constrain Q2 for which parametrization is valid.
   double mu2  = 0.25;
@@ -1791,9 +1843,8 @@ void GRVpiL::xfUpdate(int id, double x, double Q2) {
   xdVal = uv;
   xdSea = ub;
 
-  // idSav = 9 to indicate that all flavours reset. id change dummy. 
+  // idSav = 9 to indicate that all flavours reset. 
   idSav = 9;
-  id   = 0;
 
 } 
  
@@ -1818,7 +1869,7 @@ void PomFix::init() {
 
 // Gives a generic Q2-independent Pomeron PDF.
 
-void PomFix::xfUpdate(int id, double x, double) {
+void PomFix::xfUpdate(int , double x, double) {
 
   // Gluon and quark distributions.
   double gl = normGluon * pow(x, PomGluonA) * pow( (1. - x), PomGluonB); 
@@ -1841,9 +1892,8 @@ void PomFix::xfUpdate(int id, double x, double) {
   xdVal = 0.;
   xdSea = xd;
 
-  // idSav = 9 to indicate that all flavours reset. id change dummy. 
+  // idSav = 9 to indicate that all flavours reset.
   idSav = 9;
-  id    = 0;
 
 }
  
@@ -1862,7 +1912,7 @@ void PomH1FitAB::init( int iFit, string xmlPath, Info* infoPtr) {
   if (iFit == 2) dataFile = "pomH1FitB.data";
   ifstream is( (xmlPath + dataFile).c_str() );
   if (!is.good()) {
-    if (infoPtr > 0) infoPtr->errorMsg("Error from PomH1FitAB::init: "
+    if (infoPtr != 0) infoPtr->errorMsg("Error from PomH1FitAB::init: "
       "the H1 Pomeron parametrization file was not found");  
     else cout << " Error from PomH1FitAB::init: "
       << "the H1 Pomeron parametrization file was not found" << endl;  
@@ -1892,7 +1942,7 @@ void PomH1FitAB::init( int iFit, string xmlPath, Info* infoPtr) {
 
   // Check for errors during read-in of file.
   if (!is) {
-    if (infoPtr > 0) infoPtr->errorMsg("Error from PomH1FitAB::init: "
+    if (infoPtr != 0) infoPtr->errorMsg("Error from PomH1FitAB::init: "
       "the H1 Pomeron parametrization files could not be read");  
     else cout << " Error from PomH1FitAB::init: "
       << "the H1 Pomeron parametrization files could not be read" << endl;  
@@ -1907,7 +1957,7 @@ void PomH1FitAB::init( int iFit, string xmlPath, Info* infoPtr) {
 
 //--------------------------------------------------------------------------
 
-void PomH1FitAB::xfUpdate(int id, double x, double Q2) {
+void PomH1FitAB::xfUpdate(int , double x, double Q2) {
 
   // Retrict input to validity range.
   double xt  = min( xupp, max( xlow, x) );
@@ -1950,9 +2000,8 @@ void PomH1FitAB::xfUpdate(int id, double x, double Q2) {
   xdVal = 0.;
   xdSea = xu;
 
-  // idSav = 9 to indicate that all flavours reset. id change dummy. 
+  // idSav = 9 to indicate that all flavours reset. 
   idSav = 9;
-  id    = 0;
 
 } 
  
@@ -1970,7 +2019,7 @@ void PomH1Jets::init( string xmlPath, Info* infoPtr) {
   ifstream isq( (xmlPath + "pomH1JetsSinglet.data").c_str() );
   ifstream isc( (xmlPath + "pomH1JetsCharm.data").c_str() );
   if (!isg.good() || !isq.good() || !isc.good()) {
-    if (infoPtr > 0) infoPtr->errorMsg("Error from PomH1Jets::init: "
+    if (infoPtr != 0) infoPtr->errorMsg("Error from PomH1Jets::init: "
       "the H1 Pomeron parametrization files were not found");  
     else cout << " Error from PomH1Jets::init: "
       << "the H1 Pomeron parametrization files were not found" << endl;  
@@ -2017,7 +2066,7 @@ void PomH1Jets::init( string xmlPath, Info* infoPtr) {
 
   // Check for errors during read-in of files.
   if (!isg || !isq || !isc) {
-    if (infoPtr > 0) infoPtr->errorMsg("Error from PomH1Jets::init: "
+    if (infoPtr != 0) infoPtr->errorMsg("Error from PomH1Jets::init: "
       "the H1 Pomeron parametrization files could not be read");  
     else cout << " Error from PomH1Jets::init: "
       << "the H1 Pomeron parametrization files could not be read" << endl;  
@@ -2032,7 +2081,7 @@ void PomH1Jets::init( string xmlPath, Info* infoPtr) {
 
 //--------------------------------------------------------------------------
 
-void PomH1Jets::xfUpdate(int id, double x, double Q2) {
+void PomH1Jets::xfUpdate(int , double x, double Q2) {
 
   // Find position in x array.
   double xLog = log(x);
@@ -2097,9 +2146,8 @@ void PomH1Jets::xfUpdate(int id, double x, double Q2) {
   xdVal = 0.;
   xdSea = xd;
 
-  // idSav = 9 to indicate that all flavours reset. id change dummy. 
+  // idSav = 9 to indicate that all flavours reset. 
   idSav = 9;
-  id    = 0;
 
 } 
  
@@ -2112,7 +2160,6 @@ const double Lepton::ALPHAEM = 0.00729735;
 const double Lepton::ME      = 0.0005109989;
 const double Lepton::MMU     = 0.10566;
 const double Lepton::MTAU    = 1.77699;
-
  
 void Lepton::xfUpdate(int id, double x, double Q2) {
  
@@ -2146,9 +2193,8 @@ void Lepton::xfUpdate(int id, double x, double Q2) {
   // Photon inside electron (one possible scheme - primitive).
   xgamma = (0.5 * ALPHAEM / M_PI) * Q2Log * (1. + pow2(1. - x));
 
-  // idSav = 9 to indicate that all flavours reset. id change is dummy here. 
+  // idSav = 9 to indicate that all flavours reset. 
   idSav = 9;
-  id    = 0;
 
 }
  

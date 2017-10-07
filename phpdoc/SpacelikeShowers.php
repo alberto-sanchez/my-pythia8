@@ -51,7 +51,7 @@ would be of interest for a tuning exercise, however.
 
 The maximum <i>pT</i> to be allowed in the shower evolution is
 related to the nature of the hard process itself. It involves a
-delicate balance between not doublecounting and not leaving any
+delicate balance between not double-counting and not leaving any
 gaps in the coverage. The best procedure may depend on information 
 only the user has: how the events were generated and mixed (e.g. with 
 Les Houches Accord external input), and how they are intended to be 
@@ -62,32 +62,53 @@ behaviour.
 Way in which the maximum shower evolution scale is set to match the 
 scale of the hard process itself.
 <br/>
-<input type="radio" name="1" value="0" checked="checked"><strong>0 </strong>: <b>(i)</b> if the final state of the hard process  (not counting subsequent resonance decays) contains at least one quark  (<ei>u, d, s, c ,b</ei>), gluon or photon then <ei>pT_max</ei>  is chosen to be the factorization scale for internal processes  and the <code>scale</code> value for Les Houches input;  <b>(ii)</b> if not, emissions are allowed to go all the way up to  the kinematical limit.  The reasoning is that in the former set of processes the ISR emission of yet another quark, gluon or photon could lead to doublecounting, while no such danger exists in the latter case. <br/>
-<input type="radio" name="1" value="1"><strong>1 </strong>: always use the factorization scale for an internal process and the <code>scale</code> value for Les Houches input,  i.e. the lower value. This should avoid doublecounting, but may leave out some emissions that ought to have been simulated. (Also known as wimpy showers.) <br/>
-<input type="radio" name="1" value="2"><strong>2 </strong>: always allow emissions up to the kinematical limit. This will simulate all possible event topologies, but may lead to doublecounting.  (Also known as power showers.) <br/>
-<br/><b>Note 1:</b> These options only apply to the hard interaction.
-Emissions off subsequent multiple interactions are always constrainted
-to be below the factorization scale of the process itself.  
-<br/><b>Note 2:</b> Some processes contain matrix-element matching
+<input type="radio" name="1" value="0" checked="checked"><strong>0 </strong>: <b>(i)</b> if the final state of the hard process  (not counting subsequent resonance decays) contains at least one quark  (<ei>u, d, s, c ,b</ei>), gluon or photon then <ei>pT_max</ei>  is chosen to be the factorization scale for internal processes  and the <code>scale</code> value for Les Houches input;  <b>(ii)</b> if not, emissions are allowed to go all the way up to  the kinematical limit.  The reasoning is that in the former set of processes the ISR emission of yet another quark, gluon or photon could lead to double-counting, while no such danger exists in the latter case. <br/>
+<input type="radio" name="1" value="1"><strong>1 </strong>: always use the factorization scale for an internal process and the <code>scale</code> value for Les Houches input,  i.e. the lower value. This should avoid double-counting, but may leave out some emissions that ought to have been simulated. (Also known as wimpy showers.) <br/>
+<input type="radio" name="1" value="2"><strong>2 </strong>: always allow emissions up to the kinematical limit. This will simulate all possible event topologies, but may lead to double-counting.  (Also known as power showers.) <br/>
+<br/><b>Note 1:</b> Some processes contain matrix-element matching
 to the first emission; this is the case notably for single 
 <ei>gamma^*/Z^0, W^+-</ei> and <ei>H^0</ei> production. Then default
 and option 2 give the correct result, while option 1 should never
 be used. 
+<br/><b>Note 2:</b> as enumerated in the text, these options take effect 
+both for internal and external processes. Whether a particular option
+makes sense depends on the context. For instance, if events for the same
+basic process to different orders are to be matched, then option 1 would
+be a reasonable first guess. But in more sophisticated descriptions 
+option 2 could be combined with <code>UserHooks</code> vetoes on emissions 
+that would lead to double-counting, using more flexible phase space 
+boundaries. Option 0, finally, may be most realistic when only Born-level 
+processes are involved, possibly in combination with a nonzero  
+<code>SpaceShower:pTdampMatch</code>. The rules used for avoiding 
+double-counting are not foolproof, however. As an example, for the 
+<ei>t</ei>-channel process <ei>gamma gamma -> e^+ e^-</ei> its <ei>pT</ei> 
+scale is the plausible upper shower limit, with only dampened emissions 
+above it. But the initial state is not checked and, had only incoming 
+quarks and gluons been taken into account, only the <ei>s</ei>-channel 
+process <ei>q qbar -> gamma^*/Z^0 -> e^+ e^-</ei> would have been possible,
+where indeed the whole phase space should be populated. So this is 
+erroneously used, giving too much emissions. 
+<br/><b>Note 3:</b> These options only apply to the hard interaction.
+If a "second hard" process is present, the two are analyzed and 
+set separately for the default 0 option, while both are affected
+the same way for non-default options 1 and 2. 
+Emissions off subsequent multiparton interactions are always constrained
+to be below the factorization scale of each process itself.  
 
 <br/><br/><table><tr><td><strong>SpaceShower:pTmaxFudge </td><td></td><td> <input type="text" name="2" value="1.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>1.0</strong></code>; <code>minimum = 0.25</code>; <code>maximum = 2.0</code>)</td></tr></table>
 In cases where the above <code>pTmaxMatch</code> rules would imply
 that <i>pT_max = pT_factorization</i>, <code>pTmaxFudge</code> 
 introduces a multiplicative factor <i>f</i> such that instead
 <i>pT_max = f * pT_factorization</i>. Only applies to the hardest
-interaction in an event, cf. below. It is strongly suggested that 
-<i>f = 1</i>, but variations around this default can be useful to 
-test this assumption. 
+interaction in an event, and a "second hard" if there is such a one, 
+cf. below. It is strongly suggested that <i>f = 1</i>, but variations 
+around this default can be useful to test this assumption. 
   
 
-<br/><br/><table><tr><td><strong>SpaceShower:pTmaxFudgeMI </td><td></td><td> <input type="text" name="3" value="1.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>1.0</strong></code>; <code>minimum = 0.25</code>; <code>maximum = 2.0</code>)</td></tr></table>
+<br/><br/><table><tr><td><strong>SpaceShower:pTmaxFudgeMPI </td><td></td><td> <input type="text" name="3" value="1.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>1.0</strong></code>; <code>minimum = 0.25</code>; <code>maximum = 2.0</code>)</td></tr></table>
 A multiplicative factor <i>f</i> such that 
 <i>pT_max = f * pT_factorization</i>, as above, but here for the
-non-hardest interactions (when multiple interactions are allowed).
+non-hardest interactions (when multiparton interactions are allowed).
   
 
 <br/><br/><table><tr><td><strong>SpaceShower:pTdampMatch  </td><td>  &nbsp;&nbsp;(<code>default = <strong>0</strong></code>; <code>minimum = 0</code>; <code>maximum = 2</code>)</td></tr></table>
@@ -107,7 +128,8 @@ higher-order calculations.
 <input type="radio" name="4" value="1"><strong>1 </strong>: emissions go up to the kinematical limit,   but dampened by a factor <ei>k^2 Q^2_fac/(pT^2 + k^2 Q^2_fac)</ei>,  where <ei>Q_fac</ei> is the factorization scale and <ei>k</ei> is a  multiplicative fudge factor stored in <code>pTdampFudge</code> below. <br/>
 <input type="radio" name="4" value="2"><strong>2 </strong>: emissions go up to the kinematical limit,  but dampened by a factor <ei>k^2 Q^2_ren/(pT^2 + k^2 Q^2_ren)</ei>,  where <ei>Q_ren</ei> is the renormalization scale and <ei>k</ei> is a  multiplicative fudge factor stored in <code>pTdampFudge</code> below.  <br/>
 <br/><b>Note:</b> These options only apply to the hard interaction.
-Emissions off subsequent multiple interactions are always constrainted
+Specifically, a "second hard" interaction would not be affected.
+Emissions off subsequent multiparton interactions are always constrained
 to be below the factorization scale of the process itself.  
 
 <br/><br/><table><tr><td><strong>SpaceShower:pTdampFudge </td><td></td><td> <input type="text" name="5" value="1.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>1.0</strong></code>; <code>minimum = 0.25</code>; <code>maximum = 4.0</code>)</td></tr></table>
@@ -148,25 +170,46 @@ The running of <ei>alpha_em</ei>.
 <input type="radio" name="8" value="-1"><strong>-1 </strong>: zeroth order, i.e. <ei>alpha_em</ei> is kept  fixed, but at <code>StandardModel:alphaEMmZ</code>, i.e. its value at the <ei>Z^0</ei> mass. <br/>
 
 <p/>
+The natural scale for couplings and PDFs is <i>pT^2</i>. To explore 
+uncertainties it is possibly to vary around this value, however, in 
+analogy with what can be done for 
+<?php $filepath = $_GET["filepath"];
+echo "<a href='CouplingsAndScales.php?filepath=".$filepath."' target='page'>";?>hard processes</a>.
+
+<br/><br/><table><tr><td><strong>SpaceShower:renormMultFac </td><td></td><td> <input type="text" name="9" value="1." size="20"/>  &nbsp;&nbsp;(<code>default = <strong>1.</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 10.</code>)</td></tr></table>
+The default <i>pT^2</i> renormalization scale is multiplied by 
+this prefactor. For QCD this is equivalent to a change of 
+<i>Lambda^2</i> in the opposite direction, i.e. to a change of 
+<i>alpha_strong(M_Z^2)</i> (except that flavour thresholds 
+remain at fixed scales). Below, when <i>pT^2 + pT_0^2</i> is used
+as scale, it is this whole expression that is multiplied by the prefactor.
+  
+
+<br/><br/><table><tr><td><strong>SpaceShower:factorMultFac </td><td></td><td> <input type="text" name="10" value="1." size="20"/>  &nbsp;&nbsp;(<code>default = <strong>1.</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 10.</code>)</td></tr></table>
+The default <i>pT^2</i> factorization scale is multiplied by 
+this prefactor. 
+  
+
+<p/>
 There are two complementary ways of regularizing the small-<i>pT</i> 
 divergence, a sharp cutoff and a smooth dampening. These can be 
 combined as desired but it makes sense to coordinate with how the 
-same issue is handled in multiple interactions.
+same issue is handled in multiparton interactions.
 
-<br/><br/><strong>SpaceShower:samePTasMI</strong>  <input type="radio" name="9" value="on"><strong>On</strong>
-<input type="radio" name="9" value="off" checked="checked"><strong>Off</strong>
+<br/><br/><strong>SpaceShower:samePTasMPI</strong>  <input type="radio" name="11" value="on"><strong>On</strong>
+<input type="radio" name="11" value="off" checked="checked"><strong>Off</strong>
  &nbsp;&nbsp;(<code>default = <strong>off</strong></code>)<br/>
 Regularize the <i>pT -> 0</i> divergence using the same sharp cutoff 
-and smooth dampening parameters as used to describe multiple interactions.
-That is, the <code>MultipleInteractions:pT0Ref</code>, 
-<code>MultipleInteractions:ecmRef</code>, 
-<code>MultipleInteractions:ecmPow</code> and 
-<code>MultipleInteractions:pTmin</code> parameters are used to regularize 
+and smooth dampening parameters as used to describe multiparton interactions.
+That is, the <code>MultipartonInteractions:pT0Ref</code>, 
+<code>MultipartonInteractions:ecmRef</code>, 
+<code>MultipartonInteractions:ecmPow</code> and 
+<code>MultipartonInteractions:pTmin</code> parameters are used to regularize 
 all ISR QCD radiation, rather than the corresponding parameters below. 
 This is a sensible physics ansatz, based on the assumption that colour 
-screening effects influence both MI and ISR in the same way. Photon 
+screening effects influence both MPI and ISR in the same way. Photon 
 radiation is regularized separately in either case.
-<br/><b>Warning:</b> if a large <code>pT0</code> is picked for multiple 
+<br/><b>Warning:</b> if a large <code>pT0</code> is picked for multiparton 
 interactions, such that the integrated interaction cross section is 
 below the nondiffractive inelastic one, this <code>pT0</code> will 
 automatically be scaled down to cope. Information on such a rescaling 
@@ -182,7 +225,7 @@ The actual <code>pT0</code> parameter used at a given CM energy scale,
 where <i>pT0Ref</i>, <i>ecmRef</i> and <i>ecmPow</i> are the 
 three parameters below.
 
-<br/><br/><table><tr><td><strong>SpaceShower:pT0Ref </td><td></td><td> <input type="text" name="10" value="2.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>2.0</strong></code>; <code>minimum = 0.5</code>; <code>maximum = 10.0</code>)</td></tr></table>
+<br/><br/><table><tr><td><strong>SpaceShower:pT0Ref </td><td></td><td> <input type="text" name="12" value="2.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>2.0</strong></code>; <code>minimum = 0.5</code>; <code>maximum = 10.0</code>)</td></tr></table>
 Regularization of the divergence of the QCD emission probability for 
 <i>pT -> 0</i> is obtained by a factor <i>pT^2 / (pT0^2 + pT^2)</i>, 
 and by using an <i>alpha_s(pT0^2 + pT^2)</i>. An energy dependence 
@@ -191,15 +234,15 @@ so that <i>pT0Ref</i> is the <i>pT0</i> value for the reference
 cm energy, <i>pT0Ref = pT0(ecmRef)</i>.   
   
 
-<br/><br/><table><tr><td><strong>SpaceShower:ecmRef </td><td></td><td> <input type="text" name="11" value="1800.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>1800.0</strong></code>; <code>minimum = 1.</code>)</td></tr></table>
+<br/><br/><table><tr><td><strong>SpaceShower:ecmRef </td><td></td><td> <input type="text" name="13" value="1800.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>1800.0</strong></code>; <code>minimum = 1.</code>)</td></tr></table>
 The <i>ecmRef</i> reference energy scale introduced above.
   
 
-<br/><br/><table><tr><td><strong>SpaceShower:ecmPow </td><td></td><td> <input type="text" name="12" value="0.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.0</strong></code>; <code>minimum = 0.</code>; <code>maximum = 0.5</code>)</td></tr></table>
+<br/><br/><table><tr><td><strong>SpaceShower:ecmPow </td><td></td><td> <input type="text" name="14" value="0.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.0</strong></code>; <code>minimum = 0.</code>; <code>maximum = 0.5</code>)</td></tr></table>
 The <i>ecmPow</i> energy rescaling pace introduced above.
   
 
-<br/><br/><table><tr><td><strong>SpaceShower:pTmin </td><td></td><td> <input type="text" name="13" value="0.2" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.2</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 10.0</code>)</td></tr></table>
+<br/><br/><table><tr><td><strong>SpaceShower:pTmin </td><td></td><td> <input type="text" name="15" value="0.2" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.2</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 10.0</code>)</td></tr></table>
 Lower cutoff in <i>pT</i>, below which no further ISR branchings 
 are allowed. Normally the <i>pT0</i> above would be used to 
 provide the main regularization of the branching rate for 
@@ -210,18 +253,18 @@ or to combine them in intermediate approaches. Currently <i>pTmin</i>
 is taken to be energy-independent.  
   
 
-<br/><br/><table><tr><td><strong>SpaceShower:pTminChgQ </td><td></td><td> <input type="text" name="14" value="0.5" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.5</strong></code>; <code>minimum = 0.01</code>)</td></tr></table>
+<br/><br/><table><tr><td><strong>SpaceShower:pTminChgQ </td><td></td><td> <input type="text" name="16" value="0.5" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.5</strong></code>; <code>minimum = 0.01</code>)</td></tr></table>
 Parton shower cut-off <i>pT</i> for photon coupling to a coloured 
 particle.
   
 
-<br/><br/><table><tr><td><strong>SpaceShower:pTminChgL </td><td></td><td> <input type="text" name="15" value="0.0005" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.0005</strong></code>; <code>minimum = 0.0001</code>)</td></tr></table>
+<br/><br/><table><tr><td><strong>SpaceShower:pTminChgL </td><td></td><td> <input type="text" name="17" value="0.0005" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.0005</strong></code>; <code>minimum = 0.0001</code>)</td></tr></table>
 Parton shower cut-off mass for pure QED branchings. 
 Assumed smaller than (or equal to) <i>pTminChgQ</i>.
   
 
-<br/><br/><strong>SpaceShower:rapidityOrder</strong>  <input type="radio" name="16" value="on"><strong>On</strong>
-<input type="radio" name="16" value="off" checked="checked"><strong>Off</strong>
+<br/><br/><strong>SpaceShower:rapidityOrder</strong>  <input type="radio" name="18" value="on"><strong>On</strong>
+<input type="radio" name="18" value="off" checked="checked"><strong>Off</strong>
  &nbsp;&nbsp;(<code>default = <strong>off</strong></code>)<br/>
 Force emissions, after the first,  to be ordered in rapidity,
 i.e. in terms of decreasing angles in a backwards-evolution sense. 
@@ -238,20 +281,20 @@ cross-checks.
 There are three flags you can use to switch on or off selected
 branchings in the shower: 
 
-<br/><br/><strong>SpaceShower:QCDshower</strong>  <input type="radio" name="17" value="on" checked="checked"><strong>On</strong>
-<input type="radio" name="17" value="off"><strong>Off</strong>
+<br/><br/><strong>SpaceShower:QCDshower</strong>  <input type="radio" name="19" value="on" checked="checked"><strong>On</strong>
+<input type="radio" name="19" value="off"><strong>Off</strong>
  &nbsp;&nbsp;(<code>default = <strong>on</strong></code>)<br/>
 Allow a QCD shower; on/off = true/false.
   
 
-<br/><br/><strong>SpaceShower:QEDshowerByQ</strong>  <input type="radio" name="18" value="on" checked="checked"><strong>On</strong>
-<input type="radio" name="18" value="off"><strong>Off</strong>
+<br/><br/><strong>SpaceShower:QEDshowerByQ</strong>  <input type="radio" name="20" value="on" checked="checked"><strong>On</strong>
+<input type="radio" name="20" value="off"><strong>Off</strong>
  &nbsp;&nbsp;(<code>default = <strong>on</strong></code>)<br/>
 Allow quarks to radiate photons; on/off = true/false.
   
 
-<br/><br/><strong>SpaceShower:QEDshowerByL</strong>  <input type="radio" name="19" value="on" checked="checked"><strong>On</strong>
-<input type="radio" name="19" value="off"><strong>Off</strong>
+<br/><br/><strong>SpaceShower:QEDshowerByL</strong>  <input type="radio" name="21" value="on" checked="checked"><strong>On</strong>
+<input type="radio" name="21" value="off"><strong>Off</strong>
  &nbsp;&nbsp;(<code>default = <strong>on</strong></code>)<br/>
 Allow leptons to radiate photons; on/off = true/false.
   
@@ -259,14 +302,14 @@ Allow leptons to radiate photons; on/off = true/false.
 <p/>
 There are some further possibilities to modify the shower:
 
-<br/><br/><strong>SpaceShower:MEcorrections</strong>  <input type="radio" name="20" value="on" checked="checked"><strong>On</strong>
-<input type="radio" name="20" value="off"><strong>Off</strong>
+<br/><br/><strong>SpaceShower:MEcorrections</strong>  <input type="radio" name="22" value="on" checked="checked"><strong>On</strong>
+<input type="radio" name="22" value="off"><strong>Off</strong>
  &nbsp;&nbsp;(<code>default = <strong>on</strong></code>)<br/>
 Use of matrix element corrections; on/off = true/false.
   
 
-<br/><br/><strong>SpaceShower:MEafterFirst</strong>  <input type="radio" name="21" value="on" checked="checked"><strong>On</strong>
-<input type="radio" name="21" value="off"><strong>Off</strong>
+<br/><br/><strong>SpaceShower:MEafterFirst</strong>  <input type="radio" name="23" value="on" checked="checked"><strong>On</strong>
+<input type="radio" name="23" value="off"><strong>Off</strong>
  &nbsp;&nbsp;(<code>default = <strong>on</strong></code>)<br/>
 Use of matrix element corrections also after the first emission,
 for dipole ends of the same system that did not yet radiate.
@@ -274,24 +317,24 @@ Only has a meaning if <code>MEcorrections</code> above is
 switched on. 
   
 
-<br/><br/><strong>SpaceShower:phiPolAsym</strong>  <input type="radio" name="22" value="on" checked="checked"><strong>On</strong>
-<input type="radio" name="22" value="off"><strong>Off</strong>
+<br/><br/><strong>SpaceShower:phiPolAsym</strong>  <input type="radio" name="24" value="on" checked="checked"><strong>On</strong>
+<input type="radio" name="24" value="off"><strong>Off</strong>
  &nbsp;&nbsp;(<code>default = <strong>on</strong></code>)<br/>
 Azimuthal asymmetry induced by gluon polarization; on/off = true/false.
   
 
-<br/><br/><strong>SpaceShower:phiIntAsym</strong>  <input type="radio" name="23" value="on" checked="checked"><strong>On</strong>
-<input type="radio" name="23" value="off"><strong>Off</strong>
+<br/><br/><strong>SpaceShower:phiIntAsym</strong>  <input type="radio" name="25" value="on" checked="checked"><strong>On</strong>
+<input type="radio" name="25" value="off"><strong>Off</strong>
  &nbsp;&nbsp;(<code>default = <strong>on</strong></code>)<br/>
 Azimuthal asymmetry induced by interference; on/off = true/false.
   
 
-<br/><br/><table><tr><td><strong>SpaceShower:strengthIntAsym </td><td></td><td> <input type="text" name="24" value="0.7" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.7</strong></code>; <code>minimum = 0.</code>; <code>maximum = 0.9</code>)</td></tr></table>
+<br/><br/><table><tr><td><strong>SpaceShower:strengthIntAsym </td><td></td><td> <input type="text" name="26" value="0.7" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.7</strong></code>; <code>minimum = 0.</code>; <code>maximum = 0.9</code>)</td></tr></table>
 Size of asymmetry induced by interference. Natural value of order 0.5; 
 expression would blow up for a value of 1.
   
 
-<br/><br/><table><tr><td><strong>SpaceShower:nQuarkIn  </td><td></td><td> <input type="text" name="25" value="5" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>5</strong></code>; <code>minimum = 0</code>; <code>maximum = 5</code>)</td></tr></table>
+<br/><br/><table><tr><td><strong>SpaceShower:nQuarkIn  </td><td></td><td> <input type="text" name="27" value="5" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>5</strong></code>; <code>minimum = 0</code>; <code>maximum = 5</code>)</td></tr></table>
 Number of allowed quark flavours in <i>g -> q qbar</i> branchings,
 when kinematically allowed, and thereby also in incoming beams. 
 Changing it to 4 would forbid <i>g -> b bbar</i>, etc.
@@ -321,7 +364,7 @@ If so, then
 so use this to select the <i>pT2</i> of the <i>g -> Q Qbar</i> 
 branching. In the old formalism the same kind of behaviour should 
 be obtained, but by a cancellation of a <i>1/f_Q</i> that diverges 
-at the theshold and a Sudakov that vanishes.
+at the threshold and a Sudakov that vanishes.
 <br/>
 The strategy therefore is that, once <i>pT2 &lt; f * mQ2</i>, with 
 <i>f</i> a parameter of the order of 2, a <i>pT2</i> is chosen 
@@ -374,7 +417,7 @@ fwrite($handle,$data);
 }
 if($_POST["3"] != "1.0")
 {
-$data = "SpaceShower:pTmaxFudgeMI = ".$_POST["3"]."\n";
+$data = "SpaceShower:pTmaxFudgeMPI = ".$_POST["3"]."\n";
 fwrite($handle,$data);
 }
 if($_POST["4"] != "0")
@@ -402,89 +445,99 @@ if($_POST["8"] != "1")
 $data = "SpaceShower:alphaEMorder = ".$_POST["8"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["9"] != "off")
+if($_POST["9"] != "1.")
 {
-$data = "SpaceShower:samePTasMI = ".$_POST["9"]."\n";
+$data = "SpaceShower:renormMultFac = ".$_POST["9"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["10"] != "2.0")
+if($_POST["10"] != "1.")
 {
-$data = "SpaceShower:pT0Ref = ".$_POST["10"]."\n";
+$data = "SpaceShower:factorMultFac = ".$_POST["10"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["11"] != "1800.0")
+if($_POST["11"] != "off")
 {
-$data = "SpaceShower:ecmRef = ".$_POST["11"]."\n";
+$data = "SpaceShower:samePTasMPI = ".$_POST["11"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["12"] != "0.0")
+if($_POST["12"] != "2.0")
 {
-$data = "SpaceShower:ecmPow = ".$_POST["12"]."\n";
+$data = "SpaceShower:pT0Ref = ".$_POST["12"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["13"] != "0.2")
+if($_POST["13"] != "1800.0")
 {
-$data = "SpaceShower:pTmin = ".$_POST["13"]."\n";
+$data = "SpaceShower:ecmRef = ".$_POST["13"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["14"] != "0.5")
+if($_POST["14"] != "0.0")
 {
-$data = "SpaceShower:pTminChgQ = ".$_POST["14"]."\n";
+$data = "SpaceShower:ecmPow = ".$_POST["14"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["15"] != "0.0005")
+if($_POST["15"] != "0.2")
 {
-$data = "SpaceShower:pTminChgL = ".$_POST["15"]."\n";
+$data = "SpaceShower:pTmin = ".$_POST["15"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["16"] != "off")
+if($_POST["16"] != "0.5")
 {
-$data = "SpaceShower:rapidityOrder = ".$_POST["16"]."\n";
+$data = "SpaceShower:pTminChgQ = ".$_POST["16"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["17"] != "on")
+if($_POST["17"] != "0.0005")
 {
-$data = "SpaceShower:QCDshower = ".$_POST["17"]."\n";
+$data = "SpaceShower:pTminChgL = ".$_POST["17"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["18"] != "on")
+if($_POST["18"] != "off")
 {
-$data = "SpaceShower:QEDshowerByQ = ".$_POST["18"]."\n";
+$data = "SpaceShower:rapidityOrder = ".$_POST["18"]."\n";
 fwrite($handle,$data);
 }
 if($_POST["19"] != "on")
 {
-$data = "SpaceShower:QEDshowerByL = ".$_POST["19"]."\n";
+$data = "SpaceShower:QCDshower = ".$_POST["19"]."\n";
 fwrite($handle,$data);
 }
 if($_POST["20"] != "on")
 {
-$data = "SpaceShower:MEcorrections = ".$_POST["20"]."\n";
+$data = "SpaceShower:QEDshowerByQ = ".$_POST["20"]."\n";
 fwrite($handle,$data);
 }
 if($_POST["21"] != "on")
 {
-$data = "SpaceShower:MEafterFirst = ".$_POST["21"]."\n";
+$data = "SpaceShower:QEDshowerByL = ".$_POST["21"]."\n";
 fwrite($handle,$data);
 }
 if($_POST["22"] != "on")
 {
-$data = "SpaceShower:phiPolAsym = ".$_POST["22"]."\n";
+$data = "SpaceShower:MEcorrections = ".$_POST["22"]."\n";
 fwrite($handle,$data);
 }
 if($_POST["23"] != "on")
 {
-$data = "SpaceShower:phiIntAsym = ".$_POST["23"]."\n";
+$data = "SpaceShower:MEafterFirst = ".$_POST["23"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["24"] != "0.7")
+if($_POST["24"] != "on")
 {
-$data = "SpaceShower:strengthIntAsym = ".$_POST["24"]."\n";
+$data = "SpaceShower:phiPolAsym = ".$_POST["24"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["25"] != "5")
+if($_POST["25"] != "on")
 {
-$data = "SpaceShower:nQuarkIn = ".$_POST["25"]."\n";
+$data = "SpaceShower:phiIntAsym = ".$_POST["25"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["26"] != "0.7")
+{
+$data = "SpaceShower:strengthIntAsym = ".$_POST["26"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["27"] != "5")
+{
+$data = "SpaceShower:nQuarkIn = ".$_POST["27"]."\n";
 fwrite($handle,$data);
 }
 fclose($handle);
@@ -494,5 +547,5 @@ fclose($handle);
 </body>
 </html>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->
 

@@ -41,8 +41,13 @@ for various tests of the hadronization model on its own.
 <p/>
 The key trick is to set the flag <code>ProcessLevel:all = off</code>.
 When <code>pythia.next()</code> is called it then does not try to
-generate a hard process, and therefore also cannot do anything on the
-parton level. Instead only the <code>HadronLevel</code> methods are
+generate a hard process. Since there are no beams, it is also not 
+possible to perform the normal <code>PartonLevel</code> step.
+(It is still possible to generate final-state radiation, but this
+is not automatic. It would have to be done by hand, using the 
+<code>pythia.forceTimeShower(...)</code> method, before 
+<code>pythia.next()</code> is called.) 
+Thus only the <code>HadronLevel</code> methods are 
 called, to take the current content of the event record stored in
 <code>pythia.event</code> as a starting point for any hadronization 
 and decays that are allowed by the normal parameters of this step. 
@@ -134,6 +139,69 @@ The sample program in <code>main21.cc</code> illustrates how you can work
 with this facility, both for simple parton configurations and for more
 complicated ones with junctions.
 
+<p/>
+As an alternative to setting up a topology with the methods above, 
+a <?php $filepath = $_GET["filepath"];
+echo "<a href='LesHouchesAccord.php?filepath=".$filepath."' target='page'>";?>Les Houches Event File</a> (LHEF) 
+can also provide the configurations. Since no beams or processes are 
+defined, only the <code>&lt;event&gt;....&lt;/event&gt;</code> blocks 
+need to be present, one for each event, so strictly it is not a true 
+LHEF. You need to select <code>Beams:frameType = 4</code>, provide 
+the file name in <code>Beams:LHEF</code> and, as above, set
+<code>ProcessLevel:all = off</code>. Needless to say, an externally 
+linked <code>LHAup</code> class works as well as an LHEF,
+with <code>Beams:frameType = 5</code>.
+
+<p/>
+The event information to store in the LHEF, or provide by the 
+<code>LHAup</code>, is essentially the same as above. The only 
+difference is in status codes: outgoing particles should have 1 
+instead of 23, and intermediate resonances 2 instead of -22. 
+Incoming partons, if any, are -1 instead of -21.
+
+<h3>Extensions to resonance decays</h3>
+
+With the above scheme, <code>pythia.next()</code> will generate
+hadronization, i.e. string fragmentation and subsequent decays of
+normal unstable particles. It will not decay 
+<?php $filepath = $_GET["filepath"];
+echo "<a href='ResonanceDecays.php?filepath=".$filepath."' target='page'>";?>resonances</a>, i.e.
+<i>W, Z</i>, top, Higgs, SUSY and other massive particles.
+
+<p/>
+If the decay products are already provided, of course those 
+products will be hadronized, but without any of the showers
+that one would expect in <i>Z^0 -> q qbar</i>, say. That is, the
+presence of a decayed resonance in the event record can be nice
+for documentation purposes, but otherwise it plays no role. 
+It is possible to change this behaviour with the following flag. 
+
+<br/><br/><strong>Standalone:allowResDec</strong>  <input type="radio" name="1" value="on"><strong>On</strong>
+<input type="radio" name="1" value="off" checked="checked"><strong>Off</strong>
+ &nbsp;&nbsp;(<code>default = <strong>off</strong></code>)<br/>
+If off, then resonances are stable if final-state particles,
+and irrelevant if intermediate particles. If on, then 
+resonances are decayed, sequentially if necessary. After each
+decay step a parton shower is applied, and subsequent decay 
+kinematics is shifted by the recoil of such branchings. 
+If the decay chain and kinematics of the resonance is provided
+at input, this information is used, otherwise it is generated
+internally according to built-in branching ratios etc.
+  
+
+<p/>
+The input configuration has to follow the rules described above, 
+with <code>ProcessLevel:all = off</code>. (Terminology not quite 
+consistent, since resonance decays normally is part of the 
+process-level step.) It is possible to combine several resonances, 
+and other coloured or uncoloured particles into the same event.
+ 
+<p/>
+Final-state radiation is applied to each step of the decay 
+sequence by default, but can be switched off with 
+<code>PartonLevel:FSR = off</code> or 
+<code>PartonLevel:FSRinResonances</code>. 
+
 <h3>Repeated hadronization or decay</h3>
 
 An alternative approach is possible with the 
@@ -143,6 +211,26 @@ value of the <code>HadronLevel:all</code> flag. If you hadronize
 externally generated events it is equivalent to a 
 <code>pythia.next()</code> call with 
 <code>ProcessLevel:all = off</code>. 
+
+<p/>
+This method truly sticks to the hadron level, and thus cannot handle 
+resonance decays. You therefore <b>must not</b> mix it with the
+<code>Standalone:allowResDec = on</code> framework. 
+
+<p/>
+The similarity of names indicates that 
+<code>pythia.forceTimeShower( int iBeg, int iEnd, double pTmax, 
+int nBranchMax = 0)</code> is intended to belong to the same set of 
+work-by-hand methods. Here <code>iBeg</code> and <code>iEnd</code>
+give the range of partons that should be allowed to shower, 
+<code>pTmax</code> the maximum <i>pT</i> scale of emissions,
+and a nonzero <code>nBranchMax</code> a maximum number of allowed
+branchings. Additionally, a <code>scale</code> has to be set for each
+parton that should shower, which requires an additional final argument 
+to the <code>append</code> methods above. This scale limits the maximum 
+<i>pT</i> allowed for each parton, in addition to the global 
+<code>pTmax</code>. When not set the scale defaults to 0, meaning no 
+radiation for that parton.
 
 <p/>
 The real application instead is for repeated hadronization of the same
@@ -188,7 +276,31 @@ The <code>main15.cc</code> program illustrates both these methods,
 i.e. either repeated hadronization or repeated decay of PYTHIA
 events.
 
+<input type="hidden" name="saved" value="1"/>
+
+<?php
+echo "<input type='hidden' name='filepath' value='".$_GET["filepath"]."'/>"?>
+
+<table width="100%"><tr><td align="right"><input type="submit" value="Save Settings" /></td></tr></table>
+</form>
+
+<?php
+
+if($_POST["saved"] == 1)
+{
+$filepath = $_POST["filepath"];
+$handle = fopen($filepath, 'a');
+
+if($_POST["1"] != "off")
+{
+$data = "Standalone:allowResDec = ".$_POST["1"]."\n";
+fwrite($handle,$data);
+}
+fclose($handle);
+}
+
+?>
 </body>
 </html>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->

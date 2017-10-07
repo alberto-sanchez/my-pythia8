@@ -1,5 +1,5 @@
 // Analysis.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -8,6 +8,7 @@
 // Thrust: thrust analysis of the event.
 // ClusterJet: clustering jet finder.
 // CellJet: calorimetric cone jet finder. 
+// SlowJet: recombination algorithm; lightweight version of FastJet. 
 
 #ifndef Pythia8_Analysis_H
 #define Pythia8_Analysis_H
@@ -351,6 +352,173 @@ private:
 
   // Pointer to the random number generator (needed for energy smearing).
   Rndm* rndmPtr;
+
+};  
+
+//==========================================================================
+
+// SlowJetHook class.
+// Base class, used to derive your own class with your selection criteria.
+
+class SlowJetHook {
+
+public:
+
+  // Destructor.
+  virtual ~SlowJetHook() { }
+
+  // Method to be overloaded.
+  // It will be called for all final-state particles, one at a time, and
+  // should return true if the particle should be analyzed, false if not.
+  // The particle is in location iSel of the event record. 
+  // If you wish you can also modify the four-momentum and mass that will 
+  //  be used in the analysis, without affecting the event record itself,
+  // by changing pSel and mSel. Remember to respect E^2 - p^2 = m^2. 
+  virtual bool include(int iSel, const Event& event, Vec4& pSel, 
+    double& mSel) = 0;
+
+};
+
+//==========================================================================
+
+// SingleSlowJet class.
+// Simple helper class to SlowJet for a jet and its contents. 
+
+class SingleSlowJet {
+
+public:
+
+  // Constructors.
+  SingleSlowJet( Vec4 pIn = 0., double pT2In = 0., double yIn = 0., 
+      double phiIn = 0., int idxIn = 0) : p(pIn), pT2(pT2In), y(yIn),
+      phi(phiIn), mult(1) { idx.insert(idxIn); }
+  SingleSlowJet(const SingleSlowJet& ssj) : p(ssj.p), pT2(ssj.pT2),
+    y(ssj.y), phi(ssj.phi), mult(ssj.mult), idx(ssj.idx) { }
+  SingleSlowJet& operator=(const SingleSlowJet& ssj) { if (this != &ssj)
+    { p = ssj.p; pT2 = ssj.pT2; y = ssj.y; phi = ssj.phi; 
+    mult = ssj.mult; idx = ssj.idx; } return *this; }
+
+  // Properties of jet.
+  Vec4     p;  
+  double   pT2, y, phi;
+  int      mult;
+  set<int> idx;
+
+};
+
+//==========================================================================
+
+// SlowJet class.
+// This class performs a recombination jet search in (y, phi, pT) space.
+
+class SlowJet {
+
+public: 
+
+  // Constructor.
+  SlowJet(int powerIn, double Rin, double pTjetMinIn = 0., 
+    double etaMaxIn = 25., int selectIn = 2, int massSetIn = 2,
+    SlowJetHook* sjHookPtrIn = 0, bool useStandardRin = true) 
+    : power(powerIn), R(Rin), pTjetMin(pTjetMinIn), etaMax(etaMaxIn), 
+    select(selectIn), massSet(massSetIn), sjHookPtr(sjHookPtrIn),
+    useStandardR(useStandardRin) { isAnti = (power < 0); isKT = (power > 0);
+    R2 = R*R; pT2jetMin = pTjetMin*pTjetMin; cutInEta = (etaMax <= 20.); 
+    chargedOnly = (select > 2); visibleOnly = (select == 2); 
+    modifyMass = (massSet < 2); noHook = (sjHookPtr == 0); }
+  
+  // Analyze event, all in one go.
+  bool analyze(const Event& event) {
+    if ( !setup(event) ) return false; 
+    while (clSize > 0) doStep(); return true; }
+
+  // Set up list of particles to analyze, and initial distances.
+  bool setup(const Event& event);
+
+  // Do one recombination step, possibly giving a jet.
+  bool doStep();
+
+  // Do several recombinations steps, if possible.
+  bool doNSteps(int nStep) { 
+    while(nStep > 0 && clSize > 0) { doStep(); --nStep;}
+    return (nStep == 0); }
+
+  // Do recombinations until fixed numbers of clusters and jets remain.
+  bool stopAtN(int nStop) {
+    while (clSize + jtSize > nStop && clSize > 0) doStep();
+    return (clSize + jtSize == nStop); }
+
+  // Return info on jet (+cluster) results of analysis.
+  int    sizeOrig()          const {return origSize;}
+  int    sizeJet()           const {return jtSize;}
+  int    sizeAll()           const {return jtSize + clSize;}
+  double pT(int i)           const {return (i < jtSize) 
+    ? sqrt(jets[i].pT2) : sqrt(clusters[i - jtSize].pT2);}
+  double y(int i)            const {return (i < jtSize) 
+    ? jets[i].y : clusters[i - jtSize].y;}
+  double phi(int i)          const {return (i < jtSize) 
+    ? jets[i].phi : clusters[i - jtSize].phi;}
+  Vec4   p(int i)            const {return (i < jtSize) 
+    ? jets[i].p : clusters[i - jtSize].p;}
+  double m(int i)            const {return (i < jtSize) 
+    ? jets[i].p.mCalc() : clusters[i - jtSize].p.mCalc();}
+  int    multiplicity(int i) const {return (i < jtSize) 
+    ? jets[i].mult : clusters[i - jtSize].mult;}
+
+  // Return info on next step to be taken.
+  int    iNext() const {return (iMin == -1) ? -1 : iMin + jtSize;}
+  int    jNext() const {return (jMin == -1) ? -1 : jMin + jtSize;}
+  double dNext() const {return dMin;}
+
+  // Provide a listing of the info.
+  void list(bool listAll = false, ostream& os = cout) const;
+
+  // Give the index of the jet that the particle i of
+  // the event record belongs to. Returns -1 if particle i
+  // is not found in a jet.
+  int jetAssignment(int i) {
+    for (int j = 0; j < sizeJet(); j++)
+      if (jets[j].idx.find(i) != jets[j].idx.end())
+        return j;
+    return -1;
+  }
+
+  // Remove a jet.
+  void removeJet(int i) {
+    if (i < 0 || i >= jtSize) return;
+    jets.erase(jets.begin() + i);
+    jtSize--;
+  }
+
+private: 
+
+  // Constants: could only be changed in the code itself.
+  static const int    TIMESTOPRINT;
+  static const double PIMASS, TINY;
+
+  // Properties of analysis as such.
+  int    power;
+  double R, pTjetMin, etaMax, R2, pT2jetMin; 
+  int    select, massSet;
+  // SlowJetHook can be used to tailor particle selection step.
+  SlowJetHook* sjHookPtr;
+  bool   useStandardR, isAnti, isKT, cutInEta, chargedOnly, 
+         visibleOnly, modifyMass, noHook;
+
+
+  // Intermediate clustering objects and final jet objects.
+  vector<SingleSlowJet> clusters;
+  vector<SingleSlowJet> jets;
+
+  // Intermediate clustering distances.
+  vector<double> diB;
+  vector<double> dij;
+
+  // Other intermediate variables.
+  int origSize, clSize, clLast, jtSize, iMin, jMin;
+  double dPhi, dijTemp, dMin;
+
+  // Find next cluster pair to join.
+  void findNext();
 
 };  
 

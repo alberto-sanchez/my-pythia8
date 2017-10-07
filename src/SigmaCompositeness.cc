@@ -1,5 +1,5 @@
 // SigmaCompositeness.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -389,23 +389,20 @@ double Sigma2qq2qStarq::weightDecay( Event& process, int iResBeg,
   // Phase space factors.
   double mr1    = pow2(process[7].m() / process[5].m());
   double mr2    = pow2(process[8].m() / process[5].m()); 
-  double betaf  = sqrtpos( pow2(1. - mr1 - mr2) - 4. * mr1 * mr2);
 
   // Reconstruct decay angle in q* CoM frame. 
-  Vec4 p1StarCom = process[7].p();
-  Vec4 p2StarCom = process[8].p();
-  p1StarCom.bstback(process[5].p());
-  p2StarCom.bstback(process[5].p());
-  double cosThe = (process[3].p() - process[4].p()) 
-    * (p2StarCom - p1StarCom) / (sH * betaf);
+  int  idAbs3 = process[7].idAbs();
+  Vec4 pQStarCom = (idAbs3 < 20) ? process[7].p() : process[8].p();
+  pQStarCom.bstback(process[5].p());
+  double cosThe = costheta(pQStarCom, process[5].p());
   double wt     = 1.; 
 
   // Decay q* -> q (g/gamma) or q (Z^0/W^+-).
-  int idBoson   = (process[8].idAbs() < 20) ? process[7].idAbs() : process[8].idAbs();
+  int idBoson   = (idAbs3 < 20) ? process[8].idAbs() : process[7].idAbs();
   if (idBoson == 21 || idBoson == 22) {
     wt          = 0.5 * (1. + cosThe);
   } else if (idBoson == 23 || idBoson == 24) {
-    double mrB  = (process[8].idAbs() < 20) ? mr1 : mr2;
+    double mrB  = (idAbs3 < 20) ? mr2 : mr1;
     double kTrm = 0.5 * (mrB * (1. - cosThe));
     wt          = (1. + cosThe + kTrm) / (2 + mrB);
   } 
@@ -492,23 +489,20 @@ double Sigma2qqbar2lStarlbar::weightDecay( Event& process, int iResBeg,
   // Phase space factors.
   double mr1    = pow2(process[7].m() / process[5].m());
   double mr2    = pow2(process[8].m() / process[5].m()); 
-  double betaf  = sqrtpos( pow2(1. - mr1 - mr2) - 4. * mr1 * mr2);
 
   // Reconstruct decay angle in l* CoM frame.
-  Vec4 p1StarCom = process[7].p();
-  Vec4 p2StarCom = process[8].p();
-  p1StarCom.bstback(process[5].p());
-  p2StarCom.bstback(process[5].p());
-  double cosThe = (process[3].p() - process[4].p()) 
-    * (p2StarCom - p1StarCom) / (sH * betaf);
+  int  idAbs3 = process[7].idAbs();
+  Vec4 pLStarCom = (idAbs3 < 20) ? process[7].p() : process[8].p();
+  pLStarCom.bstback(process[5].p());
+  double cosThe = costheta(pLStarCom, process[5].p());
   double wt     = 1.; 
 
   // Decay, l* -> l + gamma/Z^0/W^+-).
-  int idBoson   = (process[8].idAbs() < 20) ? process[7].idAbs() : process[8].idAbs();
+  int idBoson   = (idAbs3 < 20) ? process[8].idAbs() : process[7].idAbs();
   if (idBoson == 22) {
     wt          = 0.5 * (1. + cosThe);
   } else if (idBoson == 23 || idBoson == 24) {
-    double mrB  = (process[8].idAbs() < 20) ? mr1 : mr2;
+    double mrB  = (idAbs3 < 20) ? mr2 : mr1;
     double kTrm = 0.5 * (mrB * (1. - cosThe));
     wt          = (1. + cosThe + kTrm) / (2 + mrB);
   } 
@@ -696,6 +690,128 @@ void Sigma2QCqqbar2qqbar::setIdColAcol() {
 
   // Colour flow topologies. Swap when antiquarks.
   setColAcol( 1, 0, 0, 2, 1, 0, 0, 2);
+  if (id1 < 0) swapColAcol();
+
+}
+
+//==========================================================================
+
+// Sigma2QCffbar2llbar class.
+// Cross section for f fbar -> l lbar (contact interactions).
+
+//--------------------------------------------------------------------------
+
+// Initialize process. 
+  
+void Sigma2QCffbar2llbar::initProc() {
+
+  qCLambda2   = settingsPtr->parm("ContactInteractions:Lambda");
+  qCetaLL     = settingsPtr->mode("ContactInteractions:etaLL");
+  qCetaRR     = settingsPtr->mode("ContactInteractions:etaRR");
+  qCetaLR     = settingsPtr->mode("ContactInteractions:etaLR");
+  qCLambda2  *= qCLambda2; 
+
+  // Process name.
+  if (idNew == 11) nameNew = "f fbar -> (QC) -> e- e+";
+  if (idNew == 13) nameNew = "f fbar -> (QC) -> mu- mu+";
+  if (idNew == 15) nameNew = "f fbar -> (QC) -> tau- tau+";
+
+  // Kinematics.
+  qCmNew  = particleDataPtr->m0(idNew);
+  qCmNew2 = qCmNew * qCmNew;
+  qCmZ    = particleDataPtr->m0(23);
+  qCmZ2   = qCmZ * qCmZ;
+  qCGZ    = particleDataPtr->mWidth(23);
+  qCGZ2   = qCGZ * qCGZ;
+
+}
+
+//--------------------------------------------------------------------------
+
+// Evaluate d(sigmaHat)/d(tHat) - no incoming flavour dependence. 
+
+void Sigma2QCffbar2llbar::sigmaKin() { 
+
+  qCPropGm   = 1./sH;
+  double denomPropZ = pow2(sH - qCmZ2) + qCmZ2 * qCGZ2;
+  qCrePropZ  = (sH - qCmZ2) / denomPropZ;
+  qCimPropZ  = -qCmZ * qCGZ / denomPropZ;
+
+  sigma0 = 0.;
+  if (sH > 4. * qCmNew2) sigma0 = 1./(16. * M_PI * sH2);  
+
+}
+
+//--------------------------------------------------------------------------
+
+// Evaluate d(sigmaHat)/d(tHat) - no incoming flavour dependence. 
+
+double Sigma2QCffbar2llbar::sigmaHat() { 
+
+  // Incoming fermion flavor.
+  int idAbs      = abs(id1);
+
+  // Couplings and constants.
+  double tmPe2QfQl = 4. * M_PI * alpEM * couplingsPtr->ef(idAbs) 
+                   * couplingsPtr->ef(idNew);
+  double tmPgvf = 0.25 * couplingsPtr->vf(idAbs);
+  double tmPgaf = 0.25 * couplingsPtr->af(idAbs);
+  double tmPgLf = tmPgvf + tmPgaf;
+  double tmPgRf = tmPgvf - tmPgaf;
+  double tmPgvl = 0.25 * couplingsPtr->vf(idNew);
+  double tmPgal = 0.25 * couplingsPtr->af(idNew);
+  double tmPgLl = tmPgvl + tmPgal;
+  double tmPgRl = tmPgvl - tmPgal;
+  double tmPe2s2c2 = 4. * M_PI * alpEM 
+    / (couplingsPtr->sin2thetaW() * couplingsPtr->cos2thetaW());
+
+  // Complex amplitudes.
+  complex I(0., 1.);
+  complex meLL(0., 0.);
+  complex meRR(0., 0.);
+  complex meLR(0., 0.);
+  complex meRL(0., 0.);
+
+  // Amplitudes, M = gamma + Z + CI.
+  meLL = tmPe2QfQl * qCPropGm 
+       + tmPe2s2c2 * tmPgLf * tmPgLl * (qCrePropZ + I * qCimPropZ)
+       + 2. * M_PI * qCetaLL / qCLambda2;
+  meRR = tmPe2QfQl * qCPropGm 
+       + tmPe2s2c2 * tmPgRf * tmPgRl * (qCrePropZ + I * qCimPropZ)
+       + 2. * M_PI * qCetaRR / qCLambda2;
+  meLR = tmPe2QfQl * qCPropGm 
+       + tmPe2s2c2 * tmPgLf * tmPgRl * (qCrePropZ + I * qCimPropZ)
+       + 2. * M_PI * qCetaLR / qCLambda2;
+  meRL = tmPe2QfQl * qCPropGm 
+       + tmPe2s2c2 * tmPgRf * tmPgLl * (qCrePropZ + I * qCimPropZ)
+       + 2. * M_PI * qCetaLR / qCLambda2;
+
+  double sigma = sigma0 * uH2 * real(meLL*conj(meLL));
+  sigma += sigma0 * uH2 * real(meRR*conj(meRR));
+  sigma += sigma0 * tH2 * real(meLR*conj(meLR));
+  sigma += sigma0 * tH2 * real(meRL*conj(meRL));
+  
+  // If f fbar are quarks.
+  if (idAbs < 9) sigma /= 3.;
+
+  return sigma; 
+}
+
+//--------------------------------------------------------------------------
+
+// Select identity, colour and anticolour.
+
+void Sigma2QCffbar2llbar::setIdColAcol() {
+
+  // Flavours trivial.
+  setId(id1, id2, idNew, -idNew); 
+
+  // tH defined between f and f': must swap tHat <-> uHat if id1 is fbar.
+  swapTU = (id2 > 0);
+
+  // Colour flow topologies. Swap when antiquarks.
+  if (abs(id1) < 9) setColAcol( 1, 0, 0, 1, 0, 0, 0, 0);
+  else              setColAcol( 0, 0, 0, 0, 0, 0, 0, 0);
   if (id1 < 0) swapColAcol();
 
 }

@@ -1,5 +1,5 @@
 // SigmaCompositeness.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -267,6 +267,52 @@ public:
   double qCLambda2;
   int    qCetaLL, qCetaRR, qCetaLR;
 
+};
+
+//==========================================================================
+ 
+// A derived class for f fbar -> l lbar 
+// (contact interactions).
+// Does not include t-channel contributions relevant for e^+e^- to e^+e^-
+ 
+class Sigma2QCffbar2llbar : public Sigma2Process {
+ 
+public:
+ 
+  // Constructor: bool Graviton  = true, to use LED graviton settings.
+  Sigma2QCffbar2llbar (int idIn, int codeIn) : idNew(idIn), codeNew(codeIn) {}
+ 
+  // Initialize process.
+  virtual void initProc();
+ 
+  // Calculate flavour-independent parts of cross section;
+  // first step when inflavours unknown.
+  virtual void sigmaKin();
+ 
+  // Evaluate sigmaHat(sHat); second step for given inflavours.
+  virtual double sigmaHat();
+ 
+  // Select flavour, colour and anticolour.
+  virtual void setIdColAcol();
+ 
+  // Info on the subprocess.
+  virtual string name()       const {return nameNew;}
+  virtual int    code()       const {return codeNew;}
+  virtual string inFlux()     const {return "ffbarSame";}
+  virtual bool   isSChannel() const {return true;}
+ 
+private:
+ 
+  // Process values.
+  string nameNew;
+  int    idNew, codeNew;
+  double qCmNew, qCmNew2, qCmZ, qCmZ2, qCGZ, qCGZ2, sigma0;
+
+  // Compositeness parameters.
+  double qCLambda2;
+  int    qCetaLL, qCetaRR, qCetaLR;
+  double qCPropGm, qCrePropZ, qCimPropZ;
+ 
 };
 
 //==========================================================================

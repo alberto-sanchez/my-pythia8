@@ -1,5 +1,5 @@
 // PartonLevel.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -31,8 +31,8 @@ bool PartonLevel::init( Info* infoPtrIn, Settings& settings,
   BeamParticle* beamPomAPtrIn, BeamParticle* beamPomBPtrIn, 
   Couplings* couplingsPtrIn, PartonSystems* partonSystemsPtrIn, 
   SigmaTotal* sigmaTotPtr, TimeShower* timesDecPtrIn, TimeShower* timesPtrIn, 
-  SpaceShower* spacePtrIn, RHadrons* rHadronsPtrIn, 
-  UserHooks* userHooksPtrIn) {
+  SpaceShower* spacePtrIn, RHadrons* rHadronsPtrIn, UserHooks* userHooksPtrIn,
+  MergingHooks* mergingHooksPtrIn, bool useAsTrial ) {
 
   // Store input pointers and modes for future use. 
   infoPtr            = infoPtrIn;
@@ -51,28 +51,48 @@ bool PartonLevel::init( Info* infoPtrIn, Settings& settings,
   spacePtr           = spacePtrIn; 
   rHadronsPtr        = rHadronsPtrIn; 
   userHooksPtr       = userHooksPtrIn;
+  mergingHooksPtr    = mergingHooksPtrIn;
 
-  // Min bias and single diffraction processes need special treatment.
-  doMinBias          =  settings.flag("SoftQCD:all") 
-                     || settings.flag("SoftQCD:minBias");
-  doDiffraction      =  settings.flag("SoftQCD:all") 
-                     || settings.flag("SoftQCD:singleDiffractive")
-                     || settings.flag("SoftQCD:doubleDiffractive");
+  // Min bias and diffraction processes need special treatment.
+  bool doSQ          = settings.flag("SoftQCD:all")
+                    || settings.flag("SoftQCD:inelastic");
+  bool doMB          = settings.flag("SoftQCD:minBias");
+  bool doSD          = settings.flag("SoftQCD:singleDiffractive");
+  bool doDD          = settings.flag("SoftQCD:doubleDiffractive");
+  bool doCD          = settings.flag("SoftQCD:centralDiffractive");
+  doMinBias          =  doSQ || doMB;
+  doDiffraction      =  doSQ || doSD || doDD || doCD; 
 
   // Separate low-mass (unresolved) and high-mass (perturbative) diffraction.
   mMinDiff           = settings.parm("Diffraction:mMinPert");
   mWidthDiff         = settings.parm("Diffraction:mWidthPert");
-  if (mMinDiff + mWidthDiff > infoPtr->eCM()) doDiffraction = false;
+  pMaxDiff           = settings.parm("Diffraction:probMaxPert");
+  if (mMinDiff > infoPtr->eCM()) doDiffraction = false;
 
-  // Need MI initialization for soft QCD processes, even if only first MI.
-  // But no need to initialize MI if never going to use it.
-  doMI               = settings.flag("PartonLevel:MI");
-  doMIMB             = doMI;
-  doMISDA            = doMI;
-  doMISDB            = doMI;
-  doMIinit           = doMI;
-  if (doMinBias || doDiffraction) doMIinit = true;
-  if (!settings.flag("PartonLevel:all")) doMIinit = false;  
+  // Need MPI initialization for soft QCD processes, even if only first MPI.
+  // But no need to initialize MPI if never going to use it.
+  doMPI              = settings.flag("PartonLevel:MPI");
+  doMPIMB            = doMPI;
+  doMPISDA           = doMPI;
+  doMPISDB           = doMPI;
+  doMPICD            = doMPI;
+  doMPIinit          = doMPI;
+  if (doMinBias || doDiffraction)        doMPIinit = true;
+  if (!settings.flag("PartonLevel:all")) doMPIinit = false;  
+
+  // Initialise trial shower switch
+  doTrial            = useAsTrial;
+  // Merging initialization.
+  bool hasMergingHooks = (mergingHooksPtr != 0);
+  canRemoveEvent       = !doTrial && hasMergingHooks
+    && ( mergingHooksPtr->doCKKWLMerging() || mergingHooksPtr->doNL3Merging());
+  canRemoveEmission    = !doTrial && hasMergingHooks
+    && ( mergingHooksPtr->doUMEPSMerging() || mergingHooksPtr->doNL3Merging()
+      || mergingHooksPtr->doUNLOPSMerging() );
+
+  nTrialEmissions    = 1;
+  pTLastBranch       = 0.0;
+  typeLastBranch     = 0;
 
   // Flags for showers: ISR and FSR.
   doISR              = settings.flag("PartonLevel:ISR");
@@ -90,53 +110,92 @@ bool PartonLevel::init( Info* infoPtrIn, Settings& settings,
   // Allow R-hadron formation.
   allowRH            = settings.flag("RHadrons:allow");
 
-  // Flag if lepton beams, and if non-resolved ones. May change main flags.
-  hasLeptonBeams  = ( beamAPtr->isLepton() || beamBPtr->isLepton() );
-  hasPointLeptons = ( hasLeptonBeams 
-    && (beamAPtr->isUnresolved() || beamBPtr->isUnresolved() ) );
-  if (hasLeptonBeams) {
-    doMIMB     = false;
-    doMISDA    = false;
-    doMISDB    = false;
-    doMIinit   = false;
-  }
-  if (hasPointLeptons) {
-    doISR      = false;
-    doRemnants = false;
-  }
-
   // Possibility to allow user veto during evolution.
-  canVetoPT     = (userHooksPtr > 0) ? userHooksPtr->canVetoPT()   : false;
-  pTvetoPT      = (canVetoPT)        ? userHooksPtr->scaleVetoPT() : -1.;
-  canVetoStep   = (userHooksPtr > 0) ? userHooksPtr->canVetoStep() : false;
-  nVetoStep     = (canVetoStep)   ? userHooksPtr->numberVetoStep() : -1;
-  canVetoMIStep = (userHooksPtr > 0) ? userHooksPtr->canVetoMIStep() : false;
-  nVetoMIStep   = (canVetoStep)   ? userHooksPtr->numberVetoMIStep() : -1;
+  canVetoPT          = (userHooksPtr != 0) 
+                     ? userHooksPtr->canVetoPT()   : false;
+  pTvetoPT           = (canVetoPT)        
+                     ? userHooksPtr->scaleVetoPT() : -1.;
+  canVetoStep        = (userHooksPtr != 0) 
+                     ? userHooksPtr->canVetoStep() : false;
+  nVetoStep          = (canVetoStep)      
+                     ? userHooksPtr->numberVetoStep() : -1;
+  canVetoMPIStep     = (userHooksPtr != 0) 
+                     ? userHooksPtr->canVetoMPIStep() : false;
+  nVetoMPIStep       = (canVetoMPIStep)   
+                     ? userHooksPtr->numberVetoMPIStep() : -1;
+  canVetoEarly       = (userHooksPtr != 0) 
+                     ? userHooksPtr->canVetoPartonLevelEarly() : false;
 
   // Possibility to set maximal shower scale in resonance decays.
-  canSetScale = (userHooksPtr > 0) ? userHooksPtr->canSetResonanceScale() 
-                                   : false;
+  canSetScale        = (userHooksPtr != 0) 
+                     ? userHooksPtr->canSetResonanceScale() : false;
+
+  // Done with initialization only for FSR in resonance decays.
+  if (beamAPtr == 0 || beamBPtr == 0) return true;
+
+  // Flag if lepton beams, and if non-resolved ones. May change main flags.
+  hasLeptonBeams     = ( beamAPtr->isLepton() || beamBPtr->isLepton() );
+  hasPointLeptons    = ( hasLeptonBeams 
+    && (beamAPtr->isUnresolved() || beamBPtr->isUnresolved() ) );
+  if (hasLeptonBeams) {
+    doMPIMB          = false;
+    doMPISDA         = false;
+    doMPISDB         = false;
+    doMPICD          = false;
+    doMPIinit        = false;
+  }
+  if (hasPointLeptons) {
+    doISR            = false;
+    doRemnants       = false;
+  }
 
   // Set info and initialize the respective program elements.
   timesPtr->init( beamAPtr, beamBPtr);
   if (doISR) spacePtr->init( beamAPtr, beamBPtr);
-  doMIMB  =  multiMB.init( doMIinit, 0, infoPtr, settings, particleDataPtr,
-    rndmPtr, beamAPtr, beamBPtr, couplingsPtr, partonSystemsPtr, sigmaTotPtr);
-  if (doDiffraction) doMISDA = multiSDA.init( doMIinit, 1, infoPtr, 
-    settings, particleDataPtr, rndmPtr, beamPomBPtr, beamAPtr, couplingsPtr,
-    partonSystemsPtr, sigmaTotPtr);
-  if (doDiffraction) doMISDB = multiSDB.init( doMIinit, 2, infoPtr, 
+  doMPIMB  =  multiMB.init( doMPIinit, 0, infoPtr, settings, particleDataPtr,
+    rndmPtr, beamAPtr, beamBPtr, couplingsPtr, partonSystemsPtr, sigmaTotPtr,
+    userHooksPtr);
+  if (doSD || doDD || doSQ) doMPISDA = multiSDA.init( doMPIinit, 1, infoPtr, 
+    settings, particleDataPtr, rndmPtr, beamAPtr, beamPomBPtr, couplingsPtr,
+    partonSystemsPtr, sigmaTotPtr, userHooksPtr);
+  if (doSD || doDD || doSQ) doMPISDB = multiSDB.init( doMPIinit, 2, infoPtr, 
     settings, particleDataPtr, rndmPtr, beamPomAPtr, beamBPtr, couplingsPtr, 
-    partonSystemsPtr, sigmaTotPtr);
+    partonSystemsPtr, sigmaTotPtr, userHooksPtr);
+  if (doCD || doSQ) doMPICD = multiCD.init( doMPIinit, 3, infoPtr, settings, 
+    particleDataPtr, rndmPtr, beamPomAPtr, beamPomBPtr, couplingsPtr, 
+    partonSystemsPtr, sigmaTotPtr, userHooksPtr);
   remnants.init( infoPtr, settings, rndmPtr, beamAPtr, beamBPtr, 
-    partonSystemsPtr);  
+    partonSystemsPtr);
 
   // Succeeded, or not.
   multiPtr       = &multiMB;
-  if (doMIinit && !doMIMB) return false;
-  if (doMIinit && doDiffraction && (!doMISDA || !doMISDB)) return false;
-  if (!doMIMB || !doMISDA || !doMISDB) doMI = false;
+  if (doMPIinit && !doMPIMB) return false;
+  if (doMPIinit && (doSD || doDD || doSQ) && (!doMPISDA || !doMPISDB)) 
+     return false;
+  if (doMPIinit && (doCD || doSQ) && !doMPICD) return false;
+  if (!doMPIMB || !doMPISDA || !doMPISDB || !doMPICD) doMPI = false;
   return true;
+}
+
+//--------------------------------------------------------------------------
+
+// Function to reset PartonLevel object for trial shower usage.
+
+void PartonLevel::resetTrial() {
+
+  // Clear input pointers.
+  partonSystemsPtr->clear();
+  beamAPtr->clear();
+  beamBPtr->clear();
+  beamHadAPtr->clear();
+  beamHadBPtr->clear();
+  beamPomAPtr->clear();
+  beamPomBPtr->clear();
+
+  // Clear last branching return values.
+  pTLastBranch   = 0.0;
+  typeLastBranch = 0;
+
 }
 
 //--------------------------------------------------------------------------
@@ -149,11 +208,14 @@ bool PartonLevel::next( Event& process, Event& event) {
   isResolved     = infoPtr->isResolved();
   isResolvedA    = isResolved;
   isResolvedB    = isResolved;
+  isResolvedC    = isResolved;
   isDiffA        = infoPtr->isDiffractiveA();
   isDiffB        = infoPtr->isDiffractiveB();
-  isDiff         = isDiffA || isDiffB;
+  isDiffC        = infoPtr->isDiffractiveC();
+  isDiff         = isDiffA || isDiffB || isDiffC;
+  isCentralDiff  = isDiffC;
   isDoubleDiff   = isDiffA && isDiffB;
-  isSingleDiff   = isDiff && !isDoubleDiff;
+  isSingleDiff   = isDiff && !isDoubleDiff  && !isCentralDiff;
   isMinBias      = infoPtr->isMinBias();
 
   // nHardLoop counts how many hard-scattering subsystems are to be processed.
@@ -165,18 +227,33 @@ bool PartonLevel::next( Event& process, Event& event) {
   // Handle unresolved subsystems. Done if no resolved ones.
   sizeProcess    = 0;
   sizeEvent      = 0;
-  if (!isResolvedA || !isResolvedB) {
+  if (!isResolvedA || !isResolvedB || !isResolvedC) {
     bool physical = setupUnresolvedSys( process, event);
     if (!physical || nHardLoop == 0) return physical;
     sizeProcess  = process.size();
     sizeEvent    = event.size();
   }
 
+  // Number of actual branchings.
+  int nBranch        = 0;
+  // Number of desired branchings, negative value means no restriction.
+  int nBranchMax     = (doTrial) ? nTrialEmissions : -1;
+
+  // Store merging weight.
+  bool hasMergingHooks = (mergingHooksPtr != 0);
+  if ( hasMergingHooks && canRemoveEvent )
+    mergingHooksPtr->storeWeights(infoPtr->getWeightCKKWL()); 
+
   // Big outer loop to handle up to two systems (in double diffraction),
   // but normally one. (Not indented in following, but end clearly marked.)
   for (int iHardLoop = 1; iHardLoop <= nHardLoop; ++iHardLoop) { 
     infoPtr->setCounter(20, iHardLoop);
     infoPtr->setCounter(21); 
+
+  // Classification of diffractive system: 1 = A, 2 = B, 3 = central.
+  iDS = 0;
+  if (isDiffA || isDiffB) iDS = (iHardLoop == 2 || !isResolvedA) ? 2 : 1; 
+  if (isDiffC) iDS = 3;
 
   // Process and event records can be out of step for diffraction.
   if (iHardLoop == 2) {
@@ -188,14 +265,14 @@ bool PartonLevel::next( Event& process, Event& event) {
   // If you need to restore then do not throw existing diffractive system.
   if (isDiff) {
     event.saveSize();
-    event.saveJunctionSize();
-  }
+    event.saveJunctionSize(); 
    
-  // Allow special treatment of diffractive systems.
-  if (isDiff) setupResolvedDiff(iHardLoop, process);
+    // Allow special treatment of diffractive systems.
+    setupResolvedDiff( process);
+  }
 
-  // Prepare to do multiple interactions; at new mass for diffraction.
-  if (doMIinit) multiPtr->reset();
+  // Prepare to do multiparton interactions; at new mass for diffraction.
+  if (doMPIinit) multiPtr->reset();
 
   // Special case if minimum bias: do hardest interaction.
   if (isMinBias || isDiff) {
@@ -213,59 +290,73 @@ bool PartonLevel::next( Event& process, Event& event) {
 
     // Reset flag, counters and max scales.
     physical   = true;
-    nMI        = (doSecondHard) ? 2 : 1;
+    nMPI       = (doSecondHard) ? 2 : 1;
     nISR       = 0;
     nFSRinProc = 0;
     nFSRinRes  = 0;
     nISRhard   = 0;
     nFSRhard   = 0; 
-    pTsaveMI   = 0.;
+    pTsaveMPI  = 0.;
     pTsaveISR  = 0.;
     pTsaveFSR  = 0.;
 
     // Identify hard interaction system for showers.
-    setupHardSys( iHardLoop, process, event);
+    setupHardSys( process, event);
 
     // Optionally check for a veto after the hardest interaction.
-    if (canVetoMIStep) {
-      doVeto = userHooksPtr->doVetoMIStep( 1, event);
+    if (canVetoMPIStep) {
+      doVeto = userHooksPtr->doVetoMPIStep( 1, event);
       // Abort event if vetoed.
       if (doVeto) {
-        if (isDiff) leaveResolvedDiff( iHardLoop, event);
+        if (isDiff) leaveResolvedDiff( iHardLoop, process, event);
         return false;
       }
     }
 
-    // Check matching of process scale to maximum ISR/FSR/MI scales. 
+    // Check matching of process scale to maximum ISR/FSR/MPI scales. 
     double Q2Fac       = infoPtr->Q2Fac(); 
     double Q2Ren       = infoPtr->Q2Ren(); 
     bool limitPTmaxISR = (doISR) 
       ? spacePtr->limitPTmax( event, Q2Fac, Q2Ren) : false;
     bool limitPTmaxFSR = (doFSRduringProcess) 
       ? timesPtr->limitPTmax( event, Q2Fac, Q2Ren) : false;
-    bool limitPTmaxMI  = (doMI)  ? multiPtr->limitPTmax( event) : false;
+    bool limitPTmaxMPI = (doMPI)  ? multiPtr->limitPTmax( event) : false;
 
-    // Set hard scale, maximum for showers and multiple interactions,
-    double pTscale  = process.scale();
-    if (doSecondHard) pTscale = max( pTscale, process.scaleSecond() );  
-    double pTmaxMI  = (limitPTmaxMI)  ? pTscale : infoPtr->eCM();
-    double pTmaxISR = (limitPTmaxISR) ? spacePtr->enhancePTmax() * pTscale 
+    // Set hard scale, maximum for showers and multiparton interactions.
+    double pTscaleRad  = process.scale();
+    double pTscaleMPI  = pTscaleRad;
+    if (doSecondHard) {
+      pTscaleRad       = max( pTscaleRad, process.scaleSecond() );  
+      pTscaleMPI       = min( pTscaleMPI, process.scaleSecond() );  
+    }
+    double pTmaxMPI = (limitPTmaxMPI)  ? pTscaleMPI : infoPtr->eCM();
+    double pTmaxISR = (limitPTmaxISR) ? spacePtr->enhancePTmax() * pTscaleRad 
                                       : infoPtr->eCM();
-    double pTmaxFSR = (limitPTmaxFSR) ? timesPtr->enhancePTmax() * pTscale 
+    double pTmaxFSR = (limitPTmaxFSR) ? timesPtr->enhancePTmax() * pTscaleRad 
                                       : infoPtr->eCM();
-    double pTmax    = max( pTmaxMI, max( pTmaxISR, pTmaxFSR) );
-    pTsaveMI        = pTmaxMI;
+
+    // Potentially reset up starting scales for matrix element merging.
+    if ( hasMergingHooks && (doTrial || canRemoveEvent || canRemoveEmission) )
+      mergingHooksPtr->setShowerStartingScales( doTrial,
+        (canRemoveEvent || canRemoveEmission), pTscaleRad, process, pTmaxFSR, 
+        limitPTmaxFSR, pTmaxISR, limitPTmaxISR, pTmaxMPI, limitPTmaxMPI ); 
+
+    double pTmax    = max( pTmaxMPI, max( pTmaxISR, pTmaxFSR) );
+    pTsaveMPI       = pTmaxMPI;
     pTsaveISR       = pTmaxISR;
     pTsaveFSR       = pTmaxFSR;
 
     // Prepare the classes to begin the generation.
-    if (doMI)  multiPtr->prepare( event, pTmaxMI);
+    if (doMPI) multiPtr->prepare( event, pTmaxMPI);
     if (doISR) spacePtr->prepare( 0, event, limitPTmaxISR);
     if (doFSRduringProcess) timesPtr->prepare( 0, event, limitPTmaxFSR);
     if (doSecondHard && doISR) spacePtr->prepare( 1, event, limitPTmaxISR);
-    if (doSecondHard && doFSRduringProcess) 
-      timesPtr->prepare( 1, event, limitPTmaxFSR);
+    if (doSecondHard && doFSRduringProcess) timesPtr->prepare( 1, event,
+       limitPTmaxFSR);
 
+    // Impact parameter has now been chosen, except for diffraction.
+    if (!isDiff) infoPtr->setImpact( multiPtr->bMPI(), 
+      multiPtr->enhanceMPI(), true);
     // Set up initial veto scale.
     doVeto        = false;
     double pTveto = pTvetoPT;
@@ -277,14 +368,14 @@ bool PartonLevel::next( Event& process, Event& event) {
       typeVetoStep = 0;
       nRad         =  nISR + nFSRinProc;
 
-      // Find next pT value for FSR, MI and ISR.
+      // Find next pT value for FSR, MPI and ISR.
       // Order calls to minimize time expenditure.
       double pTgen = 0.;
       double pTtimes = (doFSRduringProcess) 
         ? timesPtr->pTnext( event, pTmaxFSR, pTgen) : -1.;
       pTgen = max( pTgen, pTtimes);
-      double pTmulti = (doMI) 
-        ? multiPtr->pTnext( pTmaxMI, pTgen, event) : -1.;
+      double pTmulti = (doMPI) 
+        ? multiPtr->pTnext( pTmaxMPI, pTgen, event) : -1.;
       pTgen = max( pTgen, pTmulti);
       double pTspace = (doISR) 
         ? spacePtr->pTnext( event, pTmaxISR, pTgen, nRad) : -1.;
@@ -297,30 +388,34 @@ bool PartonLevel::next( Event& process, Event& event) {
         doVeto = userHooksPtr->doVetoPT( typeLatest, event);
         // Abort event if vetoed.
         if (doVeto) {
-          if (isDiff) leaveResolvedDiff( iHardLoop, event);
+          if (isDiff) leaveResolvedDiff( iHardLoop, process, event);
           return false;
         }
       }
 
-      // Do a multiple interaction (if allowed). 
+      // Do a multiparton interaction (if allowed). 
       if (pTmulti > 0. && pTmulti > pTspace && pTmulti > pTtimes) {
         infoPtr->addCounter(23); 
-        multiPtr->scatter( event);  
-        typeLatest = 1;
-        ++nMI;
-        if (canVetoMIStep && nMI <= nVetoMIStep) typeVetoStep = 1;
- 
-        // Update ISR and FSR dipoles.
-        if (doISR)              spacePtr->prepare( nMI - 1, event);
-        if (doFSRduringProcess) timesPtr->prepare( nMI - 1, event);
+        if (multiPtr->scatter( event)) {
+          typeLatest = 1;
+          ++nMPI;
+          if (canVetoMPIStep && nMPI <= nVetoMPIStep) typeVetoStep = 1;
+
+          // Update ISR and FSR dipoles.
+          if (doISR)              spacePtr->prepare( nMPI - 1, event);
+          if (doFSRduringProcess) timesPtr->prepare( nMPI - 1, event);
+        }
 
         // Set maximal scales for next pT to pick.
-        pTmaxMI  = pTmulti;
+        pTmaxMPI = pTmulti;
         pTmaxISR = min( pTmulti, pTmaxISR);
         pTmaxFSR = min( pTmulti, pTmaxFSR);
         pTmax    = pTmulti;
+        nBranch++;
+        pTLastBranch = pTmulti;
+        typeLastBranch = 1;
       }
-   
+
       // Do an initial-state emission (if allowed).
       else if (pTspace > 0. && pTspace > pTtimes) { 
         infoPtr->addCounter(24); 
@@ -334,6 +429,9 @@ bool PartonLevel::next( Event& process, Event& event) {
 
           // Update FSR dipoles.
           if (doFSRduringProcess) timesPtr->update( iSysNow, event); 
+          nBranch++;
+          pTLastBranch = pTspace;
+          typeLastBranch = 2;
 
         // Rescatter: it is possible for kinematics to fail, in which
         //            case we need to restart the parton level processing.
@@ -343,7 +441,7 @@ bool PartonLevel::next( Event& process, Event& event) {
         }
 
         // Set maximal scales for next pT to pick.
-        pTmaxMI  = min( pTspace, pTmaxMI);
+        pTmaxMPI = min( pTspace, pTmaxMPI);
         pTmaxISR = pTspace;
         pTmaxFSR = min( pTspace, pTmaxFSR);
         pTmax    = pTspace;
@@ -362,41 +460,53 @@ bool PartonLevel::next( Event& process, Event& event) {
 
           // Update ISR dipoles.
           if (doISR) spacePtr->update( iSysNow, event); 
+          nBranch++;
+          pTLastBranch = pTtimes;
+          typeLastBranch = 3;
+
         }
 
         // Set maximal scales for next pT to pick.
-        pTmaxMI  = min( pTtimes, pTmaxMI);
+        pTmaxMPI = min( pTtimes, pTmaxMPI);
         pTmaxISR = min( pTtimes, pTmaxISR);
         pTmaxFSR = pTtimes;
         pTmax    = pTtimes;
       }
-   
+
       // If no pT scales above zero then nothing to be done.
       else pTmax = 0.;
 
       // Optionally check for a veto after the first few interactions,
       // or after the first few emissions, ISR or FSR, in the hardest system.
       if (typeVetoStep == 1) {
-        doVeto = userHooksPtr->doVetoMIStep( nMI, event);
+        doVeto = userHooksPtr->doVetoMPIStep( nMPI, event);
       } else if (typeVetoStep > 1) {
-        doVeto = userHooksPtr->doVetoStep( typeVetoStep, nISRhard, 
+        doVeto = userHooksPtr->doVetoStep( typeVetoStep, nISRhard,
           nFSRhard, event);
       }
 
       // Abort event if vetoed.
       if (doVeto) {
-        if (isDiff) leaveResolvedDiff( iHardLoop, event);
+        if (isDiff) leaveResolvedDiff( iHardLoop, process, event);
         return false;
       }
 
       // Keep on evolving until nothing is left to be done.
       if (typeLatest > 0 && typeLatest < 4) 
         infoPtr->addCounter(25 + typeLatest); 
-      infoPtr->setPartEvolved( nMI, nISR);
-    } while (pTmax > 0.); 
+      infoPtr->setPartEvolved( nMPI, nISR);
+
+      // Handle potential merging veto.
+      if ( canRemoveEvent && nISRhard + nFSRhard == 1 ){
+        // Simply check, and possibly reset weights.
+        mergingHooksPtr->doVetoStep( process, event );
+      }
+
+    // End loop evolution down in pT from hard pT scale.
+    } while (pTmax > 0.  && (nBranchMax <= 0 || nBranch < nBranchMax) );
 
     // Do all final-state emissions if not already considered above.
-    if (doFSRafterProcess) {
+    if (doFSRafterProcess && (nBranchMax <= 0 || nBranch < nBranchMax) ) {
 
       // Find largest scale for final partons.
       pTmax = 0.;
@@ -426,7 +536,7 @@ bool PartonLevel::next( Event& process, Event& event) {
           doVeto = userHooksPtr->doVetoPT( 4, event);
           // Abort event if vetoed.
           if (doVeto) {
-            if (isDiff) leaveResolvedDiff( iHardLoop, event);
+            if (isDiff) leaveResolvedDiff( iHardLoop, process, event);
             return false;
           }
         }
@@ -440,6 +550,11 @@ bool PartonLevel::next( Event& process, Event& event) {
             if (iSysNow == 0) ++nFSRhard;
             if (canVetoStep && iSysNow == 0 && nFSRhard <= nVetoStep)
             typeVetoStep = 4;
+
+            nBranch++;
+            pTLastBranch = pTtimes;
+            typeLastBranch = 4;
+
           }
           pTmax = pTtimes;
         }
@@ -449,22 +564,38 @@ bool PartonLevel::next( Event& process, Event& event) {
 
         // Optionally check for a veto after the first few emissions.
         if (typeVetoStep > 0) {
-          doVeto = userHooksPtr->doVetoStep( typeVetoStep, nISRhard, 
+          doVeto = userHooksPtr->doVetoStep( typeVetoStep, nISRhard,
             nFSRhard, event);
           // Abort event if vetoed.
           if (doVeto) {
-            if (isDiff) leaveResolvedDiff( iHardLoop, event);
+            if (isDiff) leaveResolvedDiff( iHardLoop, process, event);
             return false;
           }
         }
 
-      // Keep on evolving until nothing is left to be done.
+        // Handle potential merging veto.
+        if ( canRemoveEvent && nISRhard + nFSRhard == 1 ){
+          // Simply check, and possibly reset weights.
+          mergingHooksPtr->doVetoStep( process, event );
+        }
+
+        // Keep on evolving until nothing is left to be done.
         infoPtr->addCounter(31);
-      } while (pTmax > 0.);
+
+      } while (pTmax > 0.  && (nBranchMax <= 0 || nBranch < nBranchMax) );
+    }
+
+    // Handle veto after ISR + FSR + MPI, but before beam remnants
+    // and resonance decays, e.g. for MLM matching.
+    if (canVetoEarly && userHooksPtr->doVetoPartonLevelEarly( event)) {
+      doVeto = true;
+      if (isDiff) leaveResolvedDiff( iHardLoop, process, event);
+      return false;
     }
 
     // Add beam remnants, including primordial kT kick and colour tracing.
-    if (physical && doRemnants && !remnants.add( event)) physical = false;
+    if (!doTrial && physical && doRemnants && !remnants.add( event))
+      physical = false;
 
     // If no problems then done.
     if (physical) break;
@@ -481,25 +612,29 @@ bool PartonLevel::next( Event& process, Event& event) {
 
   // End loop over ten tries. Restore from diffraction. Hopefully it worked.
   }
-  if (isDiff) leaveResolvedDiff( iHardLoop, event);
+  if (isDiff) leaveResolvedDiff( iHardLoop, process, event);
   if (!physical) return false;
 
   // End big outer loop to handle two systems in double diffraction.
   }
   
   // Perform showers in resonance decay chains.
-  doVeto = !resonanceShowers( process, event, true); 
+  if(nBranchMax <= 0 || nBranch < nBranchMax)
+    doVeto = !resonanceShowers( process, event, true);
   // Abort event if vetoed.
   if (doVeto) return false;
 
-  // Store event properties. Some not available for diffractive systems.
-  if (isDiff) multiPtr->setEmpty(); 
-  infoPtr->setImpact( multiPtr->bMI(), multiPtr->enhanceMI());
-  infoPtr->setEvolution( pTsaveMI, pTsaveISR, pTsaveFSR, 
-    nMI, nISR, nFSRinProc, nFSRinRes);
- 
+  // Store event properties. Not available for diffraction.
+  if (!isDiff) infoPtr->setEvolution( pTsaveMPI, pTsaveISR, pTsaveFSR, 
+    nMPI, nISR, nFSRinProc, nFSRinRes);
+  if (isDiff) {
+    multiPtr->setEmpty(); 
+    infoPtr->setImpact( multiPtr->bMPI(), multiPtr->enhanceMPI(), false);
+  }
+
   // Done.
   return true;
+
 }
 
 //--------------------------------------------------------------------------
@@ -510,18 +645,21 @@ int PartonLevel::decideResolvedDiff( Event& process) {
 
   // Loop over two systems.
   int nHighMass = 0;
-  for (int iDiffSys = 1; iDiffSys <= 2; ++iDiffSys) {
-    int iDiffMot = iDiffSys + 2;
+  int iDSmin    = (isDiffC) ? 3 : 1;
+  int iDSmax    = (isDiffC) ? 3 : 2;
+  for (int iDSnow = iDSmin; iDSnow <= iDSmax; ++iDSnow) {
+    int iDiffMot = iDSnow + 2;
 
     // Only high-mass diffractive systems should be resolved.
     double mDiff = process[iDiffMot].m();
-    bool isHighMass = ( mDiff > mMinDiff 
-      && rndmPtr->flat() < 1. - exp( -(mDiff - mMinDiff) / mWidthDiff ) );
+    bool isHighMass = ( mDiff > mMinDiff && rndmPtr->flat() 
+      < pMaxDiff * ( 1. - exp( -(mDiff - mMinDiff) / mWidthDiff ) ) );
 
     // Set outcome and done.
     if (isHighMass) ++nHighMass;
-    if (iDiffSys == 1) isResolvedA = isHighMass;
-    if (iDiffSys == 2) isResolvedB = isHighMass;
+    if (iDSnow == 1) isResolvedA = isHighMass;
+    if (iDSnow == 2) isResolvedB = isHighMass;
+    if (iDSnow == 3) isResolvedC = isHighMass;
   }
   return nHighMass;
 
@@ -540,20 +678,31 @@ bool PartonLevel::setupUnresolvedSys( Event& process, Event& event) {
   for (int i = 0; i < process.size(); ++ i) event.append( process[i]);
 
   // Loop to find diffractively excited beams.
-  for (int i = 0; i < 2; ++i)  
-  if ( (i == 0 && isDiffA && !isResolvedA) 
-    || (i == 1 && isDiffB && !isResolvedB) ) {
-    int iBeam = i + 3;
-    BeamParticle* beamPtr = (i == 0) ? beamAPtr : beamBPtr;
+  for (iDS = 1; iDS < 4; ++iDS)  
+  if ( (iDS == 1 && isDiffA && !isResolvedA) 
+    || (iDS == 2 && isDiffB && !isResolvedB) 
+    || (iDS == 3 && isDiffC && !isResolvedC) ) {
+    int iBeam = iDS + 2;
 
-    // Diffractive mass. Reconstruct boost and rotation to event cm frame.
+    // Diffractive mass. Boost and rotation from diffractive system 
+    // rest frame, aligned along z axis, to event cm frame.
     double mDiff  = process[iBeam].m();  
-    double m2Diff = mDiff*mDiff;  
-    double beta   = process[iBeam].pAbs() / process[iBeam].e();
-    double theta  = process[iBeam].theta();
-    double phi    = process[iBeam].phi();
-  
+    double m2Diff = mDiff * mDiff;  
+    Vec4 pDiffA   = (iDS == 1) ? process[1].p() 
+                               : process[1].p() - process[3].p();  
+    Vec4 pDiffB   = (iDS == 2) ? process[2].p()
+                               : process[2].p() - process[4].p(); 
+    RotBstMatrix MtoCM;
+    MtoCM.fromCMframe( pDiffA, pDiffB);
+
+    // Beam Particle used for flavour content kicked out by Pomeron.
+    // Randomize for central diffraction; misses closed gluon loop case.
+    bool beamSideA = (iDS == 1 || (iDS == 3 && rndmPtr->flat() < 0.5));
+    BeamParticle* beamPtr = (beamSideA) ? beamAPtr    : beamBPtr;
+    if (iDS == 3) beamPtr = (beamSideA) ? beamPomAPtr : beamPomBPtr;
+
     // Pick quark or gluon kicked out and flavour subdivision.
+    beamPtr->newValenceContent();
     bool gluonIsKicked = beamPtr->pickGluon(mDiff);
     int id1 = beamPtr->pickValence();
     int id2 = beamPtr->pickRemnant();
@@ -571,23 +720,28 @@ bool PartonLevel::setupUnresolvedSys( Event& process, Event& event) {
     if (!gluonIsKicked) { 
       double pAbs = sqrt( pow2(m2Diff - m1*m1 - m2*m2) 
         - pow2(2. * m1 * m2) ) / (2. * mDiff);
+      if (!beamSideA) pAbs = -pAbs;
       double e1 = (m2Diff + m1*m1 - m2*m2) / (2. * mDiff);
       double e2 = (m2Diff + m2*m2 - m1*m1) / (2. * mDiff);
-      Vec4 p1(0.,0., -pAbs, e1);
-      Vec4 p2(0.,0., pAbs, e2);
+      Vec4 p1( 0., 0., -pAbs, e1);
+      Vec4 p2( 0., 0.,  pAbs, e2);
 
       // Boost and rotate to event cm frame.
-      p1.bst(0., 0., beta); p1.rot(theta, phi);   
-      p2.bst(0., 0., beta); p2.rot(theta, phi);   
+      p1.rotbst( MtoCM);   
+      p2.rotbst( MtoCM);   
 
       // Set colours.
       int col1, acol1, col2, acol2;
       if (particleDataPtr->colType(id1) == 1) {
-        col1 = event.nextColTag(); acol1 = 0;
-        col2 = 0; acol2 = col1;
+        col1  = event.nextColTag(); 
+        acol1 = 0;
+        col2  = 0; 
+        acol2 = col1;
       } else {  
-        col1 = 0; acol1 = event.nextColTag();
-        col2 = acol1; acol2 = 0;
+        col1  = 0; 
+        acol1 = event.nextColTag();
+        col2  = acol1; 
+        acol2 = 0;
       }  
      // Update process colours to stay in step.
       process.nextColTag();  
@@ -599,7 +753,6 @@ bool PartonLevel::setupUnresolvedSys( Event& process, Event& event) {
         p2, m2);
       event[iBeam].statusNeg();
       event[iBeam].daughters(iDauBeg, iDauEnd);   
-
 
     // If gluon is kicked out: share momentum between two remnants.
     } else {
@@ -614,31 +767,39 @@ bool PartonLevel::setupUnresolvedSys( Event& process, Event& event) {
       m2Sys = mTS1 / zSys + mTS2 / (1. - zSys);
 
       // Momentum of kicked-out massless gluon in diffractive rest frame.
-      double pAbs = (m2Diff - m2Sys) / (2. * mDiff);
-      Vec4 pG(0., 0., -pAbs, pAbs);
-      Vec4 pRem(0., 0., pAbs, mDiff - pAbs);
+      double pAbs  = (m2Diff - m2Sys) / (2. * mDiff);
+      double pLRem = (beamSideA) ? pAbs : -pAbs;
+      Vec4 pG(  0., 0., -pLRem, pAbs);
+      Vec4 pRem(0., 0.,  pLRem, mDiff - pAbs);
 
       // Momenta of the two beam remnant flavours. (Lightcone p+ = m_diff!)
       double e1 = 0.5 * (zSys * mDiff + mTS1 / (zSys * mDiff));    
       double pL1 = 0.5 * (zSys * mDiff - mTS1 / (zSys * mDiff));  
+      if (!beamSideA) pL1 = -pL1;
       Vec4 p1(pxSys, pySys, pL1, e1);
       Vec4 p2 = pRem - p1;
   
       // Boost and rotate to event cm frame.
-      pG.bst(0., 0., beta); pG.rot(theta, phi);   
-      p1.bst(0., 0., beta); p1.rot(theta, phi);   
-      p2.bst(0., 0., beta); p2.rot(theta, phi); 
+      pG.rotbst( MtoCM);   
+      p1.rotbst( MtoCM);   
+      p2.rotbst( MtoCM);   
 
       // Set colours.
       int colG, acolG, col1, acol1, col2, acol2;
       if (particleDataPtr->colType(id1) == 1) {
-        col1 = event.nextColTag(); acol1 = 0;
-        colG = event.nextColTag(); acolG = col1;
-        col2 = 0; acol2 = colG;
+        col1  = event.nextColTag();
+        acol1 = 0;
+        colG  = event.nextColTag(); 
+        acolG = col1;
+        col2  = 0; 
+        acol2 = colG;
       } else {  
-        col1 = 0; acol1 = event.nextColTag();
-        colG = acol1; acolG = event.nextColTag();
-        col2 = acolG; acol2 = 0;
+        col1  = 0; 
+        acol1 = event.nextColTag();
+        colG  = acol1; 
+        acolG = event.nextColTag();
+        col2  = acolG; 
+        acol2 = 0;
       } 
       // Update process colours to stay in step.
       process.nextColTag();
@@ -664,22 +825,20 @@ bool PartonLevel::setupUnresolvedSys( Event& process, Event& event) {
 
 // Set up the hard process(es), excluding subsequent resonance decays.
 
-  void PartonLevel::setupHardSys( int iHardLoop, Event& process, 
-    Event& event) {
+void PartonLevel::setupHardSys( Event& process, Event& event) {
 
   // Incoming partons to hard process are stored in slots 3 and 4.
   int inS = 0;
   int inP = 3;
   int inM = 4;
 
-  // Identify any diffractive system, mother, last entry. Offset.
-  int iDiffSys =  (iHardLoop == 2 || !isResolvedA) ? 2 : 1; 
-  int iDiffMot = iDiffSys + 2;
+  // Mother and last entry of diffractive system. Offset.
+  int iDiffMot = iDS + 2;
   int iDiffDau = process.size() - 1; 
   int nOffset  = sizeEvent - sizeProcess;
 
   // Resolved diffraction means more entries.
-   if (isDiff) {
+  if (isDiff) {
     inS   = iDiffMot;
     inP   = iDiffDau - 3;
     inM   = iDiffDau - 2;
@@ -735,9 +894,10 @@ bool PartonLevel::setupUnresolvedSys( Event& process, Event& event) {
   // Initialize info needed for subsequent sequential decays + showers.
   nHardDone = sizeProcess;
   iPosBefShow.resize( process.size() );
+  fill( iPosBefShow.begin(), iPosBefShow.end(), 0);
 
   // Add the beam and hard subprocess partons to the event record.
-  for (int i = sizeProcess; i < iBeginSecond; ++ i) { 
+  for (int i = sizeProcess; i < iBeginSecond; ++i) { 
     if (process[i].mother1() > inM) break;
     int j = event.append(process[i]);
     iPosBefShow[i] = i;
@@ -771,6 +931,7 @@ bool PartonLevel::setupUnresolvedSys( Event& process, Event& event) {
     partonSystemsPtr->addOut(0, i + nOffset);   
   partonSystemsPtr->setSHat( 0, 
     (event[inP + nOffset].p() + event[inM + nOffset].p()).m2Calc() );
+  partonSystemsPtr->setPTHat( 0, scale);
 
   // Identify second hard process where applicable.
   // Since internally generated incoming partons are guaranteed massless. 
@@ -817,6 +978,7 @@ bool PartonLevel::setupUnresolvedSys( Event& process, Event& event) {
       partonSystemsPtr->addOut(1, i);   
     partonSystemsPtr->setSHat( 1, 
       (event[inP2].p() + event[inM2].p()).m2Calc() );
+    partonSystemsPtr->setPTHat( 1, scale);
 
   // End code for second hard process.
   }
@@ -830,71 +992,149 @@ bool PartonLevel::setupUnresolvedSys( Event& process, Event& event) {
   event.initColTag(maxColTag); 
 
   // Copy junctions from process to event.
-  for (int i = 0; i < process.sizeJunction(); ++i) 
-    event.appendJunction( process.getJunction(i));
+  for (int iJun = 0; iJun < process.sizeJunction(); ++iJun) {
+    // Resonance decay products may not have been copied from process to 
+    // event yet. If so, do not add junctions associated with decays yet.
+    int kindJunction = process.kindJunction(iJun);
+    bool doCopy = true;
+    // For junction types <= 4, check if final-state legs were copied.    
+    if (kindJunction <= 4) {
+      int iLegF1 = (kindJunction - 1) / 2;    
+      for (int iLeg = iLegF1; iLeg <= 2; ++iLeg) {
+        bool colFound = false;
+        for (int i = inM + 1; i < event.size(); ++i) {
+	  int col = (kindJunction % 2 == 1) ? event[i].col() : event[i].acol();
+	  if (col == process.colJunction(iJun,iLeg)) colFound = true;
+        }
+        if (!colFound) doCopy = false;
+      }	
+    }
+    if (doCopy) event.appendJunction( process.getJunction(iJun));
+  }
+
+  // Done. 
+}
+
+//--------------------------------------------------------------------------
+
+// Set up the event for subsequent resonance decays and showers.
+
+void PartonLevel::setupShowerSys( Event& process, Event& event) {
+
+  // Reset event record to only contain line 0.
+  event.clear();
+  event.append( process[0]);
+
+  // Initialize info needed for subsequent sequential decays + showers.
+  nHardDone = 1;
+  iPosBefShow.resize( process.size());
+  fill( iPosBefShow.begin(), iPosBefShow.end(), 0);
+
+  // Add the hard subprocess partons to the event record.
+  for (int i = 1; i < process.size(); ++i) { 
+    if (process[i].mother1() > 0) break;
+    int j = event.append(process[i]);
+    iPosBefShow[i] = i;
+
+    // Currently outgoing ones should not count as decayed.
+    if (event[j].status() == -22) { 
+      event[j].statusPos(); 
+      event[j].daughters(0, 0);
+    }
+
+    // Complete task of copying hard subsystem into event record.
+    ++nHardDone;
+  }
+
+  // Store participating partons as first set in list of all systems.
+  partonSystemsPtr->clear();
+  partonSystemsPtr->addSys();
+  for (int i = 1; i < nHardDone; ++i) partonSystemsPtr->addOut(0, i);   
+  partonSystemsPtr->setSHat( 0, pow2(process[0].m()) );
+  partonSystemsPtr->setPTHat( 0, 0.5 * process[0].m() );
+
+  // Copy junctions from process to event.
+  for (int iJun = 0; iJun < process.sizeJunction(); ++iJun) {
+    // Resonance decay products may not have been copied from process to 
+    // event yet. If so, do not add junctions associated with decays yet.
+    int kindJunction = process.kindJunction(iJun);
+    bool doCopy = true;
+    // For junction types <= 4, check if final-state legs were copied.    
+    if (kindJunction <= 4) {
+      int iLegF1 = (kindJunction - 1) / 2;    
+      for (int iLeg = iLegF1; iLeg <= 2; ++iLeg) {
+  	bool colFound = false;
+	for (int i = 1; i < event.size(); ++i) {
+	  int col = (kindJunction % 2 == 1) ? event[i].col() : event[i].acol();
+	  if (col == process.colJunction(iJun,iLeg)) colFound = true;
+	}
+	if (!colFound) doCopy = false;
+      }	
+    }
+    if (doCopy) event.appendJunction( process.getJunction(iJun));
+  }
   
   // Done. 
 }
-  
+
 //--------------------------------------------------------------------------
 
 // Resolved diffraction: replace full event with diffractive subsystem.
 
-void PartonLevel::setupResolvedDiff(int iHardLoop, Event& process) {
+void PartonLevel::setupResolvedDiff( Event& process) {
 
-  // Identify diffractive system, mother, last entry.
-  int iDiffSys =  (iHardLoop == 2 || !isResolvedA) ? 2 : 1; 
-  int iDiffMot = iDiffSys + 2;
-  int iDiffDau = process.size() - 1; 
+  // Mother and last entry of diffractive system.
+  int iDiffMot     = iDS + 2;
+  int iDiffDau     = process.size() - 1; 
 
-  // Diffractive system mass.
-  double mDiff = process[iDiffMot].m();
-  double m2Diff = mDiff * mDiff;
-
-  // Diffractively excited particle described as Pomeron-hadron beams.
+  // Diffractively excited particle to be replaced by Pomeron-hadron beams
+  // (or Pomeron-Pomeron beams for central diffraction).
   process[iDiffMot].statusNeg();
   process[iDiffMot].daughters( iDiffDau + 1, iDiffDau + 2);
-   
-  // Set up Pomeron-proton system as if it were the complete collision.
-  int    idHad = process[iDiffSys].id();
-  double mHad  = process[iDiffSys].m();
-  double m2Had = mHad * mHad;
-  double m2Pom = (process[2].p() - process[4].p()).m2Calc();
-  double mPom  = (m2Pom >= 0.) ? sqrt(m2Pom) : -sqrt(-m2Pom); 
-  double eHad  = 0.5 * (m2Diff + m2Had - m2Pom) / mDiff;
-  double ePom  = 0.5 * (m2Diff + m2Pom - m2Had) / mDiff;
-  double pzHP  = 0.5 * sqrtpos( pow2(m2Diff - m2Had - m2Pom) 
-               - 4. * m2Had * m2Pom ) / mDiff; 
-  process.append(   990, 13, iDiffMot, 0, 0, 0, 0, 0, 
-    0., 0.,  pzHP, ePom, mPom);
-  process.append( idHad, 13, iDiffMot, 0, 0, 0, 0, 0, 
-    0., 0., -pzHP, eHad, mHad);
 
-  // Reassign multiple interactions pointer to right object. 
-  multiPtr = (iDiffSys == 1) ? &multiSDA : &multiSDB; 
+  // Diffractive system mass.
+  double mDiff   = process[iDiffMot].m();
+  double m2Diff  = mDiff * mDiff;
 
-  // Reassign one beam pointer to refer to incoming Pomeron.
-  if (iDiffSys == 1) {
-    beamAPtr = beamPomBPtr;
-    beamBPtr = beamHadAPtr;
-  } else {  
-    beamAPtr = beamPomAPtr;
-    beamBPtr = beamHadBPtr;
-  }
+  // Set up Pomeron-proton or Pomeron-Pomeron system as if it were
+  // the complete collision. Set Pomeron "beam particle" massless. 
+  int idDiffA    = (iDS == 1) ? process[1].id() : 990; 
+  int idDiffB    = (iDS == 2) ? process[2].id() : 990; 
+  double mDiffA  = (iDS == 1) ? process[1].m() : 0.;  
+  double mDiffB  = (iDS == 2) ? process[2].m() : 0.; 
+  double m2DiffA = mDiffA * mDiffA;
+  double m2DiffB = mDiffB * mDiffB;
+  double eDiffA  = 0.5 * (m2Diff + m2DiffA - m2DiffB) / mDiff;  
+  double eDiffB  = 0.5 * (m2Diff + m2DiffB - m2DiffA) / mDiff;
+  double pzDiff  = 0.5 * sqrtpos( pow2(m2Diff - m2DiffA - m2DiffB) 
+		 - 4. * m2DiffA * m2DiffB ) / mDiff;   
+  process.append( idDiffA, 13, iDiffMot, 0, 0, 0, 0, 0, 
+                   0., 0.,  pzDiff, eDiffA, mDiffA);
+  process.append( idDiffB, 13, iDiffMot, 0, 0, 0, 0, 0, 
+                   0., 0., -pzDiff, eDiffB, mDiffB);
 
-  // Beams not found in normal slots 1 and 2.
-  int beamOffset = (sizeEvent > 0) ? sizeEvent - 1 : 4;  
-
-  // Reassign beam pointers in other classes.
-  timesPtr->reassignBeamPtrs( beamAPtr, beamBPtr, beamOffset); 
-  spacePtr->reassignBeamPtrs( beamAPtr, beamBPtr);  
-  remnants.reassignBeamPtrs( beamAPtr, beamBPtr);  
+  // Reassign beam pointers to refer to subsystem effective beams.
+  beamAPtr       = (iDS == 1) ? beamHadAPtr : beamPomAPtr;
+  beamBPtr       = (iDS == 2) ? beamHadBPtr : beamPomBPtr;
 
   // Pretend that the diffractive system is the whole collision.
   eCMsave = infoPtr->eCM();
   infoPtr->setECM( mDiff);
-  beamAPtr->newPzE(  pzHP, ePom);
-  beamBPtr->newPzE( -pzHP, eHad);
+  beamAPtr->newPzE(  pzDiff, eDiffA);
+  beamBPtr->newPzE( -pzDiff, eDiffB);
+
+  // Beams not found in normal slots 1 and 2.
+  int beamOffset = (sizeEvent > 0) ? sizeEvent - 1 : 4; 
+       
+  // Reassign beam pointers in other classes.
+  timesPtr->reassignBeamPtrs( beamAPtr, beamBPtr, beamOffset); 
+  spacePtr->reassignBeamPtrs( beamAPtr, beamBPtr, beamOffset);  
+  remnants.reassignBeamPtrs(  beamAPtr, beamBPtr, iDS);  
+
+  // Reassign multiparton interactions pointer to right object.
+  if      (iDS == 1) multiPtr = &multiSDA;
+  else if (iDS == 2) multiPtr = &multiSDB; 
+  else               multiPtr = &multiCD; 
 
 }
 
@@ -902,24 +1142,29 @@ void PartonLevel::setupResolvedDiff(int iHardLoop, Event& process) {
 
 // Resolved diffraction: restore to original behaviour.
 
-void PartonLevel::leaveResolvedDiff( int iHardLoop, Event& event) {
-
-  // Identify diffractive system.
-  int iDiffSys =  (iHardLoop == 2 || !isResolvedA) ? 2 : 1; 
+void PartonLevel::leaveResolvedDiff( int iHardLoop, Event& process, 
+  Event& event) {
 
   // Reconstruct boost and rotation to event cm frame.
-  Vec4 pPom = event[3 - iDiffSys].p() - event[5 - iDiffSys].p(); 
-  Vec4 pHad =  event[iDiffSys].p(); 
+  Vec4 pDiffA = (iDS == 1) ? process[1].p() 
+                           : process[1].p() - process[3].p();  
+  Vec4 pDiffB = (iDS == 2) ? process[2].p()
+                           : process[2].p() - process[4].p(); 
   RotBstMatrix MtoCM;
-  MtoCM.fromCMframe( pPom, pHad);
- 
+  MtoCM.fromCMframe( pDiffA, pDiffB);
+
   // Perform rotation and boost on diffractive system.
+  for (int i = sizeProcess; i < process.size(); ++i)
+    process[i].rotbst( MtoCM);   
   int iFirst = (iHardLoop == 1) ? 5 + sizeEvent - sizeProcess : sizeEvent;
+  if(isDiffC)  iFirst = 6 + sizeEvent - sizeProcess;  
   for (int i = iFirst; i < event.size(); ++i) 
     event[i].rotbst( MtoCM);   
 
-  // Restore multiple interactions pointer to default object.
-  multiPtr = &multiMB;
+  // Restore cm energy.
+  infoPtr->setECM( eCMsave);    
+  beamAPtr->newPzE( event[1].pz(), event[1].e());
+  beamBPtr->newPzE( event[2].pz(), event[2].e());
 
   // Restore beam pointers to incoming hadrons.
   beamAPtr = beamHadAPtr;
@@ -927,13 +1172,11 @@ void PartonLevel::leaveResolvedDiff( int iHardLoop, Event& event) {
 
   // Reassign beam pointers in other classes.
   timesPtr->reassignBeamPtrs( beamAPtr, beamBPtr, 0);  
-  spacePtr->reassignBeamPtrs( beamAPtr, beamBPtr);  
-  remnants.reassignBeamPtrs( beamAPtr, beamBPtr);  
+  spacePtr->reassignBeamPtrs( beamAPtr, beamBPtr, 0);  
+  remnants.reassignBeamPtrs(  beamAPtr, beamBPtr, 0);  
 
-  // Restore cm energy.
-  infoPtr->setECM( eCMsave);    
-  beamAPtr->newPzE( event[1].pz(), event[1].e());
-  beamBPtr->newPzE( event[2].pz(), event[2].e());
+  // Restore multiparton interactions pointer to default object.
+  multiPtr = &multiMB;
 
 }
 
@@ -957,6 +1200,11 @@ bool PartonLevel::resonanceShowers( Event& process, Event& event,
   // Isolate next system to be processed, if anything remains.
   int nRes    = 0;
   int nFSRres = 0;
+  // Number of desired branchings, negative value means no restriction.
+  int nBranchMax = (doTrial) ? nTrialEmissions : -1;
+  // Vector to tell which junctions have already been copied
+  vector<int> iJunCopied;
+
   while (nHardDone < process.size()) {
     ++nRes;
     int iBegin = nHardDone;
@@ -979,7 +1227,7 @@ bool PartonLevel::resonanceShowers( Event& process, Event& event,
         }
 
       // In optional second call (skipForR = false) process decay chains
-      // inside R-hdrons.  
+      // inside R-hadrons.  
       } else if (!inRHadDecay[iBegin]) {
         ++nHardDone;
         continue;
@@ -1011,7 +1259,8 @@ bool PartonLevel::resonanceShowers( Event& process, Event& event,
     M.bst( hardMother.p(), aftMother.p());
 
     // Extract next partons from hard event into normal event record.
-    for (int i = iBegin; i < process.size(); ++ i) { 
+    vector<bool> doCopyJun;
+    for (int i = iBegin; i < process.size(); ++i) { 
       if (process[i].mother1() != iHardMother) break;
       int iNow = event.append( process[i] );
       iPosBefShow[i] = iNow;
@@ -1028,25 +1277,67 @@ bool PartonLevel::resonanceShowers( Event& process, Event& event,
       else             event[iAftMother].daughter2( iNow); 
       now.mother1(iAftMother); 
 
+      // Check if this parton carries a junction color in hard event.
+      for (int iJun = 0; iJun < process.sizeJunction(); ++iJun) {
+        if (iJun >= int(doCopyJun.size())) doCopyJun.push_back(false); 
+        // Only consider junctions that can appear in decays.
+        int kindJunction = process.kindJunction(iJun);
+	if (kindJunction >= 5) continue;
+	int col = (kindJunction % 2 == 1) ? now.col() : now.acol();
+        int iLegF1 = (kindJunction - 1) / 2;
+	for (int iLeg = iLegF1; iLeg <= 2; ++iLeg) 
+	if (col == process.colJunction(iJun,iLeg)) doCopyJun[iJun] = true;
+      }
+  
       // Update colour and momentum information.
       if (now.col() == colBef) now.col( colAft);
       if (now.acol() == acolBef) now.acol( acolAft);
       now.rotbst( M);   
 
+      // Update vertex information.
+      if (now.hasVertex()) now.vProd( aftMother.vDec() );
+
       // Complete task of copying next subsystem into event record.
       ++nHardDone;
     }
     int iEnd = nHardDone - 1;
-    
+
+    // Copy down junctions from hard event into normal event record.
+    for (int iJun = 0; iJun < int(doCopyJun.size()); ++iJun) {
+      // Check if this junction was already copied
+      for (int jJun = 0; jJun < int(iJunCopied.size()); ++jJun) 
+        if (iJunCopied[jJun] == iJun) doCopyJun[iJun] = false;
+      // Skip if not doing anything
+      if (!doCopyJun[iJun]) continue;      
+      // Check for changed colors and update as necessary.
+      Junction junCopy = process.getJunction(iJun);
+      for (int iLeg = 0; iLeg <= 2; ++iLeg) {
+        int colLeg = junCopy.col(iLeg);
+        if (colLeg == colBef) junCopy.col(iLeg, colAft);
+	if (colLeg == acolBef) junCopy.col(iLeg, acolAft);
+      }
+      event.appendJunction(junCopy);
+      // Mark junction as copied (to avoid later recopying)
+      iJunCopied.push_back(iJun);
+    }
+
+    // Reset pT of last branching
+    pTLastBranch = 0.0;    
+
     // Do parton showers inside subsystem: maximum scale by mother mass.
     if (doFSRinResonances) {
       double pTmax = 0.5 * hardMother.m();
-      if (canSetScale) pTmax = userHooksPtr->scaleResonance( iAftMother, event);
+      if (canSetScale) pTmax 
+        = userHooksPtr->scaleResonance( iAftMother, event);
       nFSRhard     = 0; 
+
+      // Set correct scale for trial showers.
+      if (doTrial) pTmax = process.scale();
 
       // Add new system, automatically with two empty beam slots.
       int iSys = partonSystemsPtr->addSys();
       partonSystemsPtr->setSHat(iSys, pow2(hardMother.m()) );
+      partonSystemsPtr->setPTHat(iSys, 0.5 * hardMother.m() );
     
       // Loop over allowed range to find all final-state particles.
       for (int i = iPosBefShow[iBegin]; i <= iPosBefShow[iEnd]; ++i) 
@@ -1054,6 +1345,9 @@ bool PartonLevel::resonanceShowers( Event& process, Event& event,
 
       // Let prepare routine do the setup.    
       timesDecPtr->prepare( iSys, event);
+
+       // Number of actual branchings
+      int nBranch = 0;
 
       // Set up initial veto scale.
       doVeto        = false;
@@ -1078,6 +1372,11 @@ bool PartonLevel::resonanceShowers( Event& process, Event& event,
             ++nFSRres; 
             ++nFSRhard;
             if (canVetoStep && nFSRhard <= nVetoStep) typeVetoStep = 5;
+
+            nBranch++;
+            pTLastBranch = pTtimes;
+            typeLastBranch = 5;
+
           }
           pTmax = pTtimes;
         }
@@ -1093,8 +1392,14 @@ bool PartonLevel::resonanceShowers( Event& process, Event& event,
           if (doVeto) return false;
         }
 
+        // Handle potential merging veto.
+        if ( canRemoveEvent && nFSRhard == 1 ) {
+          // Simply check, and possibly reset weights.
+          mergingHooksPtr->doVetoStep( process, event, true );
+        }
+
       // Keep on evolving until nothing is left to be done.
-      } while (pTmax > 0.); 
+      } while (pTmax > 0.  && (nBranchMax <= 0 || nBranch < nBranchMax) );
 
     }    
 

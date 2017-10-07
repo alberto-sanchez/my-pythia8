@@ -9,7 +9,7 @@ between "resonances" and other "particles" made in PYTHIA.
 <li>
 The list of resonances contains <ei>gamma^*/Z^0</ei>, <ei>W^+-</ei>, top, 
 the Higgs, and essentially all new particles of Beyond-the-Standard-Model 
-physics: further Higgses, sfermions, gauginos, techniparticles, and so on. 
+physics: further Higgs bosons, sfermions, gauginos, techniparticles, and so on. 
 The partial widths to different decay channels are perturbatively
 calculable, given the parameters of the respective model, and branching
 ratios may be allowed to vary across a (reasonably broad) resonance peak.
@@ -50,7 +50,7 @@ produced in a hard process. On the other hand, photons can participate
 in shower evolution, and therefore a photon originally assumed
 massless can be assigned an arbitrarily high mass when it is allowed
 to branch into a fermion pair. In some cases this could lead to 
-doublecounting, e.g. between processes such as 
+double-counting, e.g. between processes such as 
 <ei>f fbar -> (gamma^*/Z^0) (gamma^*/Z^0)</ei>,
 <ei>f fbar -> (gamma^*/Z^0) gamma</ei> and 
 <ei>f fbar -> gamma gamma</ei>. Here it make sense to limit the
@@ -103,7 +103,7 @@ the relative rates of <ei>H^0 -> W^+ W^-</ei> and
 <p/>
 We remind that only those particles that Pythia treat as resonances 
 enjoy this property, and only those that are considered as part of the 
-hard process and its assocaited resonance decays.
+hard process and its associated resonance decays.
 
 <p/>
 There is one key restriction on resonances:
@@ -118,6 +118,24 @@ would be needed if coloured resonance particles were made stable, since
 the program would not necessarily know how to hadronize them, and 
 therefore fail at that stage.
 </parm>
+
+<p/>
+In spite of this technical parameter choice, it is possible to set 
+a lifetime for a resonance, and thereby to obtain displaced vertices.
+If a resonance is allowed to decay it will do so, irrespective of
+the location of the decay vertex. This is unlike 
+<aloc href="ParticleDecays">normal particle decays</aloc>,
+where it is possible to define some region around the primary
+vertex within which all decays should happen, with particles
+leaving that region considered stable. The logic is that resonances 
+as a rule are too short-lived for secondary vertices,
+so if you pick a scenario with a long-lived but unstable resonance
+it is because you <i>want</i> to study secondary vertices. 
+How to interface those decays to a detector simulation program then
+is another story, to be solved separately. Do note that a special
+treatment is needed for coloured long-lived resonances, that form
+<aloc href="Rhadrons">R-hadrons</aloc>, and where charge and flavour
+may change between the production and decay vertices.   
 
 <h3>Special properties and methods for resonances</h3>
 
@@ -150,7 +168,7 @@ depending on how these were encoded. A further warning is that,
 if you use this facility for <ei>Z^0</ei> or <ei>Z'^0</ei> with 
 <ei>gamma^*/Z^0</ei> or <ei>gamma^*/Z^0/Z'^0</ei> interference on,
 then also the handling of this interference is questionable.
-So, if you need to use the width-rescaling option, be extremely cautios. 
+So, if you need to use the width-rescaling option, be extremely cautious. 
 
 <p/>
 If a resonance does not have a class of its own, with hardcoded equations 
@@ -313,5 +331,5 @@ stored in a work area.
 
 </chapter>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->
 

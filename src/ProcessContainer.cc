@@ -1,5 +1,5 @@
 // ProcessContainer.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -48,7 +48,7 @@ bool ProcessContainer::init(bool isFirst, Info* infoPtrIn,
   Settings& settings, ParticleData* particleDataPtrIn, Rndm* rndmPtrIn, 
   BeamParticle* beamAPtr, BeamParticle* beamBPtr, Couplings* couplingsPtr, 
   SigmaTotal* sigmaTotPtr, ResonanceDecays* resDecaysPtrIn, 
-  SusyLesHouches* slhaPtr, UserHooks* userHooksPtr) {
+  SusyLesHouches* slhaPtr, UserHooks* userHooksPtrIn) {
 
   // Extract info about current process from SigmaProcess object.
   isLHA       = sigmaProcessPtr->isLHA();
@@ -56,6 +56,7 @@ bool ProcessContainer::init(bool isFirst, Info* infoPtrIn,
   isResolved  = sigmaProcessPtr->isResolved();
   isDiffA     = sigmaProcessPtr->isDiffA();
   isDiffB     = sigmaProcessPtr->isDiffB();
+  isDiffC     = sigmaProcessPtr->isDiffC();
   isQCD3body  = sigmaProcessPtr->isQCD3body();
   int nFin    = sigmaProcessPtr->nFinal();
   lhaStrat    = (isLHA) ? lhaUpPtr->strategy() : 0;
@@ -68,8 +69,10 @@ bool ProcessContainer::init(bool isFirst, Info* infoPtrIn,
   // Pick and create phase space generator. Send pointers where required.
   if      (isLHA)       phaseSpacePtr = new PhaseSpaceLHA();
   else if (isMinBias)   phaseSpacePtr = new PhaseSpace2to2minbias();
-  else if (!isResolved && !isDiffA  && !isDiffB )
+  else if (!isResolved && !isDiffA  && !isDiffB  && !isDiffC )
                         phaseSpacePtr = new PhaseSpace2to2elastic();
+  else if (!isResolved && !isDiffA  && !isDiffB && isDiffC)
+                        phaseSpacePtr = new PhaseSpace2to3diffractive();
   else if (!isResolved) phaseSpacePtr = new PhaseSpace2to2diffractive( 
                                         isDiffA, isDiffB);
   else if (nFin == 1)   phaseSpacePtr = new PhaseSpace2to1tauy();
@@ -82,6 +85,9 @@ bool ProcessContainer::init(bool isFirst, Info* infoPtrIn,
   particleDataPtr = particleDataPtrIn;
   rndmPtr         = rndmPtrIn;
   resDecaysPtr    = resDecaysPtrIn;
+  userHooksPtr    = userHooksPtrIn;
+  canVetoResDecay = (userHooksPtr != 0) 
+                  ? userHooksPtr->canVetoResonanceDecays() : false;
   if (isLHA) {
     sigmaProcessPtr->setLHAPtr(lhaUpPtr);
     phaseSpacePtr->setLHAPtr(lhaUpPtr);
@@ -121,11 +127,14 @@ bool ProcessContainer::init(bool isFirst, Info* infoPtrIn,
   // Check maximum by a few events, and extrapolate a further increase.
   if (physical & !isLHA) {
     int nSample = (nFin < 3) ? N12SAMPLE : N3SAMPLE;
-    for (int iSample = 0; iSample < nSample; ++iSample) 
-    while (!phaseSpacePtr->trialKin(false)) { 
+    for (int iSample = 0; iSample < nSample; ++iSample) {
+      bool test = false;
+      while (!test) test = phaseSpacePtr->trialKin(false); 
       if (iSample == nSample/2) sigmaHalfWay = phaseSpacePtr->sigmaMax();
-    }   
-    sigmaMx = pow2(phaseSpacePtr->sigmaMax()) / sigmaHalfWay;
+    } 
+    double sigmaFullWay = phaseSpacePtr->sigmaMax();  
+    sigmaMx = (sigmaHalfWay > 0.) ? pow2(sigmaFullWay) / sigmaHalfWay
+                                  : sigmaFullWay;
     phaseSpacePtr->setSigmaMax(sigmaMx);
   }
 
@@ -148,9 +157,37 @@ bool ProcessContainer::trialProcess() {
     bool repeatSame = (iTry > 0);
     bool physical = phaseSpacePtr->trialKin(true, repeatSame);
 
-    // Possibly fail, e.g. if at end of Les Houches file, else cross section.
+    // Note if at end of Les Houches file, else do statistics.
     if (isLHA && !physical) infoPtr->setEndOfFile(true);
-    else ++nTry;
+    else {
+      ++nTry;
+      // Statistics for separate Les Houches process codes. Insert new codes.
+      if (isLHA) {
+        int codeLHANow = lhaUpPtr->idProcess();
+        int iFill = -1;
+        for (int i = 0; i < int(codeLHA.size()); ++i)
+          if (codeLHANow == codeLHA[i]) iFill = i;
+        if (iFill >= 0) {
+          ++nTryLHA[iFill];
+        } else {
+          codeLHA.push_back(codeLHANow);
+          nTryLHA.push_back(1);
+          nSelLHA.push_back(0);
+          nAccLHA.push_back(0);
+          for (int i = int(codeLHA.size()) - 1; i > 0; --i) {
+            if (codeLHA[i] < codeLHA[i - 1]) { 
+              swap(codeLHA[i], codeLHA[i - 1]);
+              swap(nTryLHA[i], nTryLHA[i - 1]);
+              swap(nSelLHA[i], nSelLHA[i - 1]);
+              swap(nAccLHA[i], nAccLHA[i - 1]);
+            } 
+            else break;
+          }
+        }
+      }
+    }
+
+    // Possibly fail, else cross section.
     if (!physical) return false;
     double sigmaNow = phaseSpacePtr->sigmaNow(); 
 
@@ -164,7 +201,7 @@ bool ProcessContainer::trialProcess() {
     // Also compensating weight from biased phase-space selection. 
     double biasWeight = phaseSpacePtr->biasSelectionWeight();
     weightNow = sigmaWeight * biasWeight;
-    infoPtr->setWeight( weightNow);
+    infoPtr->setWeight( weightNow, lhaStrat);
 
     // Check that not negative cross section when not allowed.
     if (!allowNegSig) {
@@ -186,26 +223,64 @@ bool ProcessContainer::trialProcess() {
     newSigmaMx = phaseSpacePtr->newSigmaMax();
     if (newSigmaMx) sigmaMx = phaseSpacePtr->sigmaMax();
 
-    // Select or reject trial point.
+    // Select or reject trial point. Statistics.
     bool select = true;
     if (lhaStratAbs < 3) select 
       = (newSigmaMx || rndmPtr->flat() * abs(sigmaMx) < abs(sigmaNow)); 
-    if (select) ++nSel;
+    if (select) {
+      ++nSel;
+      if (isLHA) {
+        int codeLHANow = lhaUpPtr->idProcess();
+        int iFill = -1;
+        for (int i = 0; i < int(codeLHA.size()); ++i)
+          if (codeLHANow == codeLHA[i]) iFill = i;
+        if (iFill >= 0) ++nSelLHA[iFill];
+      }
+    }
     if (select || lhaStratAbs != 2) return select;
+
   }
  
 }
 
+//--------------------------------------------------------------------------
+
+// Accumulate statistics after user veto, including LHA code. 
+
+void ProcessContainer::accumulate() {
+
+  ++nAcc; 
+  wtAccSum += weightNow;
+  if (isLHA) {
+    int codeLHANow = lhaUpPtr->idProcess();
+    int iFill = -1;
+    for (int i = 0; i < int(codeLHA.size()); ++i)
+      if (codeLHANow == codeLHA[i]) iFill = i;
+    if (iFill >= 0) ++nAccLHA[iFill];
+  }
+
+}
 
 //--------------------------------------------------------------------------
   
-// Give the hard subprocess.
+// Pick flavours and colour flow of process.
 
-bool ProcessContainer::constructProcess( Event& process, bool isHardest) { 
+bool ProcessContainer::constructState() { 
 
   // Construct flavour and colours for selected event.
   if (isResolved && !isMinBias) sigmaProcessPtr->pickInState();
   sigmaProcessPtr->setIdColAcol();
+
+  // Done.
+  return true;
+
+}
+
+//--------------------------------------------------------------------------
+  
+// Give the hard subprocess with kinematics.
+
+bool ProcessContainer::constructProcess( Event& process, bool isHardest) { 
 
   // Construct kinematics from selected phase space point.
   if (!phaseSpacePtr->finalKin()) return false;
@@ -213,7 +288,7 @@ bool ProcessContainer::constructProcess( Event& process, bool isHardest) {
 
   // Basic info on process.
   if (isHardest) infoPtr->setType( name(), code(), nFin, isMinBias, 
-    isResolved, isDiffA, isDiffB, isLHA);
+    isResolved, isDiffA, isDiffB, isDiffC, isLHA);
 
   // Let hard process record begin with the event as a whole and
   // the two incoming beam particles.  
@@ -231,6 +306,12 @@ bool ProcessContainer::constructProcess( Event& process, bool isHardest) {
   process[1].daughter1(3);
   process[2].daughter1(4);
   double scale = 0.;
+  
+  // For DiffC entries 3 - 5 come jointly from 1 and 2 (to keep HepMC happy).
+  if (isDiffC) {
+    process[1].daughters(3, 5);
+    process[2].daughters(3, 5);
+  }
 
   // Insert the subprocess partons - resolved processes.
   int idRes = sigmaProcessPtr->idSChannel();
@@ -240,7 +321,7 @@ bool ProcessContainer::constructProcess( Event& process, bool isHardest) {
     int m_M1 = 3; 
     int m_M2 = 4; 
     int m_D1 = 5; 
-    int m_D2 = 4 + nFin;
+    int m_D2 = (nFin == 1) ? 0 : 4 + nFin;
     if (idRes != 0) { 
       m_M1   = 5;
       m_M2   = 0;
@@ -248,7 +329,7 @@ bool ProcessContainer::constructProcess( Event& process, bool isHardest) {
       m_D2   = 0; 
     }
 
-    // Find scale from which to begin MI/ISR/FSR evolution. 
+    // Find scale from which to begin MPI/ISR/FSR evolution. 
     scale = sqrt(Q2Fac());
     process.scale( scale );
 
@@ -326,6 +407,17 @@ bool ProcessContainer::constructProcess( Event& process, bool isHardest) {
     int status4 = (id4 == process[2].id()) ? 14 : 15;
     process.append( id4, status4, 2, 0, 0, 0, 0, 0, 
       phaseSpacePtr->p(4), phaseSpacePtr->m(4));
+
+    // For central diffraction: two scattered protons inserted so far,
+    // but modify mothers, add also centrally-produced hadronic system.
+    if (isDiffC) {
+      process[3].mothers( 1, 2);
+      process[4].mothers( 1, 2);   
+      int id5     = sigmaProcessPtr->id(5);
+      int status5 = 15;
+      process.append( id5, status5, 1, 2, 0, 0, 0, 0, 
+	phaseSpacePtr->p(5), phaseSpacePtr->m(5));
+    }
   }
 
   // Insert the outgoing particles - Les Houches Accord processes.
@@ -344,7 +436,7 @@ bool ProcessContainer::constructProcess( Event& process, bool isHardest) {
       if (int(newPos.size()) <= iNew) break;
     } 
 
-    // Find scale from which to begin MI/ISR/FSR evolution.
+    // Find scale from which to begin MPI/ISR/FSR evolution.
     scale = lhaUpPtr->scale();
     double scalePr = (scale < 0.) ? sqrt(Q2Fac()) : scale;
     process.scale( scalePr);
@@ -394,9 +486,9 @@ bool ProcessContainer::constructProcess( Event& process, bool isHardest) {
 
       // Colour trivial, except reset irrelevant colour indices.
       int colType = particleDataPtr->colType(id);
-      int col1   = (colType == 1 || colType == 2) 
+      int col1   = (colType == 1 || colType == 2 || abs(colType) == 3) 
                  ? lhaUpPtr->col1(iOld) : 0;   
-      int col2   = (colType == -1 || colType == 2) 
+      int col2   = (colType == -1 || colType == 2 || abs(colType) == 3) 
                  ?  lhaUpPtr->col2(iOld) : 0; 
 
       // Momentum trivial.
@@ -406,13 +498,20 @@ bool ProcessContainer::constructProcess( Event& process, bool isHardest) {
       double e   = lhaUpPtr->e(iOld);  
       double m   = lhaUpPtr->m(iOld);
 
+      // Polarization.
+      double pol = lhaUpPtr->spin(iOld);
+
+      // Allow scale setting for generic partons.
+      double scaleShow = lhaUpPtr->scale(iOld);
+
       // For resonance decay products use resonance mass as scale.
       double scaleNow = scalePr;
       if (mother1 > 4) scaleNow = process[mother1].m();
+      if (scaleShow >= 0.0) scaleNow = scaleShow;
 
       // Store Les Houches Accord partons.
       int iNow = process.append( id, status, mother1, mother2, daughter1, 
-        daughter2, col1, col2, Vec4(px, py, pz, e), m, scaleNow);
+        daughter2, col1, col2, Vec4(px, py, pz, e), m, scaleNow, pol);
 
       // Check if need to store lifetime.
       double tau = lhaUpPtr->tau(iOld);
@@ -434,8 +533,12 @@ bool ProcessContainer::constructProcess( Event& process, bool isHardest) {
   }
 
   // Further info on process. Reset quantities that may or may not be known.
-  int    id1Now  =  process[3].id(); 
-  int    id2Now  =  process[4].id(); 
+  int    id1Now  = process[3].id(); 
+  int    id2Now  = process[4].id(); 
+  int    id1pdf  = 0;
+  int    id2pdf  = 0;
+  double x1pdf   = 0.;
+  double x2pdf   = 0.; 
   double pdf1    = 0.;
   double pdf2    = 0.;
   double tHat    = 0.;
@@ -445,18 +548,22 @@ bool ProcessContainer::constructProcess( Event& process, bool isHardest) {
   double m4      = 0.;
   double theta   = 0.;
   double phi     = 0.;
-  double Q2FacNow, alphaEM, alphaS, Q2Ren, x1Now, x2Now, sHat;
+  double x1Now, x2Now, Q2FacNow, alphaEM, alphaS, Q2Ren, sHat;
 
   // Internally generated and stored information.
   if (!isLHA) {
+    id1pdf       = id1Now;
+    id2pdf       = id2Now;
+    x1Now        = phaseSpacePtr->x1();
+    x2Now        = phaseSpacePtr->x2();
+    x1pdf        = x1Now;
+    x2pdf        = x2Now;    
     pdf1         = sigmaProcessPtr->pdf1();
     pdf2         = sigmaProcessPtr->pdf2();
     Q2FacNow     = sigmaProcessPtr->Q2Fac();
     alphaEM      = sigmaProcessPtr->alphaEMRen();
     alphaS       = sigmaProcessPtr->alphaSRen();
     Q2Ren        = sigmaProcessPtr->Q2Ren();
-    x1Now        = phaseSpacePtr->x1();
-    x2Now        = phaseSpacePtr->x2();
     sHat         = phaseSpacePtr->sHat();
     tHat         = phaseSpacePtr->tHat();
     uHat         = phaseSpacePtr->uHat();
@@ -469,24 +576,34 @@ bool ProcessContainer::constructProcess( Event& process, bool isHardest) {
 
   // Les Houches Accord process partly available, partly to be constructed.
   else {
+    x1Now        = 2. * process[3].e() / infoPtr->eCM();
+    x2Now        = 2. * process[4].e() / infoPtr->eCM();
     Q2FacNow     = (scale < 0.) ? sigmaProcessPtr->Q2Fac() : pow2(scale);
     alphaEM      = lhaUpPtr->alphaQED();
     if (alphaEM < 0.001) alphaEM = sigmaProcessPtr->alphaEMRen();
     alphaS       = lhaUpPtr->alphaQCD();
     if (alphaS  < 0.001) alphaS  = sigmaProcessPtr->alphaSRen();
     Q2Ren        = (scale < 0.) ? sigmaProcessPtr->Q2Ren() : pow2(scale);
-    x1Now        = 2. * process[3].e() / infoPtr->eCM();
-    x2Now        = 2. * process[4].e() / infoPtr->eCM();
     Vec4 pSum    = process[3].p() + process[4].p();
     sHat         = pSum * pSum;
+    int nFinLH   = 0;
+    double pTLH  = 0.;
+    for (int i = 5; i < process.size(); ++i) 
+    if (process[i].mother1() == 3 && process[i].mother2() == 4) {
+      ++nFinLH;
+      pTLH      += process[i].pT();
+    } 
+    if (nFinLH > 0) pTHatL = pTLH / nFinLH;
 
     // Read info on parton densities if provided.
+    id1pdf       = lhaUpPtr->id1pdf();
+    id2pdf       = lhaUpPtr->id2pdf();
+    x1pdf        = lhaUpPtr->x1pdf();
+    x2pdf        = lhaUpPtr->x2pdf();
     if (lhaUpPtr->pdfIsSet()) {
-      pdf1       = lhaUpPtr->xpdf1();
-      pdf2       = lhaUpPtr->xpdf2();
+      pdf1       = lhaUpPtr->pdf1();
+      pdf2       = lhaUpPtr->pdf2();
       Q2FacNow   = pow2(lhaUpPtr->scalePDF());
-      x1Now      = lhaUpPtr->x1();
-      x2Now      = lhaUpPtr->x2();
     }
 
     // Reconstruct kinematics of 2 -> 2 processes from momenta.
@@ -507,21 +624,144 @@ bool ProcessContainer::constructProcess( Event& process, bool isHardest) {
 
   // Store information.
   if (isHardest) {
-    infoPtr->setPDFalpha( id1Now, id2Now, pdf1, pdf2, Q2FacNow, 
-      alphaEM, alphaS, Q2Ren);
-    infoPtr->setKin( x1Now, x2Now, sHat, tHat, uHat, pTHatL, m3, m4, 
-      theta, phi);
+    infoPtr->setPDFalpha( 0, id1pdf, id2pdf, x1pdf, x2pdf, pdf1, pdf2, 
+      Q2FacNow, alphaEM, alphaS, Q2Ren);
+    infoPtr->setKin( 0, id1Now, id2Now, x1Now, x2Now, sHat, tHat, uHat, 
+      pTHatL, m3, m4, theta, phi);
   }
-  infoPtr->setTypeMI( code(), pTHatL);
+  infoPtr->setTypeMPI( code(), pTHatL);
 
   // For Les Houches event store subprocess classification.
   if (isLHA) {
     int codeSub  = lhaUpPtr->idProcess();
     ostringstream nameSub;
     nameSub << "user process " << codeSub; 
-    infoPtr->setSubType( nameSub.str(), codeSub, nFin);
+    infoPtr->setSubType( 0, nameSub.str(), codeSub, nFin);
   }
 
+  // Done.
+  return true;
+
+}
+
+//--------------------------------------------------------------------------
+  
+// Give the hard resonance decay chain from Les Houches input.
+// Note: mildly modified copy of some constructProcess code; to streamline.
+
+bool ProcessContainer::constructDecays( Event& process) { 
+
+  // Let hard process record begin with the event as a whole. 
+  process.clear(); 
+  process.append( 90, -11, 0, 0, 0, 0, 0, 0, Vec4(0., 0., 0., 0.), 0., 0. ); 
+
+  // Since LHA partons may be out of order, determine correct one.
+  // (Recall that zeroth particle is empty.) 
+  vector<int> newPos;
+  newPos.reserve(lhaUpPtr->sizePart());
+  newPos.push_back(0);
+  for (int iNew = 0; iNew < lhaUpPtr->sizePart(); ++iNew) {
+    // For iNew == 0 look for the two incoming partons, then for
+    // partons having them as mothers, and so on layer by layer.
+    for (int i = 1; i < lhaUpPtr->sizePart(); ++i)
+      if (lhaUpPtr->mother1(i) == newPos[iNew]) newPos.push_back(i);
+    if (int(newPos.size()) <= iNew) break;
+  } 
+
+  // Find scale from which to begin MPI/ISR/FSR evolution.
+  double scale = lhaUpPtr->scale();
+  process.scale( scale);
+  Vec4 pSum;
+
+  // Copy over info from LHA event to process, in proper order.
+  for (int i = 1; i < lhaUpPtr->sizePart(); ++i) {
+    int iOld = newPos[i];
+    int id = lhaUpPtr->id(iOld);
+
+    // Translate from LHA status codes.
+    int lhaStatus =  lhaUpPtr->status(iOld);
+    int status = -21;
+    if (lhaStatus == 2 || lhaStatus == 3) status = -22;
+    if (lhaStatus == 1) status = 23;
+
+    // Find where mothers have been moved by reordering.
+    int mother1Old = lhaUpPtr->mother1(iOld);   
+    int mother2Old = lhaUpPtr->mother2(iOld);   
+    int mother1 = 0;
+    int mother2 = 0; 
+    for (int im = 1; im < i; ++im) {
+      if (mother1Old == newPos[im]) mother1 = im; 
+      if (mother2Old == newPos[im]) mother2 = im; 
+    } 
+
+    // Ensure that second mother = 0 except for bona fide carbon copies.
+    if (mother1 > 0 && mother2 == mother1) { 
+      int sister1 = process[mother1].daughter1();
+      int sister2 = process[mother1].daughter2();
+      if (sister2 != sister1 && sister2 != 0) mother2 = 0;
+    } 
+
+    // Find daughters and where they have been moved by reordering. 
+    int daughter1 = 0;
+    int daughter2 = 0;
+    for (int im = i + 1; im < lhaUpPtr->sizePart(); ++im) { 
+      if (lhaUpPtr->mother1(newPos[im]) == iOld
+        || lhaUpPtr->mother2(newPos[im]) == iOld) {
+        if (daughter1 == 0 || im < daughter1) daughter1 = im;
+        if (daughter2 == 0 || im > daughter2) daughter2 = im;
+      }
+    }
+    // For 2 -> 1 hard scatterings reset second daughter to 0.
+    if (daughter2 == daughter1) daughter2 = 0;
+
+    // Colour trivial, except reset irrelevant colour indices.
+    int colType = particleDataPtr->colType(id);
+    int col1   = (colType == 1 || colType == 2 || abs(colType) == 3) 
+               ? lhaUpPtr->col1(iOld) : 0;   
+    int col2   = (colType == -1 || colType == 2 || abs(colType) == 3) 
+               ?  lhaUpPtr->col2(iOld) : 0; 
+
+    // Momentum trivial.
+    double px  = lhaUpPtr->px(iOld);  
+    double py  = lhaUpPtr->py(iOld);  
+    double pz  = lhaUpPtr->pz(iOld);  
+    double e   = lhaUpPtr->e(iOld);  
+    double m   = lhaUpPtr->m(iOld);
+    if (status > 0) pSum += Vec4( px, py, pz, e);
+
+    // Polarization.
+    double pol = lhaUpPtr->spin(iOld);
+
+    // For resonance decay products use resonance mass as scale.
+    double scaleNow = scale;
+    if (mother1 > 0) scaleNow = process[mother1].m();
+
+    // Store Les Houches Accord partons.
+    int iNow = process.append( id, status, mother1, mother2, daughter1, 
+      daughter2, col1, col2, Vec4(px, py, pz, e), m, scaleNow, pol);
+      
+    // Check if need to store lifetime.
+    double tau = lhaUpPtr->tau(iOld);
+    if (tau > 0.) process[iNow].tau(tau);
+  } 
+
+  // Update four-momentum of system as a whole.
+  process[0].p( pSum);
+  process[0].m( pSum.mCalc());
+
+  // Loop through decay chains and set secondary vertices when needed.
+  for (int i = 1; i < process.size(); ++i) {
+    int iMother  = process[i].mother1();
+    
+    // If sister to already assigned vertex then assign same.
+    if ( process[i - 1].mother1() == iMother && process[i - 1].hasVertex() 
+      && i > 1) process[i].vProd( process[i - 1].vProd() ); 
+
+    // Else if mother already has vertex and/or lifetime then assign.
+    else if ( process[iMother].hasVertex() || process[iMother].tau() > 0.)
+      process[i].vProd( process[iMother].vDec() ); 
+  }
+  
   // Done.
   return true;
 
@@ -533,32 +773,54 @@ bool ProcessContainer::constructProcess( Event& process, bool isHardest) {
 
 bool ProcessContainer::decayResonances( Event& process) {
 
-  // Save current event-record size.
+  // Save current event-record size and status codes.
   process.saveSize();
+  vector<int> statusSave( process.size());
+  for (int i = 0; i < process.size(); ++i) 
+    statusSave[i] = process[i].status();
   bool physical    = true;
+  bool newChain    = false;
   bool newFlavours = false;
 
-  // Do sequential chain of uncorrelated isotropic decays.
+  // Do loop over user veto.
   do {
-    physical = resDecaysPtr->next( process);
-    if (!physical) return false;
 
-    // Check whether flavours should be correlated.
-    // (Currently only relevant for f fbar -> gamma*/Z0 gamma*/Z0.)
-    newFlavours = ( sigmaProcessPtr->weightDecayFlav( process) 
-                  < rndmPtr->flat() ); 
+    // Do sequential chain of uncorrelated isotropic decays.
+    do {
+      physical = resDecaysPtr->next( process);
+      if (!physical) return false;
+
+      // Check whether flavours should be correlated.
+      // (Currently only relevant for f fbar -> gamma*/Z0 gamma*/Z0.)
+      newFlavours = ( sigmaProcessPtr->weightDecayFlav( process) 
+                    < rndmPtr->flat() ); 
+
+      // Reset the decay chains if have to redo.
+      if (newFlavours) {
+        process.restoreSize();
+        for (int i = 0; i < process.size(); ++i) 
+          process[i].status( statusSave[i]);
+      } 
+
+    // Loop back where required to generate new decays with new flavours.    
+    } while (newFlavours);
+
+    // Correct to nonisotropic decays.
+    phaseSpacePtr->decayKinematics( process); 
+
+    // Optionally user hooks check/veto on decay chain.
+    if (canVetoResDecay) 
+      newChain = userHooksPtr->doVetoResonanceDecays( process);
 
     // Reset the decay chains if have to redo.
-    if (newFlavours) {
+    if (newChain) {
       process.restoreSize();
-      for (int i = 5; i < process.size(); ++i) process[i].statusPos();
+      for (int i = 0; i < process.size(); ++i) 
+        process[i].status( statusSave[i]);
     } 
 
-  // Loop back where required to generate new decays with new flavours.    
-  } while (newFlavours);
-
-  // Correct to nonisotropic decays.
-  phaseSpacePtr->decayKinematics( process); 
+  // Loop back where required to generate new decay chain.    
+  } while(newChain); 
 
   // Done.
   return true;
@@ -609,9 +871,10 @@ void ProcessContainer::sigmaDelta() {
   if (nAcc == 1) return;
 
   // Estimated error. Quadratic sum of cross section term and
-  // binomial from accept/reject step.
-  double delta2Sig   = (sigma2Sum * nTryInv - pow2(sigmaAvg)) * nTryInv
-    / pow2(sigmaAvg);
+  // binomial from accept/reject step. 
+  double delta2Sig   = (lhaStratAbs != 3) 
+    ? (sigma2Sum * nTryInv - pow2(sigmaAvg)) * nTryInv / pow2(sigmaAvg) 
+    : pow2( lhaUpPtr->xErrSum() / lhaUpPtr->xSecSum());
   double delta2Veto  = (nSel - nAcc) * nAccInv * nSelInv;
   double delta2Sum   = delta2Sig + delta2Veto;
   deltaFin           = sqrtpos(delta2Sum) * sigmaFin; 
@@ -640,7 +903,8 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
 
   // Set up requested objects for soft QCD processes.
   bool softQCD = settings.flag("SoftQCD:all");
-  if (softQCD || settings.flag("SoftQCD:minBias")) {
+  bool inelastic = settings.flag("SoftQCD:inelastic");
+  if (softQCD || inelastic || settings.flag("SoftQCD:minBias")) {
     sigmaPtr = new Sigma0minBias;
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   } 
@@ -648,14 +912,18 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
     sigmaPtr = new Sigma0AB2AB;
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   } 
-  if (softQCD || settings.flag("SoftQCD:singleDiffractive")) {
+  if (softQCD || inelastic || settings.flag("SoftQCD:singleDiffractive")) {
     sigmaPtr = new Sigma0AB2XB;
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
     sigmaPtr = new Sigma0AB2AX;
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   } 
-  if (softQCD || settings.flag("SoftQCD:doubleDiffractive")) {
+  if (softQCD || inelastic || settings.flag("SoftQCD:doubleDiffractive")) {
     sigmaPtr = new Sigma0AB2XX;
+    containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
+  } 
+  if (softQCD || inelastic || settings.flag("SoftQCD:centralDiffractive")) {
+    sigmaPtr = new Sigma0AB2AXB;
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   } 
   
@@ -687,19 +955,21 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
   } 
   
   // Set up requested objects for c cbar and b bbar, also hard QCD.
-  if (hardQCD || settings.flag("HardQCD:gg2ccbar")) {
+  bool hardccbar = settings.flag("HardQCD:hardccbar");
+  if (hardQCD || hardccbar || settings.flag("HardQCD:gg2ccbar")) {
     sigmaPtr = new Sigma2gg2QQbar(4, 121);
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   } 
-  if (hardQCD || settings.flag("HardQCD:qqbar2ccbar")) {
+  if (hardQCD || hardccbar || settings.flag("HardQCD:qqbar2ccbar")) {
     sigmaPtr = new Sigma2qqbar2QQbar(4, 122);
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   } 
-  if (hardQCD || settings.flag("HardQCD:gg2bbbar")) {
+  bool hardbbbar = settings.flag("HardQCD:hardbbbar");
+  if (hardQCD || hardbbbar || settings.flag("HardQCD:gg2bbbar")) {
     sigmaPtr = new Sigma2gg2QQbar(5, 123);
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   } 
-  if (hardQCD || settings.flag("HardQCD:qqbar2bbbar")) {
+  if (hardQCD || hardbbbar || settings.flag("HardQCD:qqbar2bbbar")) {
     sigmaPtr = new Sigma2qqbar2QQbar(5, 124);
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   } 
@@ -802,7 +1072,7 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
   } 
 
   // Set up requested object for s-channel gamma exchange.
-  // Subset of gamma*/Z0 above, intended for Multiple interactions.
+  // Subset of gamma*/Z0 above, intended for multiparton interactions.
   if (settings.flag("WeakSingleBoson:ffbar2ffbar(s:gm)")) {
     sigmaPtr = new Sigma2ffbar2ffbarsgm;
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
@@ -1497,7 +1767,8 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
       for (int idx = 1; idx <= 6; ++idx) {
 	for (int iso = 1; iso <= 2; ++iso) {
 	  iproc++;
-	  int id3 = iso + ((idx <= 3) ? 1000000+2*(idx-1) : 2000000+2*(idx-4));
+	  int id3 = iso + ((idx <= 3) 
+                  ? 1000000+2*(idx-1) : 2000000+2*(idx-4));
 	  int id4 = 1000021;
 	  // Skip if specific codes not asked for
 	  if (codeA != 0 && codeA != abs(id3) && codeA != abs(id4)) continue;
@@ -1515,8 +1786,8 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
       for (int idx = 1; idx <= 6; ++idx) {
 	for (int iso = 1; iso <= 2; ++iso) {
 	  iproc++;
-	  int id = iso + ((idx <= 3) ? 1000000+2*(idx-1) : 2000000+2*(idx-4)); 
-	  
+	  int id = iso + ((idx <= 3) 
+                 ? 1000000+2*(idx-1) : 2000000+2*(idx-4)); 	  
 	  // Skip if specific codes not asked for
 	  if (codeA != 0 && codeA != abs(id)) continue;
 	  if (codeA != 0 && codeB != 0 && codeB != abs(id)) continue;
@@ -1543,9 +1814,10 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
 	      iproc++;
 	      if (iso == jso && id1 != id2) iproc++;
 	      // Skip if specific codes not asked for
-	      if (codeA != 0 && codeA != abs(id1) && codeA != abs(id2)) continue;
-	      if (codeB != 0 && ( codeA != max(abs(id1),abs(id2)) ||
-				  codeB != min(abs(id1),abs(id2)) ) ) continue;
+	      if (codeA != 0 && codeA != abs(id1) 
+                && codeA != abs(id2)) continue;
+	      if (codeB != 0 && ( codeA != max(abs(id1),abs(id2)) 
+                || codeB != min(abs(id1),abs(id2)) ) ) continue;
 	      if (iso == jso && id1 != id2) {
 		sigmaPtr = new Sigma2qqbar2squarkantisquark(id1,-id2,iproc-1);
 		containerPtrs.push_back( new ProcessContainer(sigmaPtr) );   
@@ -1570,14 +1842,17 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
 	    for (int jdx = 1; jdx <= 6; ++jdx) {
 	      if (iso == jso && jdx < idx) continue;
 	      iproc++;
-	      int id1 = iso + ((idx <= 3) ? 1000000+2*(idx-1) : 2000000+2*(idx-4));
-	      int id2 = jso + ((jdx <= 3) ? 1000000+2*(jdx-1) : 2000000+2*(jdx-4));
+              int id1 = iso + ((idx <= 3) 
+                      ? 1000000+2*(idx-1) : 2000000+2*(idx-4));
+              int id2 = jso + ((jdx <= 3) 
+                      ? 1000000+2*(jdx-1) : 2000000+2*(jdx-4));
 	      // Skip if specific codes not asked for
-	      if (codeA != 0 && codeA != abs(id1) && codeA != abs(id2)) continue;
-	      if (codeB != 0 && ( codeA != max(abs(id1),abs(id2)) 
-				  || codeB != min(abs(id1),abs(id2)) ) ) continue;
+              if (codeA != 0 && codeA != abs(id1) && codeA != abs(id2)) 
+                continue;
+              if (codeB != 0 && ( codeA != max(abs(id1),abs(id2)) 
+                || codeB != min(abs(id1),abs(id2)) ) ) continue;
 	      sigmaPtr = new Sigma2qq2squarksquark(id1,id2,iproc);
-	      containerPtrs.push_back( new ProcessContainer(sigmaPtr) );	    
+	      containerPtrs.push_back( new ProcessContainer(sigmaPtr) );    
 	    }
 	  }
 	}
@@ -1594,7 +1869,8 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
 	    if (iso == 2) isUp = true;
 	    iproc++;
 	    int id3 = coupSUSY->idNeut(iNeut);
-	    int id4 = iso + ((idx <= 3) ? 1000000+2*(idx-1) : 2000000+2*(idx-4));
+            int id4 = iso + ((idx <= 3) 
+                    ? 1000000+2*(idx-1) : 2000000+2*(idx-4));
 	    // Skip if specific codes not asked for
 	    if (codeA != 0 && codeA != abs(id3) && codeA != abs(id4)) continue;
 	    if (codeB != 0 && codeB != min(abs(id3),abs(id4)) ) continue;
@@ -1616,7 +1892,8 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
 	    if (iso == 2) isUp = true;
 	    iproc++;
 	    int id3 = coupSUSY->idChar(iChar);
-	    int id4 = iso + ((idx <= 3) ? 1000000+2*(idx-1) : 2000000+2*(idx-4));
+	    int id4 = iso + ((idx <= 3) 
+                    ? 1000000+2*(idx-1) : 2000000+2*(idx-4));
 	    // Skip if specific codes not asked for
 	    if (codeA != 0 && codeA != abs(id3) && codeA != abs(id4)) continue;
 	    if (codeB != 0 && codeB != min(abs(id3),abs(id4)) ) continue;
@@ -1637,9 +1914,9 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
 	  if (codeA != 0 && codeA != abs(coupSUSY->idNeut(iNeut1)) && 
 	      codeA != abs(coupSUSY->idNeut(iNeut2))) continue;
 	  if (codeB != 0 && (codeA != max(abs(coupSUSY->idNeut(iNeut1)),
-					  abs(coupSUSY->idNeut(iNeut2))) ||
-			     codeB != min(abs(coupSUSY->idNeut(iNeut1)),
-					  abs(coupSUSY->idNeut(iNeut2)))) ) continue;
+			     abs(coupSUSY->idNeut(iNeut2))) 
+                         ||  codeB != min(abs(coupSUSY->idNeut(iNeut1)),
+			     abs(coupSUSY->idNeut(iNeut2)))) ) continue;
 	  sigmaPtr = new Sigma2qqbar2chi0chi0(iNeut1, iNeut2,iproc);
 	  containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
 	}
@@ -1655,9 +1932,9 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
 	  if (codeA != 0 && codeA != coupSUSY->idNeut(iNeut)
 	      && codeA != coupSUSY->idChar(iChar)) continue;
 	  if (codeB != 0 
-	      && ( codeA != max(coupSUSY->idNeut(iNeut),coupSUSY->idChar(iChar))
-		   || codeB != min(coupSUSY->idNeut(iNeut),coupSUSY->idChar(iChar)))
-	      ) continue;
+	    && ( codeA != max(coupSUSY->idNeut(iNeut),coupSUSY->idChar(iChar))
+	      || codeB != min(coupSUSY->idNeut(iNeut),coupSUSY->idChar(iChar))
+	      ) ) continue;
 	  sigmaPtr = new Sigma2qqbar2charchi0( iChar, iNeut, iproc-1);
 	  containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
 	  sigmaPtr = new Sigma2qqbar2charchi0(-iChar, iNeut, iproc); 
@@ -1864,7 +2141,8 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
     sigmaPtr = new Sigma2qqbar2lStarlbar(15);
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   } 
-  if (excitedfermions || settings.flag("ExcitedFermion:qqbar2nutauStarnutau")) {
+  if (excitedfermions 
+    || settings.flag("ExcitedFermion:qqbar2nutauStarnutau")) {
     sigmaPtr = new Sigma2qqbar2lStarlbar(16);
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   } 
@@ -1876,6 +2154,18 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
   } 
   if (settings.flag("ContactInteractions:QCqqbar2qqbar")) {
     sigmaPtr = new Sigma2QCqqbar2qqbar();
+    containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
+  } 
+  if (settings.flag("ContactInteractions:QCffbar2eebar")) {
+    sigmaPtr = new Sigma2QCffbar2llbar(11, 4003);
+    containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
+  }
+  if (settings.flag("ContactInteractions:QCffbar2mumubar")) {
+    sigmaPtr = new Sigma2QCffbar2llbar(13, 4004);
+    containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
+  }
+  if (settings.flag("ContactInteractions:QCffbar2tautaubar")) {
+    sigmaPtr = new Sigma2QCffbar2llbar(15, 4005);
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   } 
 
@@ -2138,6 +2428,31 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
   }
   if (settings.flag("ExtraDimensionsLED:gg2llbar")) {
     sigmaPtr = new Sigma2gg2LEDllbar( true );
+    containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
+  }
+  bool extraDimLEDdij = settings.flag("ExtraDimensionsLED:dijets");
+  if (extraDimLEDdij || settings.flag("ExtraDimensionsLED:gg2DJgg")) {
+    sigmaPtr = new Sigma2gg2LEDgg;
+    containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
+  }
+  if (extraDimLEDdij || settings.flag("ExtraDimensionsLED:gg2DJqqbar")) {
+    sigmaPtr = new Sigma2gg2LEDqqbar;
+    containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
+  }
+  if (extraDimLEDdij || settings.flag("ExtraDimensionsLED:qg2DJqg")) {
+    sigmaPtr = new Sigma2qg2LEDqg;
+    containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
+  }
+  if (extraDimLEDdij || settings.flag("ExtraDimensionsLED:qq2DJqq")) {
+    sigmaPtr = new Sigma2qq2LEDqq;
+    containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
+  }
+  if (extraDimLEDdij || settings.flag("ExtraDimensionsLED:qqbar2DJgg")) {
+    sigmaPtr = new Sigma2qqbar2LEDgg;
+    containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
+  }
+  if (extraDimLEDdij || settings.flag("ExtraDimensionsLED:qqbar2DJqqbarNew")) {
+    sigmaPtr = new Sigma2qqbar2LEDqqbarNew;
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   }
 

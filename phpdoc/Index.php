@@ -88,7 +88,7 @@ echo "<a href='SaveSettings.php?returning=1&filename=".$filename."' target='page
 <a href='ResonanceDecays.php?filepath=".$filepath."' target='page'>Resonance Decays</a><br/>
 <a href='TimelikeShowers.php?filepath=".$filepath."' target='page'>Timelike Showers</a><br/>
 <a href='SpacelikeShowers.php?filepath=".$filepath."' target='page'>Spacelike Showers</a><br/>
-<a href='MultipleInteractions.php?filepath=".$filepath."' target='page'>Multiple Interactions</a><br/>
+<a href='MultipartonInteractions.php?filepath=".$filepath."' target='page'>Multiparton Interactions</a><br/>
 <a href='BeamRemnants.php?filepath=".$filepath."' target='page'>Beam Remnants</a><br/>
 <a href='Diffraction.php?filepath=".$filepath."' target='page'>Diffraction</a><br/>
 <a href='Fragmentation.php?filepath=".$filepath."' target='page'>Fragmentation</a><br/>
@@ -96,6 +96,7 @@ echo "<a href='SaveSettings.php?returning=1&filename=".$filename."' target='page
 <a href='ParticleDecays.php?filepath=".$filepath."' target='page'>Particle Decays</a><br/>
 <a href='RHadrons.php?filepath=".$filepath."' target='page'>R-hadrons</a><br/>
 <a href='BoseEinsteinEffects.php?filepath=".$filepath."' target='page'>Bose-Einstein Effects</a><br/>
+<a href='HadronScattering.php?filepath=".$filepath."' target='page'>Hadron Scattering</a><br/>
 <a href='ParticleData.php?filepath=".$filepath."' target='page'>Particle Data</a><br/>
 <a href='ErrorChecks.php?filepath=".$filepath."' target='page'>Error Checks</a><br/>
 <a href='Tunes.php?filepath=".$filepath."' target='page'>Tunes</a><br/>
@@ -126,25 +127,34 @@ $filename = $_GET["filename"];
 echo "<a href='LesHouchesAccord.php?filepath=".$filepath."' target='page'>Les Houches Accord</a><br/>
 <a href='SUSYLesHouchesAccord.php?filepath=".$filepath."' target='page'>SUSY Les Houches Accord</a><br/>
 <a href='HepMCInterface.php?filepath=".$filepath."' target='page'>HepMC Interface</a><br/>
-<a href='ROOTusage.php?filepath=".$filepath."' target='page'>ROOT usage</a><br/>
-<a href='RIVETusage.php?filepath=".$filepath."' target='page'>RIVET usage</a><br/>
 <a href='SemiInternalProcesses.php?filepath=".$filepath."' target='page'>Semi-Internal Processes</a><br/>
 <a href='SemiInternalResonances.php?filepath=".$filepath."' target='page'>Semi-Internal Resonances</a><br/>
 <a href='MadGraph5Processes.php?filepath=".$filepath."' target='page'>MadGraph 5 Processes</a><br/>
+<a href='AlpgenEventInterface.php?filepath=".$filepath."' target='page'>Alpgen Event Interface</a><br/>
+<a href='MatchingAndMerging.php?filepath=".$filepath."' target='page'>Matching and Merging</a><br/>
+&nbsp;&nbsp;--&nbsp;&nbsp; 
+<a href='CKKWLMerging.php?filepath=".$filepath."' target='page'>CKKW-L Merging</a><br/>
+&nbsp;&nbsp;--&nbsp;&nbsp; 
+<a href='JetMatching.php?filepath=".$filepath."' target='page'>Jet Matching</a><br/>
+&nbsp;&nbsp;--&nbsp;&nbsp; 
+<a href='UMEPSMerging.php?filepath=".$filepath."' target='page'>UMEPS Merging</a><br/>
+&nbsp;&nbsp;--&nbsp;&nbsp; 
+<a href='NLOMerging.php?filepath=".$filepath."' target='page'>NLO Merging</a><br/>
+<a href='UserHooks.php?filepath=".$filepath."' target='page'>User Hooks</a><br/>
 <a href='HadronLevelStandalone.php?filepath=".$filepath."' target='page'>Hadron-Level Standalone</a><br/>
 <a href='ExternalDecays.php?filepath=".$filepath."' target='page'>External Decays</a><br/>
 <a href='BeamShape.php?filepath=".$filepath."' target='page'>Beam Shape</a><br/>
 <a href='PartonDistributions.php?filepath=".$filepath."' target='page'>Parton Distributions</a><br/>
 <a href='JetFinders.php?filepath=".$filepath."' target='page'>Jet Finders</a><br/>
 <a href='RandomNumbers.php?filepath=".$filepath."' target='page'>Random Numbers</a><br/>
-<a href='UserHooks.php?filepath=".$filepath."' target='page'>User Hooks</a><br/>
 <a href='ImplementNewShowers.php?filepath=".$filepath."' target='page'>Implement New Showers</a><br/>
+<a href='RIVETusage.php?filepath=".$filepath."' target='page'>RIVET usage</a><br/>
+<a href='ROOTusage.php?filepath=".$filepath."' target='page'>ROOT usage</a><br/>
 
 ";?>
 
 <h4>Reference Materiel</h4>
 
-<a href='PYTHIA6TranslationTable.php?filepath=".$filepath."' target='page'>PYTHIA 6 Translation Table</a><br/>
 <a href='UpdateHistory.php?filepath=".$filepath."' target='page'>Update History</a><br/>
 <a href='Bibliography.php?filepath=".$filepath."' target='page'>Bibliography</a><br/>
 <a href='Glossary.php?filepath=".$filepath."' target='page'>Glossary</a><br/>
@@ -158,4 +168,4 @@ echo "<a href='LesHouchesAccord.php?filepath=".$filepath."' target='page'>Les Ho
 </body>
 </html>
 
-<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2013 Torbjorn Sjostrand -->

@@ -1,5 +1,5 @@
 // ProcessLevel.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -45,17 +45,20 @@ public:
   // Initialization.
   bool init( Info* infoPtrIn, Settings& settings,
     ParticleData* particleDataPtrIn, Rndm* rndmPtrIn, 
-    BeamParticle* beamAPtrIn, BeamParticle* beamBPtrIn, Couplings* couplingsPtrIn, 
-    SigmaTotal* sigmaTotPtrIn, bool doLHAin, SusyLesHouches* slhaPtrIn,
-    UserHooks* userHooksPtrIn, vector<SigmaProcess*>& sigmaPtrs, 
-    ostream& os = cout);
+    BeamParticle* beamAPtrIn, BeamParticle* beamBPtrIn, 
+    Couplings* couplingsPtrIn, SigmaTotal* sigmaTotPtrIn, bool doLHAin, 
+    SusyLesHouches* slhaPtrIn, UserHooks* userHooksPtrIn, 
+    vector<SigmaProcess*>& sigmaPtrs, ostream& os = cout);
 
   // Store or replace Les Houches pointer.
-  void setLHAPtr( LHAup* lhaUpPtrIn) {lhaUpPtr = lhaUpPtrIn;
-  if (iLHACont >= 0) containerPtrs[iLHACont]->setLHAPtr(lhaUpPtr);}
+  void setLHAPtr( LHAup* lhaUpPtrIn) {lhaUpPtr = lhaUpPtrIn;     
+    if (iLHACont >= 0) containerPtrs[iLHACont]->setLHAPtr(lhaUpPtr);}
  
   // Generate the next "hard" process.
   bool next( Event& process); 
+
+  // Special case: LHA input of resonance decay only.
+  bool nextLHAdec( Event& process); 
 
   // Accumulate and update statistics (after possible user veto).
   void accumulate();
@@ -63,8 +66,18 @@ public:
   // Print statistics on cross sections and number of events.
   void statistics(bool reset = false, ostream& os = cout);
 
+  // Reset statistics.
+  void resetStatistics();
+
   // Add any junctions to the process event record list. 
   void findJunctions( Event& junEvent);
+
+  // Initialize and call resonance decays separately.
+  void initDecays( Info* infoPtrIn, ParticleData* particleDataPtrIn, 
+    Rndm* rndmPtrIn, LHAup* lhaUpPtrIn) { infoPtr = infoPtrIn;
+    resonanceDecays.init( infoPtrIn, particleDataPtrIn, rndmPtrIn); 
+    containerLHAdec.setLHAPtr(lhaUpPtrIn, particleDataPtrIn); }
+  bool nextDecays( Event& process) { return resonanceDecays.next( process);}  
 
 private: 
 
@@ -87,6 +100,9 @@ private:
   vector<ProcessContainer*> container2Ptrs;
   int    i2Container;
   double sigma2MaxSum;
+
+  // Single half-dummy container for LHA input of resonance decay only.
+  ProcessContainer containerLHAdec;
 
   // Pointer to various information on the generation.
   Info*           infoPtr;
@@ -116,8 +132,8 @@ private:
   // Pointer to LHAup for generating external events.
   LHAup*          lhaUpPtr;
 
-  // Initialization routine for SUSY spectra.
-  bool initSLHA(Settings& settings);
+  // Initialization of some SLHA blocks.
+  void initSLHA();
 
   // ResonanceDecay object does sequential resonance decays.
   ResonanceDecays resonanceDecays;
@@ -136,9 +152,6 @@ private:
 
   // Print statistics when two hard processes allowed.
   void statistics2(bool reset, ostream& os = cout);
-
-  // Statistics for Les Houches event classification.
-  vector<int> codeLHA, nEvtLHA;
 
 };
 

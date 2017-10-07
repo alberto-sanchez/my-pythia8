@@ -1,5 +1,5 @@
 // ResonanceWidths.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -12,7 +12,6 @@
 
 #include "Basics.h"
 #include "Info.h"
-#include "ParticleData.h"
 #include "PythiaStdlib.h"
 #include "Settings.h"
 #include "StandardModel.h"
@@ -111,6 +110,11 @@ protected:
  
   // Initialize constants.
   virtual void initConstants() {} 
+
+  // Virtual methods to handle model-specific (non-SM) part of initialization
+  // for use by derived classes that implement additional models (eg SUSY).
+  virtual bool initBSM() {return true;}
+  virtual bool allowCalc() {return true;}
  
   // Calculate various common prefactors for the current mass.
   // Optional argument calledFromInit only used for Z0.
@@ -211,7 +215,7 @@ public:
 private: 
 
   // Locally stored properties and couplings.
-  double thetaWRat, m2W;
+  double thetaWRat, m2W, tanBeta, tan2Beta, mbRun;
  
   // Initialize constants.
   virtual void initConstants(); 
@@ -267,7 +271,7 @@ public:
 private: 
 
   // Constants: could only be changed in the code itself.
-  static const double MASSMIN, GAMMAMARGIN;
+  static const double MASSMINWZ, MASSMINT, GAMMAMARGIN;
 
   // Higgs type in current instance.
   int    higgsType;
@@ -277,6 +281,7 @@ private:
   double sin2tW, cos2tW, mT, mZ, mW, mHchg, GammaT, GammaZ, GammaW,
          coup2d, coup2u, coup2l, coup2Z, coup2W, coup2Hchg, coup2H1H1, 
          coup2A3A3, coup2H1Z, coup2A3Z, coup2A3H1, coup2HchgW,
+         mLowT, mStepT, mLowZ, mStepZ, mLowW, mStepW,
          kinFacT[101], kinFacZ[101], kinFacW[101];
  
   // Initialize constants.
@@ -452,11 +457,11 @@ public:
 private: 
 
   // Locally stored properties and couplings.
-  bool   m_smbulk;
+  bool   eDsmbulk, eDvlvl;
   double kappaMG;
  
   // Couplings between graviton and SM (map from particle id to coupling).
-  double m_coupling[26];
+  double eDcoupling[27];
 
   // Initialize constants.
   virtual void initConstants(); 
@@ -488,7 +493,7 @@ private:
   // Couplings between kk gluon and SM (indexed by particle id).
   // Helicity dependent couplings. Use vector/axial-vector
   // couplings internally, gv/ga = 0.5 * (gL +/- gR).
-  double m_gv[10], m_ga[10];
+  double eDgv[10], eDga[10];
 
   // Interference parameter.
   int interfMode;
@@ -503,7 +508,6 @@ private:
   virtual void calcWidth(bool calledFromInit = false);
 
 };
-
 
 //==========================================================================
 

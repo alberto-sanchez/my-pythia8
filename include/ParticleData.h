@@ -1,5 +1,5 @@
 // ParticleData.h is a part of the PYTHIA event generator.
-// Copyright (C) 2011 Torbjorn Sjostrand.
+// Copyright (C) 2013 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -14,7 +14,6 @@
 #include "Basics.h"
 #include "Info.h"
 #include "PythiaStdlib.h"
-#include "ResonanceWidths.h"
 #include "Settings.h"
 #include "StandardModel.h"
 
@@ -171,6 +170,9 @@ public:
     mWidthSave = mWidthIn; if (countAsChanged) hasChangedSave = true;}
   void setMMin(double mMinIn) {mMinSave = mMinIn; hasChangedSave = true;}
   void setMMax(double mMaxIn) {mMaxSave = mMaxIn; hasChangedSave = true;}
+  // Special options specifically when cutting wings of Breit-Wigners.
+  void setMMinNoChange(double mMinIn) {mMinSave = mMinIn;}
+  void setMMaxNoChange(double mMaxIn) {mMaxSave = mMaxIn;}
   void setTau0(double tau0In) {tau0Save = tau0In; hasChangedSave = true;}
   void setIsResonance(bool isResonanceIn) {isResonanceSave = isResonanceIn; 
     hasChangedSave = true;}
@@ -180,7 +182,7 @@ public:
     {doExternalDecaySave = doExternalDecayIn; hasChangedSave = true;}
   void setIsVisible(bool isVisibleIn) {isVisibleSave = isVisibleIn; 
     hasChangedSave = true;}
-  void setDoForceWidth(bool doForceWidthIn) {doForceWidthSave = doForceWidthIn; 
+  void setDoForceWidth(bool doForceWidthIn) {doForceWidthSave = doForceWidthIn;
     hasChangedSave = true;}
   void setHasChanged(bool hasChangedIn) {hasChangedSave = hasChangedIn;
     for (int i = 0; i < int(channels.size()); ++i) 
@@ -285,7 +287,7 @@ public:
 private:
 
   // Constants: could only be changed in the code itself.
-  static const int    INVISIBLENUMBER, INVISIBLETABLE[50];
+  static const int    INVISIBLENUMBER, INVISIBLETABLE[50], KNOWNNOWIDTH[3];
   static const double MAXTAU0FORDECAY,MINMASSRESONANCE, NARROWMASS,
                       CONSTITUENTMASSTABLE[10];
 
@@ -318,7 +320,9 @@ private:
   void setConstituentMass();
 
   // Useful functions for string handling.
-  string toLower(const string& nameConv);
+  string toLower(const string& nameConv) { string temp(nameConv);
+    for (int i = 0; i < int(temp.length()); ++i) temp[i] = tolower(temp[i]); 
+    return temp; }
 
 };
 
@@ -331,7 +335,8 @@ class ParticleData {
 public:
 
   // Constructor.
-  ParticleData() : isInit(false) {}
+  ParticleData() : infoPtr(0), settingsPtr(0), rndmPtr(0), couplingsPtr(0), 
+    particlePtr(0), isInit(false), readingFailedSave(false) {}
 
   // Initialize pointers.
   void initPtr(Info* infoPtrIn, Settings* settingsPtrIn, Rndm* rndmPtrIn, 
@@ -360,6 +365,9 @@ public:
 
   // Read in one update from a single line.
   bool readString(string lineIn, bool warn = true, ostream& os = cout) ; 
+
+  // Keep track whether any readings have failed, invalidating run setup.
+  bool readingFailed() {return readingFailedSave;} 
 
   // Print out table of whole database, or of only part of it.
   void listAll(ostream& os = cout) {list(false, true, os);} 
@@ -579,15 +587,21 @@ private:
   // Pointer to current particle (e.g. when reading decay channels).
   ParticleDataEntry* particlePtr;
 
-  // Flag that initialization has been performed.
-  bool   isInit;
+  // Flag that initialization has been performed; whether any failures.
+  bool   isInit, readingFailedSave;
 
   // Method for common setting of particle-specific info.
   void   initCommon();
 
   // Useful functions for string handling.
-  string toLower(const string& name);
-  bool   boolString(string tag);
+  string toLower(const string& nameConv) { string temp(nameConv);
+    for (int i = 0; i < int(temp.length()); ++i) temp[i] = tolower(temp[i]); 
+    return temp; }
+  bool   boolString(string tag) { string tagLow = toLower(tag);
+    return ( tagLow == "true" || tagLow == "1" || tagLow == "on" 
+    || tagLow == "yes" || tagLow == "ok" ); }  
+
+  // Extract XML value following XML attribute.
   string attributeValue(string line, string attribute);
   bool   boolAttributeValue(string line, string attribute);
   int    intAttributeValue(string line, string attribute);
