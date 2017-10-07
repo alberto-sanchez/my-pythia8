@@ -1,5 +1,5 @@
 // main06.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -12,49 +12,41 @@
 
 using namespace Pythia8; 
 
-//**************************************************************************
+//==========================================================================
 
 int main() {
 
-  // Generator. Shorthand for the event and for settings.
+  // Generator. Shorthand for the event.
   Pythia pythia;
   Event& event = pythia.event;
-  Settings& settings = pythia.settings;
 
   // Read in commands from external file.
   pythia.readFile("main06.cmnd");    
 
   // Extract settings to be used in the main program.
-  int    idBeamA   = settings.mode("Main:idBeamA");
-  int    idBeamB   = settings.mode("Main:idBeamB");
-  bool   inCMframe = settings.flag("Main:inCMframe");
-  double eCM       = settings.parm("Main:eCM");
-  double eBeamA    = settings.parm("Main:eBeamA");
-  double eBeamB    = settings.parm("Main:eBeamB");
-  int    nEvent    = settings.mode("Main:numberOfEvents");
-  int    nList     = settings.mode("Main:numberToList");
-  int    nShow     = settings.mode("Main:timesToShow");
-  int    nAbort    = settings.mode("Main:timesAllowErrors");
-  bool   showCS    = settings.flag("Main:showChangedSettings");
-  bool   showAS    = settings.flag("Main:showAllSettings");
-  bool   showCPD   = settings.flag("Main:showChangedParticleData");
-  bool   showAPD   = settings.flag("Main:showAllParticleData");
+  int    nEvent    = pythia.mode("Main:numberOfEvents");
+  int    nList     = pythia.mode("Main:numberToList");
+  int    nShow     = pythia.mode("Main:timesToShow");
+  int    nAbort    = pythia.mode("Main:timesAllowErrors");
+  bool   showCS    = pythia.flag("Main:showChangedSettings");
+  bool   showAS    = pythia.flag("Main:showAllSettings");
+  bool   showCPD   = pythia.flag("Main:showChangedParticleData");
+  bool   showAPD   = pythia.flag("Main:showAllParticleData");
 
   // Debug: kill Coulomb part but keep rest of elastic description. 
-  //Settings::forceParm("StandardModel:alphaEM0", 1e-10);
-  //Settings::forceParm("StandardModel:alphaEMmZ", 1e-10);
+  //pythia.settings.forceParm("StandardModel:alphaEM0", 1e-10);
+  //pythia.settings.forceParm("StandardModel:alphaEMmZ", 1e-10);
  
-  // Initialization.
-  if (inCMframe) pythia.init( idBeamA, idBeamB, eCM);
-  else pythia.init( idBeamA, idBeamB, eBeamA, eBeamB);
+  // Initialize. Beam parameters set in .cmnd file.
+  pythia.init();
 
   // List settings.
-  if (showCS) settings.listChanged();
-  if (showAS) settings.listAll();
+  if (showCS) pythia.settings.listChanged();
+  if (showAS) pythia.settings.listAll();
 
   // List particle data.  
-  if (showCPD) ParticleDataTable::listChanged();
-  if (showAPD) ParticleDataTable::listAll();
+  if (showCPD) pythia.particleData.listChanged();
+  if (showAPD) pythia.particleData.listAll();
 
   // Book histograms.
   Hist pTspec("scattering pT spectrum", 100, 0., 2.5); 
@@ -71,11 +63,11 @@ int main() {
   Hist mSpec1("scattering mass spectrum when 1 product", 100, 0., 10.); 
  
   // Begin event loop.
-  int nShowPace = max(1,nEvent/nShow); 
+  int nPace = max(1, nEvent / max(1, nShow) ); 
   int iAbort = 0; 
   for (int iEvent = 0; iEvent < nEvent; ++iEvent) {
-    if (iEvent%nShowPace == 0) cout << " Now begin event " 
-      << iEvent << endl;
+    if (nShow > 0 && iEvent%nPace == 0) 
+      cout << " Now begin event " << iEvent << endl;
 
     // Generate events. Quit if too many failures.
     if (!pythia.next()) {
@@ -96,10 +88,10 @@ int main() {
     pTspec.fill( pT );
 
     // Study properties geared towards elastic/diffractive events.
-    mSpec.fill( pythia.info.m3Hat() );
-    mSpec.fill( pythia.info.m4Hat() );
-    mLogSpec.fill( log10(pythia.info.m3Hat()) );
-    mLogSpec.fill( log10(pythia.info.m4Hat()) );
+    mSpec.fill( event[3].m() );
+    mSpec.fill( event[4].m() );
+    mLogSpec.fill( log10(event[3].m()) );
+    mLogSpec.fill( log10(event[4].m()) );
     int code = pythia.info.code();
     double tAbs = abs(pythia.info.tHat());
     if (code == 102) {
@@ -129,7 +121,7 @@ int main() {
         if (k == i + 3) ++ndiff;
       }  
       nDiff.fill( ndiff );
-      if (ndiff == 1) mSpec1.fill( event[i +3].m() ); 
+      if (ndiff <= 1) mSpec1.fill( event[i+3].m() ); 
     }
 
   // End of event loop.

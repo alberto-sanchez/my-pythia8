@@ -1,5 +1,5 @@
 // ResonanceDecays.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -11,7 +11,7 @@
 
 #include "Basics.h"
 #include "Event.h"
-#include "Information.h"
+#include "Info.h"
 #include "ParticleData.h"
 #include "PythiaStdlib.h"
 #include "ResonanceWidths.h"
@@ -19,7 +19,7 @@
 
 namespace Pythia8 {
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceDecays class handles the sequential decay of resonances
 // that are part of the hard process (t, W, Z, H, SUSY,...).
@@ -30,6 +30,11 @@ public:
 
   // Constructor. 
   ResonanceDecays() {} 
+
+  // Store pointers to Info and Rndm for error messages and random numbers.
+  void init(Info* infoPtrIn,  ParticleData* particleDataPtrIn, 
+    Rndm* rndmPtrIn) {infoPtr = infoPtrIn; 
+    particleDataPtr = particleDataPtrIn; rndmPtr = rndmPtrIn;}
  
   // Generate the next decay sequence.
   bool next( Event& process); 
@@ -38,7 +43,17 @@ private:
 
   // Constants: could only be changed in the code itself.
   static const int    NTRYCHANNEL, NTRYMASSES;
-  static const double MSAFETY, WIDTHCUT, TINY, WTCORRECTION[11];
+  static const double MSAFETY, WIDTHCUT, TINY, TINYBWRANGE,
+                      WTCORRECTION[11];
+
+  // Pointer to various information on the generation.
+  Info*         infoPtr;
+
+  // Pointer to the particle data table.
+  ParticleData* particleDataPtr;
+
+  // Pointer to the random number generator.
+  Rndm*         rndmPtr;
 
   // Select masses of decay products.
   bool pickMasses(); 
@@ -58,7 +73,7 @@ private:
 
 };
 
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

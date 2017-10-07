@@ -1,5 +1,5 @@
 // Pythia.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -12,25 +12,31 @@
 #include "Analysis.h"
 #include "Basics.h"
 #include "BeamParticle.h"
+#include "BeamShape.h"
 #include "Event.h"
+#include "FragmentationFlavZpT.h"
 #include "HadronLevel.h"
-#include "Information.h"
+#include "Info.h"
 #include "LesHouches.h"
 #include "PartonLevel.h"
 #include "ParticleData.h"
 #include "PartonDistributions.h"
+#include "PartonSystems.h"
 #include "ProcessLevel.h"
 #include "PythiaStdlib.h"
 #include "ResonanceWidths.h"
+#include "RHadrons.h"
 #include "Settings.h"
+#include "SigmaTotal.h"
 #include "SpaceShower.h"
+#include "StandardModel.h"
 #include "SusyLesHouches.h"
 #include "TimeShower.h"
 #include "UserHooks.h"
 
 namespace Pythia8 {
  
-//**************************************************************************
+//==========================================================================
 
 // The Pythia class contains the top-level routines to generate an event.
 
@@ -48,13 +54,18 @@ public:
   bool readString(string, bool warn = true); 
  
   // Read in updates for settings or particle data from user-defined file.
-  bool readFile(string, bool warn = true, int subrun = SUBRUNDEFAULT);
+  bool readFile(string fileName, bool warn = true, 
+    int subrun = SUBRUNDEFAULT);
   bool readFile(string fileName, int subrun) {
     return readFile(fileName, true, subrun);}
+  bool readFile(istream& is = cin, bool warn = true, 
+    int subrun = SUBRUNDEFAULT);
+  bool readFile(istream& is, int subrun) {
+    return readFile(is, true, subrun);}
 
   // Possibility to pass in pointers to PDF's.
   bool setPDFPtr( PDF* pdfAPtrIn, PDF* pdfBPtrIn, PDF* pdfHardAPtrIn = 0, 
-    PDF* pdfHardBPtrIn = 0);
+    PDF* pdfHardBPtrIn = 0, PDF* pdfPomAPtrIn = 0, PDF* pdfPomBPtrIn = 0);
 
   // Possibility to pass in pointer for external handling of some decays.
   bool setDecayPtr( DecayHandler* decayHandlePtrIn, 
@@ -65,11 +76,15 @@ public:
 
   // Possibility to pass in pointer for external random number generation.
   bool setRndmEnginePtr( RndmEngine* rndmEnginePtrIn) 
-    { return Rndm::rndmEnginePtr( rndmEnginePtrIn);}  
+    { return rndm.rndmEnginePtr( rndmEnginePtrIn);}  
 
   // Possibility to pass in pointer for user hooks. 
   bool setUserHooksPtr( UserHooks* userHooksPtrIn) 
     { userHooksPtr = userHooksPtrIn; return true;} 
+
+  // Possibility to pass in pointer for beam shape. 
+  bool setBeamShapePtr( BeamShape* beamShapePtrIn) 
+    { beamShapePtr = beamShapePtrIn; return true;} 
 
   // Possibility to pass in pointer(s) for external cross section.
   bool setSigmaPtr( SigmaProcess* sigmaPtrIn) 
@@ -85,32 +100,50 @@ public:
     { timesDecPtr = timesDecPtrIn; timesPtr = timesPtrIn;
     spacePtr = spacePtrIn; return true;} 
 
-  // Initialization with two beams specified.
-  bool init( int idAin, int idBin, double eAin, double eBin);
-
   // Initialization in the CM frame.
   bool init( int idAin, int idBin, double eCMin);
+
+  // Initialization with two collinear beams, including fixed target.
+  bool init( int idAin, int idBin, double eAin, double eBin);
+
+  // Initialization with two acollinear beams.
+  bool init( int idAin, int idBin, double pxAin, double pyAin, 
+    double pzAin, double pxBin, double pyBin, double pzBin);
+
+  // Initialization by a Les Houches Event File.
+  bool init( string LesHouchesEventFile, bool skipInit = false);
 
   // Initialization using the Main beam variables.
   bool init();
 
   // Initialization according to the Les Houches Accord.
-  bool init( LHAinit* lhaInitPtrIn, LHAevnt* lhaEvntPtrIn);
+  bool init( LHAup* lhaUpPtrIn);
 
-  // Initialization by a Les Houches Event File.
-  bool init( string LesHouchesEventFile, bool skipInit = false);
+  // Initialization of SLHA data
+  bool initSLHA ();
  
   // Generate the next event.
   bool next(); 
 
+  // Generate only the hadronization/decay stage.
+  bool forceHadronLevel(bool findJunctions = true);
+
   // Special routine to allow more decays if on/off switches changed.
   bool moreDecays() {return hadronLevel.moreDecays(event);}
 
+  // Special routine to force R-hadron decay when not done before.
+  bool forceRHadronDecays() {return doRHadronDecays();}
+
   // List the current Les Houches event.
-  void LHAevntList(ostream& os = cout) {lhaEvntPtr->list(os);}
+  void LHAeventList(ostream& os = cout) {
+    if (lhaUpPtr > 0) lhaUpPtr->listEvent(os);}
+
+  // Skip a number of Les Houches events at input.
+  bool LHAeventSkip(int nSkip) {
+    if (lhaUpPtr > 0) return lhaUpPtr->skipEvent(nSkip); return false;}
 
   // Main routine to provide final statistics on generation.
-  void statistics(bool all = false);
+  void statistics(bool all = false, bool reset = false);
 
   // Read in settings values: shorthand, not new functionality.
   bool   flag(string key) {return settings.flag(key);}
@@ -119,22 +152,33 @@ public:
   string word(string key) {return settings.word(key);}
 
   // The event record for the parton-level central process.
-  Event process;
+  Event          process;
 
   // The event record for the complete event history.
-  Event event;
+  Event          event;
 
-  // Information on the generation, especially current subprocess.
-  Info info;
+  // Information on the generation: current subprocess and error statistics.
+  Info           info;
 
-  // Settings - is static but declared here for ease of use.
-  Settings settings;
+  // Settings: databases of flags/modes/parms/words to control run.
+  Settings       settings;
 
-  // ParticleDataTable - is static but declared here for ease of use.
-  ParticleDataTable particleData;
+  // ParticleData: the particle data table/database.
+  ParticleData   particleData;
+
+  // Random number generator.
+  Rndm           rndm;
+
+  // Standard Model couplings, including alphaS and alphaEM.
+  Couplings     couplings;
+  CoupSUSY      coupSUSY;
+  Couplings*    couplingsPtr;
 
   // SusyLesHouches - SLHA object for interface to SUSY spectra.
   SusyLesHouches slha;
+
+  // The partonic content of each subcollision system (auxiliary to event).
+  PartonSystems  partonSystems; 
 
 private: 
 
@@ -142,18 +186,23 @@ private:
   static const int NTRY, SUBRUNDEFAULT;
 
   // Initialization data, extracted from database.
-  bool   doProcessLevel, doPartonLevel, doHadronLevel, checkEvent;
+  string xmlPath;
+  bool   doProcessLevel, doPartonLevel, doHadronLevel, checkEvent, 
+         doDiffraction, decayRHadrons;
   int    nErrList;
   double epTolErr, epTolWarn;
 
   // Initialization data, extracted from init(...) call.
-  bool   isConstructed, isInit, inCMframe;
-  int    idA, idB;  
-  double mA, mB, eA, eB, pzA, pzB, eCM, betaZ, gammaZ;
+  bool   isConstructed, isInit, isUnresolvedA, isUnresolvedB;
+  int    idA, idB, frameType;  
+  double mA, mB, pxA, pxB, pyA, pyB, pzA, pzB, eA, eB, 
+         pzAcm, pzBcm, eCM, betaZ, gammaZ;
+  Vec4   pAinit, pBinit, pAnow, pBnow;
+  RotBstMatrix MfromCM, MtoCM;
 
   // information for error checkout.
-  int    nInitCalls, nErrEvent;
-  vector<int> iErrId, iErrNan;
+  int    nErrEvent;
+  vector<int> iErrId, iErrCol, iErrNan, iErrNanVtx;
 
   // Pointers to the parton distributions of the two incoming beams.
   PDF* pdfAPtr;  
@@ -163,25 +212,36 @@ private:
   PDF* pdfHardAPtr;  
   PDF* pdfHardBPtr; 
 
+  // Extra Pomeron PDF pointers to be used in diffractive processes only. 
+  PDF* pdfPomAPtr;  
+  PDF* pdfPomBPtr; 
+
   // Keep track when "new" has been used and needs a "delete" for PDF's.  
-  bool useNewPdfA, useNewPdfB, useNewPdfHard;
+  bool useNewPdfA, useNewPdfB, useNewPdfHard, useNewPdfPomA, useNewPdfPomB;
 
   // The two incoming beams.
   BeamParticle beamA;
   BeamParticle beamB;
 
-  // LHAinit and LHAevnt objects for generating external events.
-  bool doLHA, useNewLHA;
-  LHAinit* lhaInitPtr;
-  LHAevnt* lhaEvntPtr;
+  // Alternative Pomeron beam-inside-beam.
+  BeamParticle beamPomA;
+  BeamParticle beamPomB;
+
+  // LHAup object for generating external events.
+  bool   doLHA, useNewLHA;
+  LHAup* lhaUpPtr;
 
   // Pointer to external decay handler and list of particles it handles.
   DecayHandler* decayHandlePtr;
-  vector<int> handledParticles;
+  vector<int>   handledParticles;
 
-  // Pointer to userHooks object for user interaction with program.
+  // Pointer to UserHooks object for user interaction with program.
   UserHooks* userHooksPtr;
-  bool hasUserHooks, doVetoProcess, doVetoPartons;
+  bool       hasUserHooks, doVetoProcess, doVetoPartons;
+
+  // Pointer to BeamShape object for beam momentum and interaction vertex.
+  BeamShape* beamShapePtr;
+  bool       useNewBeamShape, doMomentumSpread, doVertexSpread;
 
   // Pointers to external processes derived from the Pythia base classes.
   vector<SigmaProcess*> sigmaPtrs;  
@@ -193,9 +253,7 @@ private:
   TimeShower*  timesDecPtr;
   TimeShower*  timesPtr;
   SpaceShower* spacePtr;
-
-  // Keep track when "new" has been used and needs a "delete" for showers.  
-  bool useNewTimes, useNewSpace;
+  bool         useNewTimes, useNewSpace;
 
   // The main generator class to define the core process of the event.
   ProcessLevel processLevel;
@@ -206,8 +264,11 @@ private:
   // The main generator class to produce the hadron level of the event.
   HadronLevel hadronLevel;
 
-  // ErrorMsg is a static class, so not needed here, except as reminder.
-  ErrorMsg errorMsg; 
+  // The total cross section class is used both on process and parton level.
+  SigmaTotal sigmaTot; 
+
+  // The RHadrons class is used both at PartonLevel and HadronLevel.
+  RHadrons   rHadrons;
 
   // Write the Pythia banner, with symbol and version information.
   void banner(ostream& os = cout);
@@ -215,17 +276,29 @@ private:
   // Check for lines in file that mark the beginning of new subrun.
   int readSubrun(string line, bool warn = true, ostream& os = cout);
 
-  // Initialization routine to set up kinematic and more.
+  // Initialization routine to set up the whole generation machinery.
   bool initInternal();
 
-  // Initialize tunes to e+e- and pp/ppbar data.
-  void initTunes();
+  // Check that combinations of settings are allowed; change if not.
+  void checkSettings();
 
-  // Initialization routine for SUSY spectra.
-  bool initSLHA();
+  // Check that beams and beam combination can be handled.
+  bool checkBeams();
 
-  // Add any junctions to the event record list when no ProcessLevel.
-  void findJunctions();
+  // Calculate kinematics at initialization.
+  bool initKinematics();
+
+  // Set up pointers to PDFs.
+  bool initPDFs();
+
+  // Recalculate kinematics for each event when beam momentum has a spread.
+  void nextKinematics();
+
+  // Boost from CM frame to lab frame, or inverse. Set production vertex.
+  void boostAndVertex(bool toLab, bool setVertex);
+
+  // Perform R-hadron decays.
+  bool doRHadronDecays();
 
   // Check that the final event makes sense.
   bool check(ostream& os = cout);
@@ -235,7 +308,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

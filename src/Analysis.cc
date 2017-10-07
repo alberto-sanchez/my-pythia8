@@ -1,5 +1,5 @@
 // Analysis.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -10,12 +10,12 @@
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // Sphericity class.
 // This class finds sphericity-related properties of an event.
 
-//*********
+//--------------------------------------------------------------------------
  
 // Constants: could be changed here if desired, but normally should not.
 // These are of technical nature, as described for each.
@@ -23,17 +23,20 @@ namespace Pythia8 {
 // Minimum number of particles to perform study.
 const int    Sphericity::NSTUDYMIN     = 2;
 
+// Maximum number of times that an error warning will be printed.
+const int    Sphericity::TIMESTOPRINT  = 1;
+
 // Assign mimimum squared momentum in weight to avoid division by zero. 
 const double Sphericity::P2MIN         = 1e-20;
 
 // Second eigenvalue not too low or not possible to find eigenvectors.
 const double Sphericity::EIGENVALUEMIN = 1e-10;
 
-//*********
+//--------------------------------------------------------------------------
  
 // Analyze event.
 
-bool Sphericity::analyze(const Event& event) {
+bool Sphericity::analyze(const Event& event, ostream& os) {
 
   // Initial values, tensor and counters zero.
   eVal1 = eVal2 = eVal3 = 0.;
@@ -67,8 +70,9 @@ bool Sphericity::analyze(const Event& event) {
 
   // Very low multiplicities (0 or 1) not considered.
   if (nStudy < NSTUDYMIN) {
-    ErrorMsg::message("Warning in Sphericity::analyze: "
-    " too few particles"); 
+    if (nFew < TIMESTOPRINT) os << " PYTHIA Error in " << 
+    "Sphericity::analyze: too few particles" << endl; 
+    ++nFew;
     return false;
   }
 
@@ -98,8 +102,9 @@ bool Sphericity::analyze(const Event& event) {
 
     // If all particles are back-to-back then only first axis meaningful.
     if (iVal > 1 && eVal2 < EIGENVALUEMIN) {
-      ErrorMsg::message("Warning in Sphericity::analyze: "
-      " particles too back-to-back"); 
+      if (nBack < TIMESTOPRINT) os << " PYTHIA Error in "
+      "Sphericity::analyze: particles too back-to-back" << endl; 
+      ++nBack;
       return false;
     }
 
@@ -140,7 +145,7 @@ bool Sphericity::analyze(const Event& event) {
       } 
     }
 
-    // Construct eigenvector. Normalize to unit length. Random sign.
+    // Construct eigenvector. Normalize to unit length; sign irrelevant.
     int k1 = kMax + 1; if (k1 > 3) k1 -= 3;
     int k2 = kMax + 2; if (k2 > 3) k2 -= 3;
     double eVec[4];
@@ -150,8 +155,7 @@ bool Sphericity::analyze(const Event& event) {
       - dd[jMax][k2] * dd[jMax2][k1]) / dd[jMax][kMax];
     double length = sqrt( pow2(eVec[1]) + pow2(eVec[2])
       + pow2(eVec[3]) );
-    if (Rndm::flat() > 0.5) length = -length;
-
+ 
     // Store eigenvectors.
     if (iVal == 0) eVec1 = Vec4( eVec[1] / length,
       eVec[2] / length, eVec[3] / length, 0.);
@@ -159,20 +163,19 @@ bool Sphericity::analyze(const Event& event) {
       eVec[2] / length, eVec[3] / length, 0.);
   }
 
-  // Middle eigenvector is orthogonal to the other two.
+  // Middle eigenvector is orthogonal to the other two; sign irrelevant.
   eVec2 = cross3( eVec1, eVec3);
-  if (Rndm::flat() > 0.5) eVec2 = -eVec2;
 
   // Done.
   return true;
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Provide a listing of the info.
   
-void Sphericity::list(ostream& os) {
+void Sphericity::list(ostream& os) const {
 
   // Header.
   os << "\n --------  PYTHIA Sphericity Listing  -------- \n";
@@ -195,27 +198,30 @@ void Sphericity::list(ostream& os) {
 }
 
 
-//**************************************************************************
+//==========================================================================
 
 // Thrust class.
 // This class finds thrust-related properties of an event.
 
-//*********
+//--------------------------------------------------------------------------
  
 // Constants: could be changed here if desired, but normally should not.
 // These are of technical nature, as described for each.
 
 // Minimum number of particles to perform study.
-const int    Thrust::NSTUDYMIN = 2;
+const int    Thrust::NSTUDYMIN    = 2;
+
+// Maximum number of times that an error warning will be printed.
+const int    Thrust::TIMESTOPRINT = 1;
 
 // Major not too low or not possible to find major axis.
-const double Thrust::MAJORMIN  = 1e-10;
+const double Thrust::MAJORMIN     = 1e-10;
 
-//*********
+//--------------------------------------------------------------------------
  
 // Analyze event.
 
-bool Thrust::analyze(const Event& event) {
+bool Thrust::analyze(const Event& event, ostream& os) {
 
   // Initial values and counters zero.
   eVal1 = eVal2 = eVal3 = 0.;
@@ -240,8 +246,9 @@ bool Thrust::analyze(const Event& event) {
 
   // Very low multiplicities (0 or 1) not considered.
   if (nStudy < NSTUDYMIN) {
-    ErrorMsg::message("Warning in Thrust::analyze: "
-    " too few particles"); 
+    if (nFew < TIMESTOPRINT) os << " PYTHIA Error in " << 
+    "Thrust::analyze: too few particles" << endl; 
+    ++nFew;
     return false;
   }
 
@@ -327,11 +334,11 @@ bool Thrust::analyze(const Event& event) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Provide a listing of the info.
   
-void Thrust::list(ostream& os) {
+void Thrust::list(ostream& os) const {
 
   // Header.
   os << "\n --------  PYTHIA Thrust Listing  ------------ \n"
@@ -351,12 +358,20 @@ void Thrust::list(ostream& os) {
 
 }
 
-//**************************************************************************
+//==========================================================================
 
 // SingleClusterJet class.
 // Simple helper class to ClusterJet for a jet and its contents. 
 
-//*********
+//--------------------------------------------------------------------------
+ 
+// Constants: could be changed here if desired, but normally should not.
+// These are of technical nature, as described for each.
+
+// Assign minimal pAbs to avoid division by zero.
+const double SingleClusterJet::PABSMIN  = 1e-10; 
+
+//--------------------------------------------------------------------------
  
 // Distance measures between two SingleClusterJet objects.
 
@@ -377,28 +392,38 @@ double dist2Fun(int measure, const SingleClusterJet& j1,
 
 }  
 
-//**************************************************************************
+//==========================================================================
 
 // ClusterJet class.
 // This class performs a jet clustering according to different
 // distance measures: Lund, JADE or Durham.
 
-//*********
+//--------------------------------------------------------------------------
  
 // Constants: could be changed here if desired, but normally should not.
 // These are of technical nature, as described for each.
 
+// Maximum number of times that an error warning will be printed.
+const int    ClusterJet::TIMESTOPRINT   = 1;
+
+// Assume the pi+- mass for all particles exceptthe photon in one option.
+const double ClusterJet::PIMASS        = 0.13957; 
+
+// Assign minimal pAbs to avoid division by zero.
+const double ClusterJet::PABSMIN        = 1e-10; 
+
 // Initial pT/m preclustering scale as fraction of clustering one.
 const double ClusterJet::PRECLUSTERFRAC = 0.1; 
+
 // Step with which pT/m is reduced if preclustering gives too few jets.
 const double ClusterJet::PRECLUSTERSTEP = 0.8;
 
-//*********
+//--------------------------------------------------------------------------
  
 // Analyze event.
 
 bool ClusterJet::analyze(const Event& event, double yScaleIn, 
-  double pTscaleIn, int nJetMinIn, int nJetMaxIn) {
+  double pTscaleIn, int nJetMinIn, int nJetMaxIn, ostream& os) {
 
   // Input values. Initial values zero.
   yScale  = yScaleIn;
@@ -408,6 +433,7 @@ bool ClusterJet::analyze(const Event& event, double yScaleIn,
   particles.resize(0);
   jets.resize(0);
   Vec4 pSum;
+  distances.clear();
 
   // Loop over desired particles in the event.
   for (int i = 0; i < event.size(); ++i) 
@@ -419,7 +445,7 @@ bool ClusterJet::analyze(const Event& event, double yScaleIn,
     Vec4 pTemp = event[i].p();
     if (massSet == 0 || massSet == 1) {
       double mTemp = (massSet == 0 || event[i].id() == 22) 
-        ? 0. : piMass; 
+        ? 0. : PIMASS; 
       double eTemp = sqrt(pTemp.pAbs2() + pow2(mTemp));
       pTemp.e(eTemp);
     }
@@ -430,15 +456,16 @@ bool ClusterJet::analyze(const Event& event, double yScaleIn,
   // Very low multiplicities not considered.
   nParticles = particles.size();
   if (nParticles < nJetMin) {
-    ErrorMsg::message("Warning in ClusterJet::analyze: "
-    " too few particles"); 
+    if (nFew < TIMESTOPRINT) os << " PYTHIA Error in " << 
+    "ClusterJet::analyze: too few particles" << endl; 
+    ++nFew;
     return false;
   }
 
   // Squared maximum distance in GeV^2 for joining.
   double p2Sum = pSum.m2Calc();
   dist2Join = max( yScale * p2Sum, pow2(pTscale));
-  double dist2BigMin = 2. * max( dist2Join, p2Sum);
+  dist2BigMin = 2. * max( dist2Join, p2Sum);
 
   // Do preclustering if desired and possible. 
   if (doPrecluster && nParticles > nJetMin + 2) {
@@ -472,13 +499,20 @@ bool ClusterJet::analyze(const Event& event, double yScaleIn,
     // Stop if no pair below cut and not more jets than allowed. 
     if ( dist2Min > dist2Join  
       && (nJetMax < nJetMin || int(jets.size()) <= nJetMax) ) break;
+    
+    // Stop if reached minimum allowed number of jets. Else continue.
+    if (int(jets.size()) <= nJetMin) break; 
 
     // Join two closest jets.
     jets[jMin].pJet         += jets[kMin].pJet;
-    jets[jMin].pAbs          = jets[jMin].pJet.pAbs();
+    jets[jMin].pAbs          = max( PABSMIN, jets[jMin].pJet.pAbs());
     jets[jMin].multiplicity += jets[kMin].multiplicity;
     for (int i = 0; i < nParticles; ++i) 
     if (particles[i].daughter == kMin) particles[i].daughter = jMin;
+
+    // Save the last 5 distances.
+    distances.push_front(dist2Min);
+    if (distances.size() > 5) distances.pop_back();
 
     // Move up last jet to empty slot to shrink list.
     jets[kMin]               = jets.back();
@@ -489,9 +523,6 @@ bool ClusterJet::analyze(const Event& event, double yScaleIn,
 
     // Do reassignments of particles to nearest jet if desired.
     if (doReassign) reassign();
-    
-    // Stop if reached minimum allowed number of jets. Else continue.
-    if (int(jets.size()) <= nJetMin) break; 
   }
 
   // Order jets in decreasing energy.
@@ -509,7 +540,7 @@ bool ClusterJet::analyze(const Event& event, double yScaleIn,
   return true;
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Precluster nearby particles to save computer time.
   
@@ -578,7 +609,7 @@ void ClusterJet::precluster() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Reassign particles to nearest jet to correct misclustering.
   
@@ -608,8 +639,10 @@ void ClusterJet::reassign() {
   }
 
   // Replace old by new jet momenta.
-  for (int j = 0; j < int(jets.size()); ++j) 
+  for (int j = 0; j < int(jets.size()); ++j) {
     jets[j].pJet = jets[j].pTemp;
+    jets[j].pAbs =  max( PABSMIN, jets[j].pJet.pAbs());
+  }
 
   // Check that no empty clusters after reassignments.
   for ( ;  ; ) {
@@ -633,20 +666,21 @@ void ClusterJet::reassign() {
     } 
 
     // Let this particle form new jet and subtract off from existing.
-    int jSplit = particles[iSplit].daughter;    
+    int jSplit         = particles[iSplit].daughter;    
     jets[jEmpty]       = SingleClusterJet( particles[iSplit].pJet ); 
     jets[jSplit].pJet -=  particles[iSplit].pJet;
-    jets[jSplit].pAbs  = jets[jSplit].pJet.pAbs();
+    jets[jSplit].pAbs  =  max( PABSMIN,jets[jSplit].pJet.pAbs());
+    particles[iSplit].daughter = jEmpty;
     --jets[jSplit].multiplicity;
   }      
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Provide a listing of the info.
   
-void ClusterJet::list(ostream& os) {
+void ClusterJet::list(ostream& os) const {
 
   // Header.
   string method = (measure == 1) ? "Lund pT" 
@@ -670,17 +704,25 @@ void ClusterJet::list(ostream& os) {
      << "--------" << endl;
 }
 
-//**************************************************************************
+//==========================================================================
 
 // CellJet class.
 // This class performs a cone jet search in (eta, phi, E_T) space.
 
-//*********
+//--------------------------------------------------------------------------
+ 
+// Constants: could be changed here if desired, but normally should not.
+// These are of technical nature, as described for each.
+
+// Minimum number of particles to perform study.
+const int CellJet::TIMESTOPRINT = 1;
+
+//--------------------------------------------------------------------------
  
 // Analyze event.
 
 bool CellJet::analyze(const Event& event, double eTjetMinIn, 
-  double coneRadiusIn, double eTseedIn) {
+  double coneRadiusIn, double eTseedIn, ostream& ) {
 
   // Input values. Initial values zero.
   eTjetMin   = eTjetMinIn;
@@ -700,11 +742,11 @@ bool CellJet::analyze(const Event& event, double eTjetMinIn,
     if (abs(etaNow) > etaMax) continue;
     double phiNow = event[i].phi();
     double pTnow  = event[i].pT();
-    int iEtaNow = max(1, min( nEta, 1 + int(nEta * 0.5 
+    int iEtaNow   = max(1, min( nEta, 1 + int(nEta * 0.5 
       * (1. + etaNow / etaMax) ) ) );
-    int iPhiNow = max(1, min( nPhi, 1 + int(nPhi * 0.5
+    int iPhiNow   = max(1, min( nPhi, 1 + int(nPhi * 0.5
       * (1. + phiNow / M_PI) ) ) );
-    int iCell = nPhi * iEtaNow + iPhiNow;
+    int iCell     = nPhi * iEtaNow + iPhiNow;
 
     // Add pT to cell already hit or book a new cell.
     bool found = false;
@@ -724,12 +766,12 @@ bool CellJet::analyze(const Event& event, double eTjetMinIn,
   }
 
   // Smear true bin content by calorimeter resolution.
-  if (smear > 0) 
+  if (smear > 0 && rndmPtr > 0) 
   for (int j = 0; j < int(cells.size()); ++j) {
     double eTeConv = (smear < 2) ? 1. : cosh( cells[j].etaCell );
     double eBef = cells[j].eTcell * eTeConv; 
     double eAft = 0.;
-    do eAft = eBef + resolution * sqrt(eBef) * Rndm::gauss();
+    do eAft = eBef + resolution * sqrt(eBef) * rndmPtr->gauss();
     while (eAft < 0 || eAft > upperCut * eBef);
     cells[j].eTcell = eAft / eTeConv;
   }
@@ -752,56 +794,56 @@ bool CellJet::analyze(const Event& event, double eTjetMinIn,
 
     // If too small cell eT then done, else start new trial jet.  
     if (eTmax < eTseed) break;
-    double etaCenter = cells[jMax].etaCell;
-    double phiCenter = cells[jMax].phiCell;
-    double eTjet = 0.;
+    double etaCenterNow = cells[jMax].etaCell;
+    double phiCenterNow = cells[jMax].phiCell;
+    double eTjetNow     = 0.;
 
     //  Sum up unused cells within required distance of seed.
     for (int j = 0; j < int(cells.size()); ++j) {
       if (cells[j].isUsed) continue;
-      double dEta = abs( cells[j].etaCell - etaCenter );
+      double dEta = abs( cells[j].etaCell - etaCenterNow );
       if (dEta > coneRadius) continue;
-      double dPhi = abs( cells[j].phiCell - phiCenter );
+      double dPhi = abs( cells[j].phiCell - phiCenterNow );
       if (dPhi > M_PI) dPhi = 2. * M_PI - dPhi;
       if (dPhi > coneRadius) continue;
       if (pow2(dEta) + pow2(dPhi) > pow2(coneRadius)) continue;
       cells[j].isAssigned = true;
-      eTjet += cells[j].eTcell;
+      eTjetNow += cells[j].eTcell;
     }
 
     // Reject cluster below minimum ET.
-    if (eTjet < eTjetMin) {
+    if (eTjetNow < eTjetMin) {
       cells[jMax].canBeSeed = false; 
       for (int j = 0; j < int(cells.size()); ++j) 
         cells[j].isAssigned = false;
 
     // Else find new jet properties. 
     } else {
-      double etaWeighted = 0.;
-      double phiWeighted = 0.;
-      int multiplicity   = 0;
-      Vec4 pMassive;
+      double etaWeightedNow = 0.;
+      double phiWeightedNow = 0.;
+      int multiplicityNow   = 0;
+      Vec4 pMassiveNow;
       for (int j = 0; j < int(cells.size()); ++j) 
       if (cells[j].isAssigned) {
         cells[j].canBeSeed  = false; 
         cells[j].isUsed     = true; 
         cells[j].isAssigned = false; 
-        etaWeighted += cells[j].eTcell * cells[j].etaCell;
+        etaWeightedNow += cells[j].eTcell * cells[j].etaCell;
         double phiCell = cells[j].phiCell; 
-        if (abs(phiCell - phiCenter) > M_PI) 
-          phiCell += (phiCenter > 0.) ? 2. * M_PI : -2. * M_PI;
-        phiWeighted  += cells[j].eTcell * phiCell;
-        multiplicity += cells[j].multiplicity;
-        pMassive     += cells[j].eTcell * Vec4( 
+        if (abs(phiCell - phiCenterNow) > M_PI) 
+          phiCell += (phiCenterNow > 0.) ? 2. * M_PI : -2. * M_PI;
+        phiWeightedNow  += cells[j].eTcell * phiCell;
+        multiplicityNow += cells[j].multiplicity;
+        pMassiveNow     += cells[j].eTcell * Vec4( 
            cos(cells[j].phiCell),  sin(cells[j].phiCell), 
           sinh(cells[j].etaCell), cosh(cells[j].etaCell) );
       } 
-      etaWeighted /= eTjet;
-      phiWeighted /= eTjet; 
+      etaWeightedNow /= eTjetNow;
+      phiWeightedNow /= eTjetNow; 
 
       // Bookkeep new jet, in decreasing ET order.
-      jets.push_back( SingleCellJet( eTjet, etaCenter, phiCenter,
-        etaWeighted, phiWeighted, multiplicity, pMassive) ); 
+      jets.push_back( SingleCellJet( eTjetNow, etaCenterNow, phiCenterNow,
+        etaWeightedNow, phiWeightedNow, multiplicityNow, pMassiveNow) ); 
       for (int i = int(jets.size()) - 1; i > 0; --i) {
         if (jets[i-1].eTjet > jets[i].eTjet) break;
         swap( jets[i-1], jets[i]);
@@ -813,11 +855,11 @@ bool CellJet::analyze(const Event& event, double eTjetMinIn,
   return true;
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Provide a listing of the info.
   
-void CellJet::list(ostream& os) {
+void CellJet::list(ostream& os) const {
 
   // Header.
   os << "\n --------  PYTHIA CellJet Listing, eTjetMin = " 
@@ -845,6 +887,6 @@ void CellJet::list(ostream& os) {
      << endl;
 }
 
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8

@@ -1,5 +1,5 @@
 // PartonLevel.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -13,18 +13,22 @@
 #include "BeamParticle.h"
 #include "BeamRemnants.h"
 #include "Event.h"
-#include "Information.h"
+#include "Info.h"
 #include "MultipleInteractions.h"
 #include "ParticleData.h"
+#include "PartonSystems.h"
 #include "PythiaStdlib.h"
+#include "RHadrons.h"
 #include "Settings.h"
+#include "SigmaTotal.h"
 #include "SpaceShower.h"
+#include "StandardModel.h"
 #include "TimeShower.h"
 #include "UserHooks.h"
 
 namespace Pythia8 {
  
-//**************************************************************************
+//==========================================================================
 
 // The PartonLevel class contains the top-level routines to generate
 // the partonic activity of an event.
@@ -37,20 +41,31 @@ public:
   PartonLevel() : userHooksPtr(0) {} 
  
   // Initialization of all classes at the parton level.
-  bool init( Info* infoPtrIn, BeamParticle* beamAPtrIn, 
-    BeamParticle* beamBPtrIn,  TimeShower* timesDecPtrIn,
+  bool init( Info* infoPtrIn, Settings& settings,
+    ParticleData* particleDataPtrIn, Rndm* rndmPtrIn, 
+    BeamParticle* beamAPtrIn, BeamParticle* beamBPtrIn, 
+    BeamParticle* beamPomAPtrIn, BeamParticle* beamPomBPtrIn, 
+    Couplings* couplingsPtrIn, PartonSystems* partonSystemsPtrIn, 
+    SigmaTotal* sigmaTotPtr, TimeShower* timesDecPtrIn, 
     TimeShower* timesPtrIn, SpaceShower* spacePtrIn, 
-    UserHooks* userHooksPtrIn);
+    RHadrons* rHadronsPtrIn, UserHooks* userHooksPtrIn);
  
   // Generate the next parton-level process.
   bool next( Event& process, Event& event); 
+
+  // Perform showers in resonance decay chains. (For special cases.)
+  bool resonanceShowers( Event& process, Event& event, bool skipForR); 
 
   // Tell whether failure was due to vetoing.
   bool hasVetoed() const {return doVeto;}
 
   // Accumulate and print statistics.
-  void accumulate() {multi.accumulate( infoPtr);}
-  void statistics() {if (doMI) multi.statistics();}
+  void accumulate() {multiPtr->accumulate();}
+  void statistics(bool reset = false) {
+    if (doMI) multiMB.statistics(reset);}
+    // For now no separate statistics for diffraction??
+    //if (doMISDA && doDiffraction) multiSDA.statistics(reset); 
+    //if (doMISDB && doDiffraction) multiSDB.statistics(reset);}
 
 private: 
 
@@ -58,55 +73,91 @@ private:
   static const int NTRY;
 
   // Initialization data, mainly read from Settings.
-  bool   doMI, doISR, doFSRduringProcess, doFSRafterProcess, 
-         doFSRinResonances, doRemnants, doSecondHard, 
-         hasLeptonBeams, hasPointLeptons, canVetoPT, canVetoStep;
+  bool   doMinBias, doDiffraction, doMI, doMIMB, doMISDA, doMISDB, doMIinit, 
+         doISR, doFSRduringProcess, doFSRafterProcess,  doFSRinResonances, 
+         doRemnants, doSecondHard, hasLeptonBeams, hasPointLeptons, 
+         canVetoPT, canVetoStep, canVetoMIStep, canSetScale, allowRH;
+  double mMinDiff, mWidthDiff;
 
   // Event generation strategy. Number of steps. Maximum pT scales.
   bool   doVeto;
   int    nMI, nISR, nFSRinProc, nFSRinRes, nISRhard, nFSRhard, 
-         typeLatest, nVetoStep, typeVetoStep, iSysNow;
+         typeLatest, nVetoStep, typeVetoStep, nVetoMIStep, iSysNow;
   double pTsaveMI, pTsaveISR, pTsaveFSR, pTvetoPT;
 
+  // Current event properties.
+  bool   isMinBias, isDiffA, isDiffB, isDiff, isSingleDiff, isDoubleDiff, 
+         isResolved, isResolvedA, isResolvedB;
+  int    sizeProcess, sizeEvent, nHardDone, nHardDoneRHad;
+  double eCMsave; 
+  vector<bool> inRHadDecay;
+  vector<int>  iPosBefShow;
+
   // Pointer to various information on the generation.
-  Info* infoPtr;
+  Info*          infoPtr;
+
+  // Pointer to the particle data table.
+  ParticleData*  particleDataPtr;
+
+  // Pointer to the random number generator.
+  Rndm*          rndmPtr;
 
   // Pointers to the two incoming beams.
-  BeamParticle* beamAPtr;
-  BeamParticle* beamBPtr;
+  BeamParticle*  beamAPtr;
+  BeamParticle*  beamBPtr;
+
+  // Spare copies of normal pointers. Pointers to Pomeron beam-inside-beam.
+  BeamParticle*  beamHadAPtr;  
+  BeamParticle*  beamHadBPtr;  
+  BeamParticle*  beamPomAPtr;
+  BeamParticle*  beamPomBPtr;
+
+  // Pointers to Standard Model couplings.
+  Couplings*     couplingsPtr;
+  
+  // Pointer to information on subcollision parton locations.
+  PartonSystems* partonSystemsPtr;
 
   // Pointer to userHooks object for user interaction with program.
-  UserHooks* userHooksPtr;
+  UserHooks*     userHooksPtr;
 
   // Pointers to timelike showers for resonance decays and the rest.
-  TimeShower* timesDecPtr;
-  TimeShower* timesPtr;
+  TimeShower*    timesDecPtr;
+  TimeShower*    timesPtr;
 
   // Pointer to spacelike showers.
-  SpaceShower* spacePtr;
+  SpaceShower*   spacePtr;
 
-  // The generator class for multiple interactions.
-  MultipleInteractions multi;
+  // The generator classes for multiple interactions.
+  MultipleInteractions  multiMB;
+  MultipleInteractions  multiSDA;
+  MultipleInteractions  multiSDB;
+  MultipleInteractions* multiPtr;
 
   // The generator class to construct beam-remnant kinematics. 
   BeamRemnants remnants;
 
-  // Set up the hard process, excluding subsequent resonance decays.
-  void setupHardSys( Event& process, Event& event);
-  // Keep track of how much of hard process has been handled.
-  int nHardDone;
+  // The RHadrons class is used to fragment off and decay R-hadrons.
+  RHadrons*    rHadronsPtr;
+
+  // Resolved diffraction: find how many systems should have it.
+  int decideResolvedDiff( Event& process);
 
   // Set up an unresolved process, i.e. elastic or diffractive.
   bool setupUnresolvedSys( Event& process, Event& event);
 
-  // Perform showers in resonance decay chains.
-  int resonanceShowers( Event& process, Event& event); 
-  // Position in main event record of hard partons before showers.
-  vector<int> iPosBefShow;
+  // Set up the hard process, excluding subsequent resonance decays.
+  void setupHardSys( int iHardLoop, Event& process, Event& event);
+
+  // Resolved diffraction: pick whether to have it and set up for it.
+  void setupResolvedDiff( int iHardLoop, Event& process);
+
+  // Resolved diffraction: restore normal behaviour.
+  void leaveResolvedDiff( int iHardLoop, Event& event);
   
 };
 
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

@@ -1,5 +1,5 @@
 // BeamParticle.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -13,7 +13,7 @@
 #include "Basics.h"
 #include "Event.h"
 #include "FragmentationFlavZpT.h"
-#include "Information.h"
+#include "Info.h"
 #include "ParticleData.h"
 #include "PartonDistributions.h"
 #include "PythiaStdlib.h"
@@ -21,15 +21,18 @@
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // This class holds info on a parton resolved inside the incoming beam,
-// i.e. either an initiator (part a hard scattering or multiple interaction)
+// i.e. either an initiator (part of a hard or a multiple interaction)
 // or a remnant (part of the beam remnant treatment).
 
 // The companion code is -1 from onset and for g, is -2 for an unmatched 
 // sea quark, is >= 0 for a matched sea quark, with the number giving the 
 // companion position, and is -3 for a valence quark.
+
+// Rescattering partons properly do not belong here, but bookkeeping is
+// simpler with them, so they are stored with companion code -10.
 
 class ResolvedParton {
 
@@ -38,8 +41,8 @@ public:
   // Constructor.
   ResolvedParton( int iPosIn = 0, int idIn = 0, double xIn = 0., 
     int companionIn = -1) : iPosRes(iPosIn), idRes(idIn), xRes(xIn), 
-    companionRes(companionIn), xqCompRes(0.), mRes(0.), colRes(0),
-    acolRes(0) { } 
+    companionRes(companionIn), xqCompRes(0.), mRes(0.), factorRes(1.), 
+    colRes(0), acolRes(0) { } 
 
   // Set info on initiator or remnant parton.
   void iPos( int iPosIn) {iPosRes = iPosIn;} 
@@ -58,27 +61,35 @@ public:
   void col(int colIn) {colRes = colIn;}
   void acol(int acolIn) {acolRes = acolIn;}
   void cols(int colIn = 0,int acolIn = 0) 
-    {colRes = colIn; acolRes = acolIn;}  
+    {colRes = colIn; acolRes = acolIn;} 
+  void scalePT( double factorIn) {pRes.px(factorIn * pRes.px()); 
+    pRes.py(factorIn * pRes.py()); factorRes *= factorIn;}
+  void scaleX( double factorIn) {xRes *= factorIn;}
 
   // Get info on initiator or remnant parton.
-  int iPos() const {return iPosRes;} 
-  int id() const {return idRes;} 
-  double x() const {return xRes;} 
-  int companion() const {return companionRes;} 
-  bool isValence() const {return (companionRes == -3);}
-  bool isUnmatched() const {return (companionRes == -2);}
-  bool isCompanion() const {return (companionRes >= 0);}
+  int    iPos()        const {return iPosRes;} 
+  int    id()          const {return idRes;} 
+  double x()           const {return xRes;} 
+  int    companion()   const {return companionRes;} 
+  bool   isValence()   const {return (companionRes == -3);}
+  bool   isUnmatched() const {return (companionRes == -2);}
+  bool   isCompanion() const {return (companionRes >= 0);}
+  bool   isFromBeam()  const {return (companionRes > -10);}
   double xqCompanion() const {return xqCompRes;} 
-  Vec4 p() const {return pRes;}
-  double px() const {return pRes.px();}
-  double py() const {return pRes.py();}
-  double pz() const {return pRes.pz();}
-  double e() const {return pRes.e();}
-  double m() const {return mRes;}
-  double pT() const {return pRes.pT();}
-  double mT2() const {return mRes*mRes + pRes.pT2();}
-  int col() const {return colRes;}
-  int acol() const {return acolRes;}
+  Vec4   p()           const {return pRes;}
+  double px()          const {return pRes.px();}
+  double py()          const {return pRes.py();}
+  double pz()          const {return pRes.pz();}
+  double e()           const {return pRes.e();}
+  double m()           const {return mRes;}
+  double pT()          const {return pRes.pT();}
+  double mT2()         const {return (mRes >= 0.) 
+    ? mRes*mRes + pRes.pT2() : - mRes*mRes + pRes.pT2();}
+  double pPos()        const {return pRes.e() +  pRes.pz();}
+  double pNeg()        const {return pRes.e() -  pRes.pz();}
+  int    col()         const {return colRes;}
+  int    acol()        const {return acolRes;}
+  double pTfactor()    const {return factorRes;} 
  
 private:
 
@@ -90,13 +101,13 @@ private:
   double xqCompRes;
   // Four-momentum and mass; for remnant kinematics construction.
   Vec4   pRes;
-  double mRes;
+  double mRes, factorRes;
   // Colour codes.
   int   colRes, acolRes;
 
 };
 
-//**************************************************************************
+//==========================================================================
 
 // This class holds info on a beam particle in the evolution of 
 // initial-state radiation and multiple interactions.
@@ -106,14 +117,19 @@ class BeamParticle {
 public:
 
   // Constructor.
-  BeamParticle() {Q2ValFracSav = -1.;}  
+  BeamParticle() : nInit(0) {resolved.resize(0); Q2ValFracSav = -1.;}  
 
-  // Initialize static data members.
-  static void initStatic();
+  // Initialize data on a beam particle and save pointers.
+  void init( int idIn, double pzIn, double eIn, double mIn, 
+    Info* infoPtrIn, Settings& settings, ParticleData* particleDataPtrIn, 
+    Rndm* rndmPtrIn, PDF* pdfInPtr, PDF* pdfHardInPtr, bool isUnresolvedIn, 
+    StringFlav* flavSelPtrIn);
 
-  // Initialize. Possibility to force re-initialization by hand.
-  void init( int idIn, double pzIn, double eIn, double mIn, PDF* pdfInPtr,
-    PDF* pdfHardInPtr, bool isUnresolvedIn = false);
+  // For mesons like pi0 valence content varies from event to event.
+  void newValenceContent();
+
+  // Set new pZ and E, but keep the rest the same.
+  void newPzE( double pzIn, double eIn) {pBeam = Vec4( 0., 0., pzIn, eIn);}
 
   // Member functions for output.
   int id() const {return idBeam;}
@@ -134,28 +150,28 @@ public:
   double xMax(int iSkip = -1);
 
   // Special hard-process parton distributions (can agree with standard ones).
-  double xfHard(int id, double x, double Q2) 
-    {return pdfHardBeamPtr->xf(id, x, Q2);}
+  double xfHard(int idIn, double x, double Q2) 
+    {return pdfHardBeamPtr->xf(idIn, x, Q2);}
    
   // Standard parton distributions.
-  double xf(int id, double x, double Q2) 
-    {return pdfBeamPtr->xf(id, x, Q2);}
+  double xf(int idIn, double x, double Q2) 
+    {return pdfBeamPtr->xf(idIn, x, Q2);}
 
   // Ditto, split into valence and sea parts (where gluon counts as sea).
-  double xfVal(int id, double x, double Q2) 
-    {return pdfBeamPtr->xfVal(id, x, Q2);}
-  double xfSea(int id, double x, double Q2) 
-    {return pdfBeamPtr->xfSea(id, x, Q2);}
+  double xfVal(int idIn, double x, double Q2) 
+    {return pdfBeamPtr->xfVal(idIn, x, Q2);}
+  double xfSea(int idIn, double x, double Q2) 
+    {return pdfBeamPtr->xfSea(idIn, x, Q2);}
 
   // Rescaled parton distributions, as needed for MI and ISR.
   // For ISR also allow split valence/sea, and only return relevant part.
-  double xfMI(int id, double x, double Q2) 
-    {return xfModified(-1, id, x, Q2);}
-  double xfISR(int indexMI, int id, double x, double Q2) 
-    {return xfModified( indexMI, id, x, Q2);}
+  double xfMI(int idIn, double x, double Q2) 
+    {return xfModified(-1, idIn, x, Q2);}
+  double xfISR(int indexMI, int idIn, double x, double Q2) 
+    {return xfModified( indexMI, idIn, x, Q2);}
 
   // Decide whether chosen quark is valence, sea or companion.
-  void pickValSeaComp();
+  int pickValSeaComp();
 
   // Initialize kind of incoming beam particle.
   void initBeamKind();
@@ -168,20 +184,20 @@ public:
   int sizeInit() const {return nInit;}
 
   // Clear list of resolved partons. 
-  void clear() {resolved.resize(0);}
+  void clear() {resolved.resize(0); nInit = 0;}
 
   // Add a resolved parton to list. 
-  int append( int iPos, int id, double x, int companion = -1)
-    {resolved.push_back( ResolvedParton( iPos, id, x, companion) );
+  int append( int iPos, int idIn, double x, int companion = -1)
+    {resolved.push_back( ResolvedParton( iPos, idIn, x, companion) );
     return resolved.size() - 1;}
 
   // Print extracted parton list; for debug mainly.
-  void list(ostream& os = cout); 
+  void list(ostream& os = cout) const; 
 
   // How many different flavours, and how many quarks of given flavour.
   int nValenceKinds() const {return nValKinds;}
-  int nValence(int id) const {for (int i = 0; i < nValKinds; ++i) 
-    if (id == idVal[i]) return nVal[i]; return 0;}
+  int nValence(int idIn) const {for (int i = 0; i < nValKinds; ++i) 
+    if (idIn == idVal[i]) return nVal[i]; return 0;}
 
   // Test whether a lepton is to be considered as unresolved.
   bool isUnresolvedLepton();
@@ -216,26 +232,38 @@ public:
  
 private: 
 
-  // Static initialization data, normally only set once.
-  static int    maxValQuark, companionPower;
-  static double valencePowerMeson, valencePowerUinP,
-         valencePowerDinP, valenceDiqEnhance;
-  static bool   allowJunction;
-  static double pickQuarkNorm, pickQuarkPower, diffPrimKTwidth,
-         diffLargeMassSuppress;
-
   // Constants: could only be changed in the code itself.
   static const double XMINUNRESOLVED;
+
+  // Pointer to various information on the generation.
+  Info*         infoPtr;
+
+  // Pointer to the particle data table.
+  ParticleData* particleDataPtr;
+
+  // Pointer to the random number generator.
+  Rndm*         rndmPtr;
+ 
+  // Pointers to PDF sets.
+  PDF*          pdfBeamPtr;
+  PDF*          pdfHardBeamPtr;
+
+  // Pointer to class for flavour generation.
+  StringFlav*   flavSelPtr;
+
+  // Initialization data, normally only set once.
+  bool   allowJunction;
+  int    maxValQuark, companionPower;
+  double valencePowerMeson, valencePowerUinP, valencePowerDinP, 
+         valenceDiqEnhance, pickQuarkNorm, pickQuarkPower, 
+         diffPrimKTwidth, diffLargeMassSuppress;
 
   // Basic properties of a beam particle.
   int    idBeam, idBeamAbs;  
   Vec4   pBeam;
   double mBeam;
-  PDF*   pdfBeamPtr;
-  PDF*   pdfHardBeamPtr;
-
   // Beam kind. Valence flavour content for hadrons.
-  bool   isLeptonBeam, isUnresolvedBeam, isHadronBeam, isMesonBeam, 
+  bool   isUnresolvedBeam, isLeptonBeam, isHadronBeam, isMesonBeam, 
          isBaryonBeam;
   int    nValKinds, idVal[3], nVal[3];
 
@@ -252,7 +280,7 @@ private:
   int    junCol[3];
 
   // Routine to calculate pdf's given previous interactions.
-  double xfModified( int iSkip, int id, double x, double Q2); 
+  double xfModified( int iSkip, int idIn, double x, double Q2); 
 
   // Fraction of hadron momentum sitting in a valence quark distribution.
   double xValFrac(int j, double Q2);
@@ -270,7 +298,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

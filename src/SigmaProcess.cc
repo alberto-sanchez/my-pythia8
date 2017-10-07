@@ -1,5 +1,5 @@
 // SigmaProcess.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -10,41 +10,12 @@
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // The SigmaProcess class.
 // Base class for cross sections.
 
-//*********
- 
-// Definitions of static variables and functions.
-// (Values will be overwritten in initStatic call, so are purely dummy.)
-
-int         SigmaProcess::alphaSorder    = 1;
-int         SigmaProcess::alphaEMorder   = 1;
-int         SigmaProcess::nQuarkIn       = 5;
-int         SigmaProcess::renormScale1   = 1;
-int         SigmaProcess::renormScale2   = 2;
-int         SigmaProcess::renormScale3   = 3;
-int         SigmaProcess::renormScale3VV = 3;
-int         SigmaProcess::factorScale1   = 1;
-int         SigmaProcess::factorScale2   = 1;
-int         SigmaProcess::factorScale3   = 2;
-int         SigmaProcess::factorScale3VV = 2;
-double      SigmaProcess::alphaSvalue    = 0.1265;
-double      SigmaProcess::Kfactor        = 1.;
-double      SigmaProcess::renormMultFac  = 1.;
-double      SigmaProcess::renormFixScale = 10000.;
-double      SigmaProcess::factorMultFac  = 1.;
-double      SigmaProcess::factorFixScale = 10000.;
-AlphaStrong SigmaProcess::alphaS;
-AlphaEM     SigmaProcess::alphaEM;
-int         SigmaProcess::higgsH1parity  = 1;
-int         SigmaProcess::higgsH2parity  = 1;
-int         SigmaProcess::higgsA3parity  = 2;
-double      SigmaProcess::higgsH1eta     = 0.;
-double      SigmaProcess::higgsH2eta     = 0.;
-double      SigmaProcess::higgsA3eta     = 0.;
+//--------------------------------------------------------------------------
 
 // Constants: could be changed here if desired, but normally should not.
 // These are of technical nature, as described for each.
@@ -55,113 +26,100 @@ const double SigmaProcess::CONVERT2MB    = 0.389380;
 // The sum of outgoing masses must not be too close to the cm energy.
 const double SigmaProcess::MASSMARGIN    = 0.1;
 
-// Pointers to the parton densities of the incoming beams.
-BeamParticle* SigmaProcess::beamAPtr; 
-BeamParticle* SigmaProcess::beamBPtr; 
-  
-// Pointer to the total/elastic/diffractive cross section object.
-SigmaTotal* SigmaProcess::sigmaTotPtr;
+// Parameters of momentum rescaling procedure: maximally allowed 
+// relative energy error and number of iterations. 
+const double SigmaProcess::COMPRELERR = 1e-10;
+const int    SigmaProcess::NCOMPSTEP  = 10;
 
-// Information on incoming beams.
-int    SigmaProcess::idA,        SigmaProcess::idB;
-double SigmaProcess::mA,         SigmaProcess::mB; 
-bool   SigmaProcess::isLeptonA,  SigmaProcess::isLeptonB; 
-bool   SigmaProcess::hasLeptonBeams     = false;
+//--------------------------------------------------------------------------
 
-// Pointer to the SLHA object.
-SusyLesHouches* SigmaProcess::slha;
+// Perform simple initialization and store pointers.
 
-// Pointers to LHAinit and LHAevnt for generating external events.
-LHAinit* SigmaProcess::lhaInitPtr;
-LHAevnt* SigmaProcess::lhaEvntPtr;
+void SigmaProcess::init(Info* infoPtrIn, Settings* settingsPtrIn,
+  ParticleData* particleDataPtrIn, Rndm* rndmPtrIn, BeamParticle* beamAPtrIn, 
+  BeamParticle* beamBPtrIn, Couplings* couplingsPtrIn, 
+  SigmaTotal* sigmaTotPtrIn, SusyLesHouches* slhaPtrIn) {
 
-//*********
+  // Store pointers.
+  infoPtr         = infoPtrIn;
+  settingsPtr     = settingsPtrIn;
+  particleDataPtr = particleDataPtrIn;
+  rndmPtr         = rndmPtrIn;
+  beamAPtr        = beamAPtrIn;
+  beamBPtr        = beamBPtrIn;
+  couplingsPtr    = couplingsPtrIn;
+  sigmaTotPtr     = sigmaTotPtrIn;
+  slhaPtr         = slhaPtrIn;
 
-// Initialize static data members.
-
-void SigmaProcess::initStatic() {
-
-  // Parameters of alphaStrong generation .
-  alphaSvalue     = Settings::parm("SigmaProcess:alphaSvalue");
-  alphaSorder     = Settings::mode("SigmaProcess:alphaSorder");
-
-  // Initialize alphaStrong generation.
-  alphaS.init( alphaSvalue, alphaSorder); 
-
-  // Parameters of alphaEM generation.
-  alphaEMorder    = Settings::mode("SigmaProcess:alphaEMorder");
-
-  // Initialize alphaEM generation.
-  alphaEM.init( alphaEMorder); 
+  // Read out some properties of beams to allow shorthand.
+  idA             = (beamAPtr > 0) ? beamAPtr->id() : 0;
+  idB             = (beamBPtr > 0) ? beamBPtr->id() : 0;
+  mA              = (beamAPtr > 0) ? beamAPtr->m() : 0.;
+  mB              = (beamBPtr > 0) ? beamBPtr->m() : 0.;
+  isLeptonA       = (beamAPtr > 0) ? beamAPtr->isLepton() : false;
+  isLeptonB       = (beamBPtr > 0) ? beamBPtr->isLepton() : false;
+  hasLeptonBeams  = isLeptonA || isLeptonB;
 
   // K factor, multiplying resolved processes. (But not here for MI.)
-  Kfactor         = Settings::parm("SigmaProcess:Kfactor");
+  Kfactor         = settingsPtr->parm("SigmaProcess:Kfactor");
 
   // Maximum incoming quark flavour.
-  nQuarkIn        = Settings::mode("PDFinProcess:nQuarkIn");
+  nQuarkIn        = settingsPtr->mode("PDFinProcess:nQuarkIn");
+
+  // Medium heavy fermion masses set massless or not in ME expressions.
+  mcME            = (settingsPtr->flag("SigmaProcess:cMassiveME"))   
+                  ? particleDataPtr->m0(4)  : 0.;
+  mbME            = (settingsPtr->flag("SigmaProcess:bMassiveME"))   
+                  ? particleDataPtr->m0(5)  : 0.;
+  mmuME           = (settingsPtr->flag("SigmaProcess:muMassiveME"))  
+                  ? particleDataPtr->m0(13) : 0.;
+  mtauME          = (settingsPtr->flag("SigmaProcess:tauMassiveME")) 
+                  ? particleDataPtr->m0(15) : 0.;
 
   // Renormalization scale choice.
-  renormScale1    = Settings::mode("SigmaProcess:renormScale1"); 
-  renormScale2    = Settings::mode("SigmaProcess:renormScale2"); 
-  renormScale3    = Settings::mode("SigmaProcess:renormScale3"); 
-  renormScale3VV  = Settings::mode("SigmaProcess:renormScale3VV"); 
-  renormMultFac   = Settings::parm("SigmaProcess:renormMultFac"); 
-  renormFixScale  = Settings::parm("SigmaProcess:renormFixScale"); 
+  renormScale1    = settingsPtr->mode("SigmaProcess:renormScale1"); 
+  renormScale2    = settingsPtr->mode("SigmaProcess:renormScale2"); 
+  renormScale3    = settingsPtr->mode("SigmaProcess:renormScale3"); 
+  renormScale3VV  = settingsPtr->mode("SigmaProcess:renormScale3VV"); 
+  renormMultFac   = settingsPtr->parm("SigmaProcess:renormMultFac"); 
+  renormFixScale  = settingsPtr->parm("SigmaProcess:renormFixScale"); 
 
   // Factorization scale choice.
-  factorScale1    = Settings::mode("SigmaProcess:factorScale1"); 
-  factorScale2    = Settings::mode("SigmaProcess:factorScale2"); 
-  factorScale3    = Settings::mode("SigmaProcess:factorScale3"); 
-  factorScale3VV  = Settings::mode("SigmaProcess:factorScale3VV"); 
-  factorMultFac   = Settings::parm("SigmaProcess:factorMultFac"); 
-  factorFixScale  = Settings::parm("SigmaProcess:factorFixScale"); 
+  factorScale1    = settingsPtr->mode("SigmaProcess:factorScale1"); 
+  factorScale2    = settingsPtr->mode("SigmaProcess:factorScale2"); 
+  factorScale3    = settingsPtr->mode("SigmaProcess:factorScale3"); 
+  factorScale3VV  = settingsPtr->mode("SigmaProcess:factorScale3VV"); 
+  factorMultFac   = settingsPtr->parm("SigmaProcess:factorMultFac"); 
+  factorFixScale  = settingsPtr->parm("SigmaProcess:factorFixScale"); 
 
   // CP violation parameters for the BSM Higgs sector.
-  higgsH1parity   = Settings::mode("HiggsH1:parity");
-  higgsH1eta      = Settings::parm("HiggsH1:etaParity");
-  higgsH2parity   = Settings::mode("HiggsH2:parity");
-  higgsH2eta      = Settings::parm("HiggsH2:etaParity");
-  higgsA3parity   = Settings::mode("HiggsA3:parity");
-  higgsA3eta      = Settings::parm("HiggsA3:etaParity");
+  higgsH1parity   = settingsPtr->mode("HiggsH1:parity");
+  higgsH1eta      = settingsPtr->parm("HiggsH1:etaParity");
+  higgsH2parity   = settingsPtr->mode("HiggsH2:parity");
+  higgsH2eta      = settingsPtr->parm("HiggsH2:etaParity");
+  higgsA3parity   = settingsPtr->mode("HiggsA3:parity");
+  higgsA3eta      = settingsPtr->parm("HiggsA3:etaParity");
 
   // If BSM not switched on then H1 should have SM properties.
-  if (!Settings::flag("Higgs:useBSM")){
+  if (!settingsPtr->flag("Higgs:useBSM")){
     higgsH1parity = 1;
     higgsH1eta    = 0.;
   }
- 
-}
-
-//*********
-
-// Store static pointers to beams and to SigmaTotal
-
-void SigmaProcess::setStaticPtrs( BeamParticle* beamAPtrIn, 
-  BeamParticle* beamBPtrIn, SigmaTotal* sigmaTotPtrIn) {
-
-  // Store pointers.
-  beamAPtr    = beamAPtrIn;
-  beamBPtr    = beamBPtrIn;
-  sigmaTotPtr = sigmaTotPtrIn; 
-
-  // Read out some properties of beams to allow shorthand.
-  idA         = beamAPtr->id();
-  idB         = beamBPtr->id();
-  mA          = beamAPtr->m();
-  mB          = beamBPtr->m();
-  isLeptonA   = beamAPtr->isLepton();
-  isLeptonB   = beamBPtr->isLepton();
-  hasLeptonBeams = isLeptonA || isLeptonB;
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Set up allowed flux of incoming partons.
 // addBeam: set up PDF's that need to be evaluated for the two beams.
 // addPair: set up pairs of incoming partons from the two beams.
 
 bool SigmaProcess::initFlux() {
+
+  // Reset arrays (in case of several init's in same run).
+  inBeamA.clear();
+  inBeamB.clear();
+  inPair.clear();
 
   // Read in process-specific channel information.
   string fluxType = inFlux();
@@ -176,41 +134,41 @@ bool SigmaProcess::initFlux() {
   // Case with q g incoming state.
   else if (fluxType == "qg") {
     for (int i = -nQuarkIn; i <= nQuarkIn; ++i) {
-      int id = (i == 0) ? 21 : i;
-      addBeamA(id);
-      addBeamB(id);
+      int idNow = (i == 0) ? 21 : i;
+      addBeamA(idNow);
+      addBeamB(idNow);
     }
-    for (int id = -nQuarkIn; id <= nQuarkIn; ++id) 
-    if (id != 0) {
-      addPair(id, 21);
-      addPair(21, id);
+    for (int idNow = -nQuarkIn; idNow <= nQuarkIn; ++idNow) 
+    if (idNow != 0) {
+      addPair(idNow, 21);
+      addPair(21, idNow);
     }
   }
 
   // Case with q q', q qbar' or qbar qbar' incoming state.
   else if (fluxType == "qq") {
-    for (int id = -nQuarkIn; id <= nQuarkIn; ++id) 
-    if (id != 0) {
-      addBeamA(id);
-      addBeamB(id);
+    for (int idNow = -nQuarkIn; idNow <= nQuarkIn; ++idNow) 
+    if (idNow != 0) {
+      addBeamA(idNow);
+      addBeamB(idNow);
     }
-    for (int id1 = -nQuarkIn; id1 <= nQuarkIn; ++id1) 
-    if (id1 != 0) 
-    for (int id2 = -nQuarkIn; id2 <= nQuarkIn; ++id2) 
-    if (id2 != 0) 
-      addPair(id1, id2);
+    for (int id1Now = -nQuarkIn; id1Now <= nQuarkIn; ++id1Now) 
+    if (id1Now != 0) 
+    for (int id2Now = -nQuarkIn; id2Now <= nQuarkIn; ++id2Now) 
+    if (id2Now != 0) 
+      addPair(id1Now, id2Now);
   }
 
   // Case with q qbar incoming state.
   else if (fluxType == "qqbarSame") {
-    for (int id = -nQuarkIn; id <= nQuarkIn; ++id) 
-    if (id != 0) {
-      addBeamA(id);
-      addBeamB(id);
+    for (int idNow = -nQuarkIn; idNow <= nQuarkIn; ++idNow) 
+    if (idNow != 0) {
+      addBeamA(idNow);
+      addBeamB(idNow);
     }
-    for (int id = -nQuarkIn; id <= nQuarkIn; ++id) 
-    if (id != 0) 
-      addPair(id, -id);
+    for (int idNow = -nQuarkIn; idNow <= nQuarkIn; ++idNow) 
+    if (idNow != 0) 
+      addPair(idNow, -idNow);
   }
 
   // Case with f f', f fbar', fbar fbar' incoming state.
@@ -223,31 +181,31 @@ bool SigmaProcess::initFlux() {
     // First beam is lepton and second is hadron.
     } else if ( isLeptonA ) {
       addBeamA(idA);
-      for (int id = -nQuarkIn; id <= nQuarkIn; ++id) 
-      if (id != 0) {
-        addBeamB(id);
-        addPair(idA, id);
+      for (int idNow = -nQuarkIn; idNow <= nQuarkIn; ++idNow) 
+      if (idNow != 0) {
+        addBeamB(idNow);
+        addPair(idA, idNow);
       }
     // First beam is hadron and second is lepton.
     } else if ( isLeptonB ) {
       addBeamB(idB);
-      for (int id = -nQuarkIn; id <= nQuarkIn; ++id) 
-      if (id != 0) {
-        addBeamA(id);
-        addPair(id, idB);
+      for (int idNow = -nQuarkIn; idNow <= nQuarkIn; ++idNow) 
+      if (idNow != 0) {
+        addBeamA(idNow);
+        addPair(idNow, idB);
       }
     // Hadron beams gives quarks.
     } else {
-      for (int id = -nQuarkIn; id <= nQuarkIn; ++id) 
-      if (id != 0) {
-        addBeamA(id);
-        addBeamB(id);
+      for (int idNow = -nQuarkIn; idNow <= nQuarkIn; ++idNow) 
+      if (idNow != 0) {
+        addBeamA(idNow);
+        addBeamB(idNow);
       }
-      for (int id1 = -nQuarkIn; id1 <= nQuarkIn; ++id1) 
-      if (id1 != 0) 
-      for (int id2 = -nQuarkIn; id2 <= nQuarkIn; ++id2) 
-      if (id2 != 0) 
-        addPair(id1, id2);
+      for (int id1Now = -nQuarkIn; id1Now <= nQuarkIn; ++id1Now) 
+      if (id1Now != 0) 
+      for (int id2Now = -nQuarkIn; id2Now <= nQuarkIn; ++id2Now) 
+      if (id2Now != 0) 
+        addPair(id1Now, id2Now);
     }
   }
 
@@ -260,37 +218,37 @@ bool SigmaProcess::initFlux() {
       addPair(idA, idB);
     // Else assume both to be hadrons, for better or worse.
     } else {
-      for (int id = -nQuarkIn; id <= nQuarkIn; ++id) 
-      if (id != 0) {
-        addBeamA(id);
-        addBeamB(id);
+      for (int idNow = -nQuarkIn; idNow <= nQuarkIn; ++idNow) 
+      if (idNow != 0) {
+        addBeamA(idNow);
+        addBeamB(idNow);
       }
-      for (int id = -nQuarkIn; id <= nQuarkIn; ++id) 
-      if (id != 0) 
-        addPair(id, -id);
+      for (int idNow = -nQuarkIn; idNow <= nQuarkIn; ++idNow) 
+      if (idNow != 0) 
+        addPair(idNow, -idNow);
     }
   }
 
   // Case with f fbar' charged(+-1) incoming state.
   else if (fluxType == "ffbarChg") {
     // If beams are leptons then also colliding partons.
-    if ( isLeptonA && isLeptonB && abs( ParticleDataTable::chargeType(idA) 
-             + ParticleDataTable::chargeType(idB) ) == 3 ) {
+    if ( isLeptonA && isLeptonB && abs( particleDataPtr->chargeType(idA) 
+             + particleDataPtr->chargeType(idB) ) == 3 ) {
       addBeamA(idA);
       addBeamB(idB);
       addPair(idA, idB);
     // Hadron beams gives quarks.
     } else {
-      for (int id = -nQuarkIn; id <= nQuarkIn; ++id) 
-      if (id != 0) {
-        addBeamA(id);
-        addBeamB(id);
+      for (int idNow = -nQuarkIn; idNow <= nQuarkIn; ++idNow) 
+      if (idNow != 0) {
+        addBeamA(idNow);
+        addBeamB(idNow);
       }
-      for (int id1 = -nQuarkIn; id1 <= nQuarkIn; ++id1) 
-      if (id1 != 0) 
-      for (int id2 = -nQuarkIn; id2 <= nQuarkIn; ++id2) 
-      if (id2 != 0 && id1 * id2 < 0 && (abs(id1) + abs(id2))%2 == 1) 
-        addPair(id1, id2);
+      for (int id1Now = -nQuarkIn; id1Now <= nQuarkIn; ++id1Now) 
+      if (id1Now != 0) 
+      for (int id2Now = -nQuarkIn; id2Now <= nQuarkIn; ++id2Now) 
+      if (id2Now != 0 && id1Now * id2Now < 0 
+        && (abs(id1Now) + abs(id2Now))%2 == 1) addPair(id1Now, id2Now);
     }
   }
 
@@ -303,16 +261,16 @@ bool SigmaProcess::initFlux() {
       addPair(idA, idB);
     // Hadron beams gives quarks.
     } else {
-      for (int id = -nQuarkIn; id <= nQuarkIn; ++id) 
-      if (id != 0) {
-        addBeamA(id);
-        addBeamB(id);
+      for (int idNow = -nQuarkIn; idNow <= nQuarkIn; ++idNow) 
+      if (idNow != 0) {
+        addBeamA(idNow);
+        addBeamB(idNow);
       }
-      for (int id1 = -nQuarkIn; id1 <= nQuarkIn; ++id1) 
-      if (id1 != 0) 
-      for (int id2 = -nQuarkIn; id2 <= nQuarkIn; ++id2) 
-      if (id2 != 0 && id1 * id2 < 0) 
-        addPair(id1, id2);
+      for (int id1Now = -nQuarkIn; id1Now <= nQuarkIn; ++id1Now) 
+      if (id1Now != 0) 
+      for (int id2Now = -nQuarkIn; id2Now <= nQuarkIn; ++id2Now) 
+      if (id2Now != 0 && id1Now * id2Now < 0) 
+        addPair(id1Now, id2Now);
     }
   }
 
@@ -323,10 +281,10 @@ bool SigmaProcess::initFlux() {
       addBeamA(idA);
       addPair(idA, 22);
     } else {  
-      for (int id = -nQuarkIn; id <= nQuarkIn; ++id) 
-      if (id != 0) {
-        addBeamA(id);
-        addPair(id, 22);
+      for (int idNow = -nQuarkIn; idNow <= nQuarkIn; ++idNow) 
+      if (idNow != 0) {
+        addBeamA(idNow);
+        addPair(idNow, 22);
       }
     }
     // Fermion from incoming side B.
@@ -334,15 +292,25 @@ bool SigmaProcess::initFlux() {
       addBeamB( idB);
       addPair(22, idB);
     } else {  
-      for (int id = -nQuarkIn; id <= nQuarkIn; ++id) 
-      if (id != 0) {
-        addBeamB(id);
-        addPair(22, id);
+      for (int idNow = -nQuarkIn; idNow <= nQuarkIn; ++idNow) 
+      if (idNow != 0) {
+        addBeamB(idNow);
+        addPair(22, idNow);
       }
     }
     // Photons in the beams.
     addBeamA(22);
     addBeamB(22);
+  }
+
+  // Case with gamma gamma incoming state.
+  else if (fluxType == "ggm") {
+    addBeamA(21);
+    addBeamA(22);
+    addBeamB(21);
+    addBeamB(22);
+    addPair(21, 22);
+    addPair(22, 21);
   }
 
   // Case with gamma gamma incoming state.
@@ -354,7 +322,7 @@ bool SigmaProcess::initFlux() {
 
   // Unrecognized fluxType is bad sign. Else done.
   else {
-    ErrorMsg::message("Error in SigmaProcess::initFlux: "
+    infoPtr->errorMsg("Error in SigmaProcess::initFlux: "
     "unrecognized inFlux type", fluxType);
     return false;
   }
@@ -362,7 +330,7 @@ bool SigmaProcess::initFlux() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Convolute matrix-element expression(s) with parton flux and K factor.
 
@@ -405,7 +373,7 @@ double SigmaProcess::sigmaPDF() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Select incoming parton channel and extract parton densities (resolved).
 
@@ -418,7 +386,7 @@ void SigmaProcess::pickInState(int id1in, int id2in) {
   }
 
   // Pick channel. Extract channel flavours and pdf's.
-  double sigmaRand =  sigmaSumSave * Rndm::flat();
+  double sigmaRand =  sigmaSumSave * rndmPtr->flat();
   for (int i = 0; i < sizePair(); ++i) {
     sigmaRand -= inPair[i].pdfSigma;
     if (sigmaRand <= 0.) {
@@ -432,7 +400,53 @@ void SigmaProcess::pickInState(int id1in, int id2in) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
+
+// Calculate incoming modified masses and four-vectors for matrix elements.
+
+bool SigmaProcess::setupForMEin() {
+
+  // Initially assume it will work out to set up modified kinematics.
+  bool allowME = true;
+
+  // Correct incoming c, b, mu and tau to be massive or not.
+  mME[0] = 0.;
+  int id1Tmp = abs(id1);
+  if (id1Tmp ==  4) mME[0] = mcME; 
+  if (id1Tmp ==  5) mME[0] = mbME; 
+  if (id1Tmp == 13) mME[0] = mmuME; 
+  if (id1Tmp == 15) mME[0] = mtauME; 
+  mME[1] = 0.;
+  int id2Tmp = abs(id2);
+  if (id2Tmp ==  4) mME[1] = mcME; 
+  if (id2Tmp ==  5) mME[1] = mbME; 
+  if (id2Tmp == 13) mME[1] = mmuME; 
+  if (id2Tmp == 15) mME[1] = mtauME; 
+
+  // If kinematically impossible return to massless case, but set error.
+  if (mME[0] + mME[1] >= mH) {
+    mME[0] = 0.;
+    mME[1] = 0.;
+    allowME = false;
+  }
+
+  // Do incoming two-body kinematics for massless or massive cases.
+  if (mME[0] == 0. && mME[1] == 0.) {
+  pME[0] = 0.5 * mH * Vec4( 0., 0.,  1., 1.);
+  pME[1] = 0.5 * mH * Vec4( 0., 0., -1., 1.);
+  } else {
+    double e0   = 0.5 * (mH * mH + mME[0] * mME[0] - mME[1] * mME[1]) / mH;
+    double pz0  = sqrtpos(e0 * e0 - mME[0] * mME[0]);
+    pME[0] = Vec4( 0., 0.,  pz0, e0);
+    pME[1] = Vec4( 0., 0., -pz0, mH - e0);
+  }
+
+  // Done.
+  return allowME;
+  
+}
+
+//--------------------------------------------------------------------------
 
 // Evaluate weight for W decay distribution in t -> W b -> f fbar b.
 
@@ -441,28 +455,28 @@ double SigmaProcess::weightTopDecay( Event& process, int iResBeg,
 
   // If not pair W d/s/b and mother t then return unit weight.
   if (iResEnd - iResBeg != 1) return 1.;
-  int iW = iResBeg;
-  int iB = iResBeg + 1;
-  int idW = process[iW].idAbs();
-  int idB = process[iB].idAbs();
-  if (idW != 24) {
-    swap(iW, iB); 
-    swap(idW, idB);
+  int iW1  = iResBeg;
+  int iB2  = iResBeg + 1;
+  int idW1 = process[iW1].idAbs();
+  int idB2 = process[iB2].idAbs();
+  if (idW1 != 24) {
+    swap(iW1, iB2); 
+    swap(idW1, idB2);
   } 
-  if (idW != 24 || (idB != 1 && idB != 3 && idB != 5)) return 1.;
-  int iT = process[iW].mother1(); 
+  if (idW1 != 24 || (idB2 != 1 && idB2 != 3 && idB2 != 5)) return 1.;
+  int iT   = process[iW1].mother1(); 
   if (iT <= 0 || process[iT].idAbs() != 6) return 1.;
 
   // Find sign-matched order of W decay products. 
-  int iF    = process[iW].daughter1(); 
-  int iFbar = process[iW].daughter2();
+  int iF    = process[iW1].daughter1(); 
+  int iFbar = process[iW1].daughter2();
   if (iFbar - iF != 1) return 1.; 
   if (process[iT].id() * process[iF].id() < 0) swap(iF, iFbar);
 
   // Weight and maximum weight.
   double wt    = (process[iT].p() * process[iFbar].p()) 
-               * (process[iF].p() * process[iB].p());
-  double wtMax = ( pow4(process[iT].m()) - pow4(process[iW].m()) ) / 8.;  
+               * (process[iF].p() * process[iB2].p());
+  double wtMax = ( pow4(process[iT].m()) - pow4(process[iW1].m()) ) / 8.;  
 
   // Done.
   return wt / wtMax;
@@ -470,7 +484,7 @@ double SigmaProcess::weightTopDecay( Event& process, int iResBeg,
 }
 
 
-//*********
+//--------------------------------------------------------------------------
 
 // Evaluate weight for Z0/W+- decay distributions in H -> Z0/W+ Z0/W- -> 4f.
 
@@ -563,13 +577,13 @@ double SigmaProcess::weightHiggsDecay( Event& process, int iResBeg,
 
   // Z0 Z0 decay: vector and axial couplings of two fermion pairs.
   if (idZW1 == 23) {
-    double vf1 = CoupEW::vf(process[i3].idAbs());
-    double af1 = CoupEW::af(process[i3].idAbs());
-    double vf2 = CoupEW::vf(process[i5].idAbs());
-    double af2 = CoupEW::af(process[i5].idAbs());
+    double vf1 = couplingsPtr->vf(process[i3].idAbs());
+    double af1 = couplingsPtr->af(process[i3].idAbs());
+    double vf2 = couplingsPtr->vf(process[i5].idAbs());
+    double af2 = couplingsPtr->af(process[i5].idAbs());
     double va12asym = 4. * vf1 * af1 * vf2 * af2 
       / ( (vf1*vf1 + af1*af1) * (vf2*vf2 + af2*af2) );
-    double etaMod = higgsEta / pow2( ParticleDataTable::m0(23) );
+    double etaMod = higgsEta / pow2( particleDataPtr->m0(23) );
     
     // Normal CP-even decay.
     if (higgsParity == 1) wt = 8. * (1. + va12asym) * p35 * p46 
@@ -590,12 +604,12 @@ double SigmaProcess::weightHiggsDecay( Event& process, int iResBeg,
       - 2. * pow2(p35 * p46 - p36 * p45) 
       + p34 * p56 * (pow2(p35 + p46) + pow2(p36 + p45)) 
       + va12asym * p34 * p56 * (p35 + p36 - p45 - p46) 
-      * (p35 + p45 - p36 - p46) ) ) / ( 1. * 2. * etaMod * mZW1 * mZW2 
+      * (p35 + p45 - p36 - p46) ) ) / ( 1. + 2. * etaMod * mZW1 * mZW2 
       + 2. * pow2(etaMod * mZW1 * mZW2) * (1. + va12asym) );
 
   // W+ W- decay.
   } else if (idZW1 == 24) {
-    double etaMod = higgsEta / pow2( ParticleDataTable::m0(24) );
+    double etaMod = higgsEta / pow2( particleDataPtr->m0(24) );
     
     // Normal CP-even decay.
     if (higgsParity == 1) wt = 16. * p35 * p46; 
@@ -621,12 +635,37 @@ double SigmaProcess::weightHiggsDecay( Event& process, int iResBeg,
 
 }
 
-//**************************************************************************
+//==========================================================================
 
 // The Sigma1Process class.
 // Base class for resolved 2 -> 1 cross sections; derived from SigmaProcess.
 
-//*********
+//--------------------------------------------------------------------------
+
+// Wrapper to sigmaHat, to (a) store current incoming flavours, 
+// (b) convert from GeV^-2 to mb where required, and
+// (c) convert from |M|^2 to d(sigmaHat)/d(tHat) where required.
+
+double Sigma1Process::sigmaHatWrap(int id1in, int id2in) {
+  
+  id1 = id1in; 
+  id2 = id2in; 
+  double sigmaTmp = sigmaHat(); 
+  if (convertM2()) {
+    sigmaTmp /= 2. * sH;
+    // Convert 2 * pi * delta(p^2 - m^2) to Breit-Wigner with same area.
+    int idTmp     = resonanceA();
+    double mTmp   = particleDataPtr->m0(idTmp);
+    double GamTmp = particleDataPtr->mWidth(idTmp); 
+    sigmaTmp *= 2. * mTmp * GamTmp / ( pow2(sH - mTmp * mTmp) 
+      + pow2(mTmp * GamTmp) );
+  }  
+  if (convert2mb()) sigmaTmp *= CONVERT2MB; 
+  return sigmaTmp;
+
+}
+
+//--------------------------------------------------------------------------
 
 // Input and complement kinematics for resolved 2 -> 1 process. 
 
@@ -643,25 +682,43 @@ void Sigma1Process::store1Kin( double x1in, double x2in, double sHin) {
   sH2    = sH * sH;
 
   // Different options for renormalization scale, but normally sHat.
-  Q2RenSave = renormMultFac * sH;
+  Q2RenSave                        = renormMultFac * sH;
   if (renormScale1 == 2) Q2RenSave = renormFixScale; 
 
   // Different options for factorization scale, but normally sHat.
-  Q2FacSave = factorMultFac * sH;
-  if (factorScale1 == 2) Q2RenSave = factorFixScale; 
+  Q2FacSave                        = factorMultFac * sH;
+  if (factorScale1 == 2) Q2FacSave = factorFixScale; 
 
   // Evaluate alpha_strong and alpha_EM.
-  alpS   = alphaS.alphaS(Q2RenSave);  
-  alpEM  = alphaEM.alphaEM(Q2RenSave);  
+  alpS   = couplingsPtr->alphaS(Q2RenSave);  
+  alpEM  = couplingsPtr->alphaEM(Q2RenSave);  
 
 }
 
-//**************************************************************************
+//--------------------------------------------------------------------------
+
+// Calculate modified masses and four-vectors for matrix elements.
+
+bool Sigma1Process::setupForME() {
+
+  // Common initial-state handling.
+  bool allowME = setupForMEin(); 
+
+  // Final state trivial here.
+  mME[2] = mH;
+  pME[2] = Vec4( 0., 0., 0., mH);
+
+  // Done.
+  return allowME;
+
+}
+
+//==========================================================================
 
 // The Sigma2Process class.
 // Base class for resolved 2 -> 2 cross sections; derived from SigmaProcess.
 
-//*********
+//--------------------------------------------------------------------------
 
 // Input and complement kinematics for resolved 2 -> 2 process. 
 
@@ -709,12 +766,12 @@ void Sigma2Process::store2Kin( double x1in, double x2in, double sHin,
   if (isSChannel()) {
 
     // Different options for renormalization scale, but normally sHat.
-    Q2RenSave = renormMultFac * sH;
+    Q2RenSave                        = renormMultFac * sH;
     if (renormScale1 == 2) Q2RenSave = renormFixScale; 
 
     // Different options for factorization scale, but normally sHat.
-    Q2FacSave = factorMultFac * sH;
-    if (factorScale1 == 2) Q2RenSave = factorFixScale; 
+    Q2FacSave                        = factorMultFac * sH;
+    if (factorScale1 == 2) Q2FacSave = factorFixScale; 
 
   // Normal case with "true" 2 -> 2.  
   } else { 
@@ -725,7 +782,7 @@ void Sigma2Process::store2Kin( double x1in, double x2in, double sHin,
     else if (renormScale2 == 2) Q2RenSave = sqrt((pT2 + s3) * (pT2 + s4));
     else if (renormScale2 == 3) Q2RenSave = pT2 + 0.5 * (s3 + s4);
     else                        Q2RenSave = sH;
-    Q2RenSave *= renormMultFac;
+    Q2RenSave                            *= renormMultFac;
     if      (renormScale2 == 5) Q2RenSave = renormFixScale; 
 
     // Different options for factorization scale.
@@ -734,17 +791,17 @@ void Sigma2Process::store2Kin( double x1in, double x2in, double sHin,
     else if (factorScale2 == 2) Q2FacSave = sqrt((pT2 + s3) * (pT2 + s4));
     else if (factorScale2 == 3) Q2FacSave = pT2 + 0.5 * (s3 + s4);
     else                        Q2FacSave = sH;
-    Q2FacSave *= factorMultFac;
+    Q2FacSave                            *= factorMultFac;
     if      (factorScale2 == 5) Q2FacSave = factorFixScale; 
   }
 
   // Evaluate alpha_strong and alpha_EM.
-  alpS = alphaS.alphaS(Q2RenSave);  
-  alpEM = alphaEM.alphaEM(Q2RenSave);  
+  alpS  = couplingsPtr->alphaS(Q2RenSave);  
+  alpEM = couplingsPtr->alphaEM(Q2RenSave);  
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // As above, special kinematics for multiple interactions. 
 
@@ -802,59 +859,143 @@ void Sigma2Process::store2KinMI( double x1in, double x2in,
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
-// Perform kinematics for a Multiple Interaction.
+// Perform kinematics for a Multiple Interaction, including a rescattering.
 
-bool Sigma2Process::final2KinMI() {
+bool Sigma2Process::final2KinMI( int i1Res, int i2Res, Vec4 p1Res, Vec4 p2Res,
+  double m1Res, double m2Res) {
 
   // Have to set flavours and colours.
   setIdColAcol();
 
   // Check that masses of outgoing particles not too big.
-  m3           = ParticleDataTable::m0(idSave[3]);
-  m4           = ParticleDataTable::m0(idSave[4]);
-  double eCM   = sqrt(sH);
-  if (m3 + m4 + MASSMARGIN > eCM) return false;
+  m3           = particleDataPtr->m0(idSave[3]);
+  m4           = particleDataPtr->m0(idSave[4]);
+  mH           = sqrt(sH);
+  if (m3 + m4 + MASSMARGIN > mH) return false;
   s3           = m3 * m3;
   s4           = m4 * m4;
 
+  // Do kinematics of the production; without or with masses.  
+  double e1In  = 0.5 * mH;
+  double e2In  = e1In;
+  double pzIn  = e1In;
+  if (i1Res > 0 || i2Res > 0) {
+    double s1  = m1Res * m1Res;
+    double s2  = m2Res * m2Res;
+    e1In       = 0.5 * (sH + s1 - s2) / mH;
+    e2In       = 0.5 * (sH + s2 - s1) / mH;
+    pzIn       = sqrtpos( e1In*e1In - s1 );
+  }
+
   // Do kinematics of the decay.
-  double eIn   = 0.5 * eCM;
-  double e3    = 0.5 * (sH + s3 - s4) / eCM;
-  double e4    = 0.5 * (sH + s4 - s3) / eCM;
+  double e3    = 0.5 * (sH + s3 - s4) / mH;
+  double e4    = 0.5 * (sH + s4 - s3) / mH;
   double pAbs  = sqrtpos( e3*e3 - s3 );
-  phi          = 2. * M_PI * Rndm::flat();
+  phi          = 2. * M_PI * rndmPtr->flat();
   double pZ    = pAbs * cosTheta;
-  double pX    = pAbs * sinTheta * sin(phi);
-  double pY    = pAbs * sinTheta * cos(phi);
-  double scale = eIn * sinTheta;
+  pTFin        = pAbs * sinTheta;
+  double pX    = pTFin * sin(phi);
+  double pY    = pTFin * cos(phi);
+  double scale = 0.5 * mH * sinTheta;
 
   // Fill particle info.
-  parton[1] = Particle( idSave[1], -31, 0, 0, 3, 4, colSave[1], acolSave[1],
-    0., 0., eIn, eIn, 0., scale);
-  parton[2] = Particle( idSave[2], -31, 0, 0, 3, 4, colSave[2], acolSave[2],
-    0., 0., -eIn, eIn, 0., scale);
-  parton[3] = Particle( idSave[3],  33, 1, 2, 0, 0, colSave[3], acolSave[3],
-    pX, pY, pZ, e3, m3, scale);
-  parton[4] = Particle( idSave[4],  33, 1, 2, 0, 0, colSave[4], acolSave[4],
-    -pX, -pY, -pZ, e4, m4, scale);
+  int status1  = (i1Res == 0) ? -31 : -34; 
+  int status2  = (i2Res == 0) ? -31 : -34; 
+  parton[1]    = Particle( idSave[1], status1, 0, 0, 3, 4, 
+    colSave[1], acolSave[1],  0.,  0.,  pzIn, e1In, m1Res, scale);
+  parton[2]    = Particle( idSave[2], status2, 0, 0, 3, 4, 
+    colSave[2], acolSave[2],  0.,  0., -pzIn, e2In, m2Res, scale);
+  parton[3]    = Particle( idSave[3],      33, 1, 2, 0, 0, 
+    colSave[3], acolSave[3],  pX,  pY,    pZ,   e3,    m3, scale);
+  parton[4]    = Particle( idSave[4],      33, 1, 2, 0, 0, 
+    colSave[4], acolSave[4], -pX, -pY,   -pZ,   e4,    m4, scale);
 
   // Boost particles from subprocess rest frame to event rest frame.
-  double betaZ = (x1Save - x2Save) / (x1Save + x2Save);
-  for (int i = 1; i <= 4; ++i) parton[i].bst(0., 0., betaZ);
+  // Normal multiple interaction: only longitudinal boost.
+  if (i1Res == 0 && i2Res == 0) {
+    double betaZ = (x1Save - x2Save) / (x1Save + x2Save);
+    for (int i = 1; i <= 4; ++i) parton[i].bst(0., 0., betaZ);
+  // Rescattering: generic rotation and boost required. 
+  } else {
+    RotBstMatrix M;
+    M.fromCMframe( p1Res, p2Res);
+    for (int i = 1; i <= 4; ++i) parton[i].rotbst(M);
+  }
 
   // Done.
   return true;
 
 }  
 
-//**************************************************************************
+//--------------------------------------------------------------------------
+
+// Calculate modified masses and four-vectors for matrix elements.
+
+bool Sigma2Process::setupForME() {
+
+  // Common initial-state handling.
+  bool allowME = setupForMEin(); 
+
+  // Correct outgoing c, b, mu and tau to be massive or not.
+  mME[2] = m3;
+  int id3Tmp = abs(id3Mass());
+  if (id3Tmp ==  4) mME[2] = mcME; 
+  if (id3Tmp ==  5) mME[2] = mbME; 
+  if (id3Tmp == 13) mME[2] = mmuME; 
+  if (id3Tmp == 15) mME[2] = mtauME; 
+  mME[3] = m4;
+  int id4Tmp = abs(id4Mass());
+  if (id4Tmp ==  4) mME[3] = mcME; 
+  if (id4Tmp ==  5) mME[3] = mbME; 
+  if (id4Tmp == 13) mME[3] = mmuME; 
+  if (id4Tmp == 15) mME[3] = mtauME;
+
+  // If kinematically impossible turn to massless case, but set error.
+  if (mME[2] + mME[3] >= mH) {
+    mME[2] = 0.;
+    mME[3] = 0.;
+    allowME = false;
+  }
+
+  // Calculate scattering angle in subsystem rest frame.
+  double sH34 = sqrtpos( pow2(sH - s3 - s4) - 4. * s3 * s4);
+  double cThe = (tH - uH) / sH34;
+  double sThe = sqrtpos(1. - cThe * cThe);
+
+  // Setup massive kinematics with preserved scattering angle. 
+  double s3ME   = pow2(mME[2]);
+  double s4ME   = pow2(mME[3]);
+  double sH34ME = sqrtpos( pow2(sH - s3ME - s4ME) - 4. * s3ME * s4ME);
+  double pAbsME = 0.5 * sH34ME / mH;
+
+  // Normally allowed with unequal (or vanishing) masses.
+  if (id3Tmp == 0 || id3Tmp != id4Tmp) { 
+    pME[2] = Vec4(  pAbsME * sThe, 0.,  pAbsME * cThe, 
+             0.5 * (sH + s3ME - s4ME) / mH);
+    pME[3] = Vec4( -pAbsME * sThe, 0., -pAbsME * cThe, 
+             0.5 * (sH + s4ME - s3ME) / mH);
+
+  // For equal (anti)particles (e.g. W+ W-) use averaged mass.  
+  } else {
+    mME[2] = sqrtpos(0.5 * (s3ME + s4ME) - 0.25 * pow2(s3ME - s4ME) / sH);
+    mME[3] = mME[2];
+    pME[2] = Vec4(  pAbsME * sThe, 0.,  pAbsME * cThe, 0.5 * mH);
+    pME[3] = Vec4( -pAbsME * sThe, 0., -pAbsME * cThe, 0.5 * mH);
+  }  
+
+  // Done.
+  return allowME;
+
+}
+
+//==========================================================================
 
 // The Sigma3Process class.
 // Base class for resolved 2 -> 3 cross sections; derived from SigmaProcess.
 
-//*********
+//--------------------------------------------------------------------------
 
 // Input and complement kinematics for resolved 2 -> 3 process. 
 
@@ -889,6 +1030,7 @@ void Sigma3Process::store3Kin( double x1in, double x2in, double sHin,
   // Standard Mandelstam variables and four-momenta in rest frame.
   sH       = sHin;
   mH       = sqrt(sH);
+  sH2      = sH * sH;
   p3cm     = p3cmIn;
   p4cm     = p4cmIn;
   p5cm     = p5cmIn;
@@ -911,7 +1053,7 @@ void Sigma3Process::store3Kin( double x1in, double x2in, double sHin,
 
   // "Normal" 2 -> 3 processes, i.e. not vector boson fusion.
   } else if ( idTchan1() != 23 && idTchan1() != 24 && idTchan2() != 23 
-    && idTchan1() != 24 ) {
+    && idTchan2() != 24 ) {
     double mT3S = s3 + p3cm.pT2();
     double mT4S = s4 + p4cm.pT2();
     double mT5S = s5 + p5cm.pT2();
@@ -922,9 +1064,9 @@ void Sigma3Process::store3Kin( double x1in, double x2in, double sHin,
       / max( mT3S, max(mT4S, mT5S) ) );
     else if (renormScale3 == 3) Q2RenSave = pow( mT3S * mT4S * mT5S, 
                                             1./3. );
-    else if (renormScale3 == 4) Q2RenSave = (mT3S * mT4S * mT5S) / 3.;
+    else if (renormScale3 == 4) Q2RenSave = (mT3S + mT4S + mT5S) / 3.;
     else                        Q2RenSave = sH;
-    Q2RenSave *= renormMultFac;
+    Q2RenSave                            *= renormMultFac;
     if      (renormScale3 == 6) Q2RenSave = renormFixScale; 
     
     // Different options for factorization scale.
@@ -933,15 +1075,15 @@ void Sigma3Process::store3Kin( double x1in, double x2in, double sHin,
       / max( mT3S, max(mT4S, mT5S) ) );
     else if (factorScale3 == 3) Q2FacSave = pow( mT3S * mT4S * mT5S, 
                                             1./3. );
-    else if (factorScale3 == 4) Q2FacSave = (mT3S * mT4S * mT5S) / 3.;
+    else if (factorScale3 == 4) Q2FacSave = (mT3S + mT4S + mT5S) / 3.;
     else                        Q2FacSave = sH;
-    Q2RenSave *= factorMultFac;
+    Q2FacSave                            *= factorMultFac;
     if      (factorScale3 == 6) Q2FacSave = factorFixScale; 
 
   // Vector boson fusion 2 -> 3 processes; recoils in positions 4 and 5.
   } else {
-    double sV4   = pow2( ParticleDataTable::m0(idTchan1()) ); 
-    double sV5   = pow2( ParticleDataTable::m0(idTchan2()) ); 
+    double sV4   = pow2( particleDataPtr->m0(idTchan1()) ); 
+    double sV5   = pow2( particleDataPtr->m0(idTchan2()) ); 
     double mT3S  = s3  + p3cm.pT2();
     double mTV4S = sV4 + p4cm.pT2();
     double mTV5S = sV5 + p5cm.pT2();
@@ -953,7 +1095,7 @@ void Sigma3Process::store3Kin( double x1in, double x2in, double sHin,
                                               1./3. );
     else if (renormScale3VV == 4) Q2RenSave = (mT3S * mTV4S * mTV5S) / 3.;
     else                          Q2RenSave = sH;
-    Q2RenSave *= renormMultFac;
+    Q2RenSave                              *= renormMultFac;
     if      (renormScale3VV == 6) Q2RenSave = renormFixScale; 
     
     // Different options for factorization scale.
@@ -963,39 +1105,232 @@ void Sigma3Process::store3Kin( double x1in, double x2in, double sHin,
                                               1./3. );
     else if (factorScale3VV == 4) Q2FacSave = (mT3S * mTV4S * mTV5S) / 3.;
     else                          Q2FacSave = sH;
-    Q2RenSave *= factorMultFac;
+    Q2FacSave                              *= factorMultFac;
     if      (factorScale3VV == 6) Q2FacSave = factorFixScale; 
   }
 
   // Evaluate alpha_strong and alpha_EM.
-  alpS = alphaS.alphaS(Q2RenSave);  
-  alpEM = alphaEM.alphaEM(Q2RenSave);  
+  alpS  = couplingsPtr->alphaS(Q2RenSave);  
+  alpEM = couplingsPtr->alphaEM(Q2RenSave);  
 
 }
 
-//**************************************************************************
+//--------------------------------------------------------------------------
+
+// Calculate modified masses and four-vectors for matrix elements.
+
+bool Sigma3Process::setupForME() {
+
+  // Common initial-state handling.
+  bool allowME = setupForMEin(); 
+
+  // Correct outgoing c, b, mu and tau to be massive or not.
+  mME[2] = m3;
+  int id3Tmp = abs(id3Mass());
+  if (id3Tmp ==  4) mME[2] = mcME; 
+  if (id3Tmp ==  5) mME[2] = mbME; 
+  if (id3Tmp == 13) mME[2] = mmuME; 
+  if (id3Tmp == 15) mME[2] = mtauME; 
+  mME[3] = m4;
+  int id4Tmp = abs(id4Mass());
+  if (id4Tmp ==  4) mME[3] = mcME; 
+  if (id4Tmp ==  5) mME[3] = mbME; 
+  if (id4Tmp == 13) mME[3] = mmuME; 
+  if (id4Tmp == 15) mME[3] = mtauME;
+  mME[4] = m5;
+  int id5Tmp = abs(id5Mass());
+  if (id5Tmp ==  4) mME[4] = mcME; 
+  if (id5Tmp ==  5) mME[4] = mbME; 
+  if (id5Tmp == 13) mME[4] = mmuME; 
+  if (id5Tmp == 15) mME[4] = mtauME;
+
+  // If kinematically impossible turn to massless case, but set error.
+  if (mME[2] + mME[3] + mME[4] >= mH) {
+    mME[2] = 0.;
+    mME[3] = 0.;
+    mME[4] = 0.;
+    allowME = false;
+  }
+  
+  // Form new average masses if identical particles.
+  if (id3Tmp != 0 && id4Tmp == id3Tmp && id5Tmp == id3Tmp) {
+    double mAvg = (mME[2] + mME[3] + mME[4]) / 3.;
+    mME[2] = mAvg;
+    mME[3] = mAvg;
+    mME[4] = mAvg;
+  } else if (id3Tmp != 0 && id4Tmp == id3Tmp) {
+    mME[2] = sqrtpos(0.5 * (pow2(mME[2]) + pow2(mME[3])) 
+           - 0.25 * pow2(pow2(mME[2]) - pow2(mME[3])) / sH);
+    mME[3] = mME[2];
+  } else if (id3Tmp != 0 && id5Tmp == id3Tmp) {
+    mME[2] = sqrtpos(0.5 * (pow2(mME[2]) + pow2(mME[4])) 
+           - 0.25 * pow2(pow2(mME[2]) - pow2(mME[4])) / sH);
+    mME[4] = mME[2];
+  } else if (id4Tmp != 0 && id5Tmp == id4Tmp) {
+    mME[3] = sqrtpos(0.5 * (pow2(mME[3]) + pow2(mME[4])) 
+           - 0.25 * pow2(pow2(mME[3]) - pow2(mME[4])) / sH);
+    mME[4] = mME[2];
+  }
+
+  // Iterate rescaled three-momenta until convergence.
+  double m2ME3 = pow2(mME[2]);
+  double m2ME4 = pow2(mME[3]);
+  double m2ME5 = pow2(mME[4]);
+  double p2ME3 = p3cm.pAbs2();
+  double p2ME4 = p4cm.pAbs2();
+  double p2ME5 = p5cm.pAbs2();
+  double p2sum = p2ME3 + p2ME4 + p2ME5;
+  double eME3  = sqrt(m2ME3 + p2ME3);
+  double eME4  = sqrt(m2ME4 + p2ME4);
+  double eME5  = sqrt(m2ME5 + p2ME5);
+  double esum  = eME3 + eME4 + eME5;
+  double p2rat = p2ME3 / eME3 + p2ME4 / eME4 + p2ME5 / eME5;
+  int iStep = 0;
+  while ( abs(esum - mH) > COMPRELERR * mH && iStep < NCOMPSTEP ) {
+    ++iStep;
+    double compFac = 1. + 2. * (mH - esum) / p2rat;
+    p2ME3 *= compFac;
+    p2ME4 *= compFac;
+    p2ME5 *= compFac;
+    eME3   = sqrt(m2ME3 + p2ME3);
+    eME4   = sqrt(m2ME4 + p2ME4);
+    eME5   = sqrt(m2ME5 + p2ME5);
+    esum   = eME3 + eME4 + eME5;
+    p2rat  = p2ME3 / eME3 + p2ME4 / eME4 + p2ME5 / eME5;
+  }  
+
+  // If failed convergence set error flag.
+  if (abs(esum - mH) > COMPRELERR * mH) allowME = false; 
+
+  // Set up accepted kinematics.
+  double totFac = sqrt( (p2ME3 + p2ME4 + p2ME5) / p2sum);
+  pME[2] = totFac * p3cm;
+  pME[2].e( eME3);  
+  pME[3] = totFac * p4cm;
+  pME[3].e( eME4);  
+  pME[4] = totFac * p5cm;
+  pME[4].e( eME5);  
+
+  // Done.
+  return allowME;
+
+}
+
+//==========================================================================
 
 // The SigmaLHAProcess class.
 // Wrapper for Les Houches Accord external input; derived from SigmaProcess.
 // Note: arbitrary subdivision into PhaseSpaceLHA and SigmaLHAProcess tasks.
 
-//*********
+//--------------------------------------------------------------------------
+
+// Set scale, alpha_strong and alpha_EM when not set.
+
+void SigmaLHAProcess::setScale() {
+
+  // If scale has not been set, then to set.
+  double scaleLHA = lhaUpPtr->scale();
+  if (scaleLHA < 0.) {
+
+    // Final-state partons and their invariant mass.
+    vector<int> iFin;
+    Vec4 pFinSum;
+    for (int i = 3; i < lhaUpPtr->sizePart(); ++i) 
+    if (lhaUpPtr->mother1(i) == 1) {
+      iFin.push_back(i);
+      pFinSum += Vec4( lhaUpPtr->px(i), lhaUpPtr->py(i), 
+        lhaUpPtr->pz(i), lhaUpPtr->e(i) );
+    }  
+    int nFin = iFin.size(); 
+    sH       = pFinSum * pFinSum; 
+    mH       = sqrt(sH);
+    sH2      = sH * sH;
+
+    // If 1 final-state particle then use Sigma1Process logic.
+    if (nFin == 1) {
+      Q2RenSave                             = renormMultFac * sH;
+      if (renormScale1 == 2) Q2RenSave      = renormFixScale; 
+      Q2FacSave                             = factorMultFac * sH;
+      if (factorScale1 == 2) Q2FacSave      = factorFixScale; 
+
+    // If 2 final-state particles then use Sigma2Process logic.
+    } else if (nFin == 2) {
+      double s3  = pow2(lhaUpPtr->m(iFin[0]));      
+      double s4  = pow2(lhaUpPtr->m(iFin[1])); 
+      double pT2 = pow2(lhaUpPtr->px(iFin[0])) + pow2(lhaUpPtr->py(iFin[0])); 
+      if      (renormScale2 == 1) Q2RenSave = pT2 + min(s3, s4);
+      else if (renormScale2 == 2) Q2RenSave = sqrt((pT2 + s3) * (pT2 + s4));
+      else if (renormScale2 == 3) Q2RenSave = pT2 + 0.5 * (s3 + s4);
+      else                        Q2RenSave = sH;
+      Q2RenSave                            *= renormMultFac;
+      if      (renormScale2 == 5) Q2RenSave = renormFixScale; 
+      if      (factorScale2 == 1) Q2FacSave = pT2 + min(s3, s4);
+      else if (factorScale2 == 2) Q2FacSave = sqrt((pT2 + s3) * (pT2 + s4));
+      else if (factorScale2 == 3) Q2FacSave = pT2 + 0.5 * (s3 + s4);
+      else                        Q2FacSave = sH;
+      Q2FacSave                            *= factorMultFac;
+      if      (factorScale2 == 5) Q2FacSave = factorFixScale; 
+
+    // If 3 or more final-state particles then use Sigma3Process logic.
+    } else {
+      double mTSlow  = sH;
+      double mTSmed  = sH;
+      double mTSprod = 1.;
+      double mTSsum  = 0.;  
+      for (int i = 0; i < nFin; ++i) {
+        double mTSnow = pow2(lhaUpPtr->m(iFin[i])) 
+          + pow2(lhaUpPtr->px(iFin[i])) + pow2(lhaUpPtr->py(iFin[i]));
+        if      (mTSnow < mTSlow) {mTSmed = mTSlow; mTSlow = mTSnow;}
+        else if (mTSnow < mTSmed) mTSmed = mTSnow;
+        mTSprod *= mTSnow;
+        mTSsum  += mTSnow; 
+      }
+      if      (renormScale3 == 1) Q2RenSave = mTSlow; 
+      else if (renormScale3 == 2) Q2RenSave = sqrt(mTSlow * mTSmed);
+      else if (renormScale3 == 3) Q2RenSave = pow(mTSprod, 1. / nFin);
+      else if (renormScale3 == 4) Q2RenSave = mTSsum / nFin;
+      else                        Q2RenSave = sH;
+      Q2RenSave                            *= renormMultFac;
+      if      (renormScale3 == 6) Q2RenSave = renormFixScale; 
+      if      (factorScale3 == 1) Q2FacSave = mTSlow; 
+      else if (factorScale3 == 2) Q2FacSave = sqrt(mTSlow * mTSmed);
+      else if (factorScale3 == 3) Q2FacSave = pow(mTSprod, 1. / nFin);
+      else if (factorScale3 == 4) Q2FacSave = mTSsum / nFin;
+      else                        Q2FacSave = sH;
+      Q2FacSave                            *= factorMultFac;
+      if      (factorScale3 == 6) Q2FacSave = factorFixScale; 
+    }
+  }
+
+  // If alpha_strong and alpha_EM have not been set, then set them.
+  if (lhaUpPtr->alphaQCD() < 0.001) {
+    double Q2RenNow = (scaleLHA < 0.) ? Q2RenSave : pow2(scaleLHA);
+    alpS = couplingsPtr->alphaS(Q2RenNow);
+  }
+  if (lhaUpPtr->alphaQED() < 0.001) {
+    double Q2RenNow = (scaleLHA < 0.) ? Q2RenSave : pow2(scaleLHA);
+    alpEM = couplingsPtr->alphaEM(Q2RenNow);  
+  }
+
+}
+
+//--------------------------------------------------------------------------
 
 // Obtain number of final-state partons from LHA object.
 
 int SigmaLHAProcess::nFinal() const {
 
   // At initialization size unknown, so return 0.
-  if (lhaEvntPtr->size() <= 0) return 0;
+  if (lhaUpPtr->sizePart() <= 0) return 0;
 
   // Sum up all particles that has first mother = 1.
   int nFin = 0; 
-  for (int i = 3; i < lhaEvntPtr->size(); ++i) 
-    if (lhaEvntPtr->mother1(i) == 1) ++nFin;
+  for (int i = 3; i < lhaUpPtr->sizePart(); ++i) 
+    if (lhaUpPtr->mother1(i) == 1) ++nFin;
   return nFin;
 
 }
 
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8

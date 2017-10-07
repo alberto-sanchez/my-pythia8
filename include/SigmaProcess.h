@@ -1,5 +1,5 @@
 // SigmaProcess.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -18,7 +18,8 @@
 // SigmaSUSY for supersymmetric production;
 // SigmaLeftRightSym for  processes in left-right-symmetric scenarios;
 // SigmaLeptoquark for leptoquark production.
-// SigmaExtraDim for processes in scenarios for extra dimensions.
+// SigmaExtraDim for processes in scenarios for extra dimensions;
+// SigmaGeneric for generic scalar/fermion/vector pair production.
 
 #ifndef Pythia8_SigmaProcess_H
 #define Pythia8_SigmaProcess_H
@@ -26,10 +27,11 @@
 #include "Basics.h"
 #include "BeamParticle.h"
 #include "Event.h"
-#include "Information.h"
+#include "Info.h"
 #include "LesHouches.h"
 #include "ParticleData.h"
 #include "PartonDistributions.h"
+#include "PythiaComplex.h"
 #include "PythiaStdlib.h"
 #include "ResonanceWidths.h"
 #include "Settings.h"
@@ -39,7 +41,7 @@
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // InBeam is a simple helper class for partons and their flux in a beam.
 
@@ -56,7 +58,7 @@ public:
 
 };
 
-//**************************************************************************
+//==========================================================================
 
 // InPair is a simple helper class for colliding parton pairs and their flux.
 
@@ -74,7 +76,7 @@ public:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // SigmaProcess is the base class for cross section calculations.
 
@@ -85,19 +87,14 @@ public:
   // Destructor.
   virtual ~SigmaProcess() {}
 
-  // Initialize (some) static data members.
-  static void initStatic();
+  // Perform simple initialization and store pointers.
+  void init(Info* infoPtrIn, Settings* settingsPtrIn,
+    ParticleData* particleDataPtrIn, Rndm* rndmPtrIn,
+    BeamParticle* beamAPtrIn, BeamParticle* beamBPtrIn, Couplings* couplings, 
+	    SigmaTotal* sigmaTotPtrIn = 0, SusyLesHouches* slhaPtr = 0); 
 
-  // Store static pointers to beams and to SigmaTotal
-  static void setStaticPtrs( BeamParticle* beamAPtrIn, 
-    BeamParticle* beamBPtrIn, SigmaTotal* sigmaTotPtrIn);
-
-  // Store or replace Les Houches pointers.
-  static void setLHAPtrs( LHAinit* lhaInitPtrIn, LHAevnt* lhaEvntPtrIn) 
-    { lhaInitPtr = lhaInitPtrIn; lhaEvntPtr = lhaEvntPtrIn;}  
-
-  // Store pointer to SUSY Les Houches Accord.
-  static void setSlhaPtr(SusyLesHouches* slhaIn) {slha = slhaIn;}
+  // Store or replace Les Houches pointer.
+  void setLHAPtr( LHAup* lhaUpPtrIn) {lhaUpPtr = lhaUpPtrIn;}  
 
   // Initialize process. Only used for some processes.
   virtual void initProc() {}
@@ -136,7 +133,8 @@ public:
 
   // Wrapper to sigmaHat, to (a) store current incoming flavours and 
   // (b) convert from GeV^-2 to mb where required.
-  double sigmaHatWrap(int id1in = 0, int id2in = 0) {
+  // For 2 -> 1/2 also (c) convert from from |M|^2 to d(sigmaHat)/d(tHat).
+  virtual double sigmaHatWrap(int id1in = 0, int id2in = 0) {
     id1 = id1in; id2 = id2in; 
     return ( convert2mb() ? CONVERT2MB * sigmaHat() : sigmaHat() ); }
 
@@ -150,7 +148,8 @@ public:
   virtual void setIdColAcol() {}
 
   // Perform kinematics for a Multiple Interaction, in its rest frame.
-  virtual bool final2KinMI() {return true;}
+  virtual bool final2KinMI( int = 0, int = 0, Vec4 = 0., Vec4 = 0.,
+    double = 0., double = 0.) {return true;}
 
   // Evaluate weight for simultaneous flavours (only gamma*/Z0 gamma*/Z0).
   // Usage: weightDecayFlav( process).
@@ -160,6 +159,9 @@ public:
   // Usage: weightDecay( process, iResBeg, iResEnd), where 
   // iResBeg <= i < iResEnd is range of sister partons to test decays of.
   virtual double weightDecay( Event&, int, int) {return 1.;}
+
+  // Set scale, when that is missing for an external LHA process.
+  virtual void setScale() {} 
 
   // Process name and code, and the number of final-state particles.
   virtual string name()            const {return "unnamed process";}
@@ -172,6 +174,9 @@ public:
   // Need to know whether to convert cross section answer from GeV^-2 to mb.
   virtual bool   convert2mb()      const {return true;}
 
+  // For 2 -> 2 process optional conversion from |M|^2 to d(sigmaHat)/d(tHat).
+  virtual bool   convertM2()       const {return false;}
+
   // Special treatment needed for Les Houches processes.
   virtual bool   isLHA()           const {return false;}
 
@@ -180,6 +185,9 @@ public:
   virtual bool   isResolved()      const {return true;}
   virtual bool   isDiffA()         const {return false;}
   virtual bool   isDiffB()         const {return false;}
+
+  // Special treatment needed for SUSY processes.
+  virtual bool   isSUSY()          const {return false;}  
 
   // Special treatment needed if negative cross sections allowed.
   virtual bool   allowNegativeSigma() const {return false;}
@@ -196,7 +204,13 @@ public:
   virtual int    resonanceB()      const {return 0;}
 
   // 2 -> 2 and 2 -> 3 processes only through s-channel exchange.
-  virtual bool isSChannel()        const {return false;}
+  virtual bool   isSChannel()      const {return false;}
+
+  // NOAM: Insert an intermediate resonance in 2 -> 1 -> 2 (or 3) listings.
+  virtual int    idSChannel()      const {return 0;}
+
+  // QCD 2 -> 3 processes need special phase space selection machinery.
+  virtual bool   isQCD3body()      const {return false;}
 
   // Special treatment in 2 -> 3 with two massive propagators.
   virtual int    idTchan1()        const {return 0;}
@@ -231,57 +245,90 @@ public:
   double phiMI()            const {return phi;}
   double sHBetaMI()         const {return sHBeta;}
   double pT2MI()            const {return pT2Mass;}
+  double pTMIFin()          const {return pTFin;}
+
+  // Save and load kinematics for trial interactions
+  void saveKin() {
+    for (int i = 0; i < 6; i++) { partonT[i] = parton[i]; mSaveT[i] = mSave[i]; }
+    pTFinT = pTFin; phiT = phi; cosThetaT = cosTheta; sinThetaT = sinTheta; }
+  void loadKin() {
+    for (int i = 0; i < 6; i++) { parton[i] = partonT[i]; mSave[i] = mSaveT[i]; }
+    pTFin = pTFinT; cosTheta = cosThetaT; sinTheta = sinThetaT; phi = phiT;
+  }
+  void swapKin() {
+    for (int i = 0; i < 6; i++) { swap(parton[i], partonT[i]);
+                                  swap(mSave[i], mSaveT[i]); }
+    swap(pTFin, pTFinT); swap(cosTheta, cosThetaT);
+    swap(sinTheta, sinThetaT); swap(phi, phiT); }
 
 protected:
 
   // Constructor.
   SigmaProcess() {for (int i = 0; i < 6; ++i) mSave[i] = 0.;}
 
-  // Static initialization data, normally only set once.
-  static int    alphaSorder, alphaEMorder, nQuarkIn,
-                renormScale1, renormScale2, renormScale3, renormScale3VV, 
-                factorScale1, factorScale2, factorScale3, factorScale3VV;
-  static double alphaSvalue, Kfactor, renormMultFac, renormFixScale, 
-                factorMultFac, factorFixScale;
-
-  // Static alphaStrong and alphaElectromagnetic calculation.
-  static AlphaStrong alphaS;
-  static AlphaEM     alphaEM;
-
   // Constants: could only be changed in the code itself.
-  static const double CONVERT2MB, MASSMARGIN;
+  static const double CONVERT2MB, MASSMARGIN, COMPRELERR;
+  static const int    NCOMPSTEP;
 
-  // Static pointers to incoming beams.
-  static BeamParticle* beamAPtr;
-  static BeamParticle* beamBPtr;
+  // Pointer to various information on the generation.
+  Info*           infoPtr;
+ 
+  // Pointer to the settings database.
+  Settings*       settingsPtr;
 
-  // Static further information on incoming beams.
-  static int    idA, idB;
-  static double mA, mB; 
-  static bool   isLeptonA, isLeptonB, hasLeptonBeams;
+  // Pointer to the particle data table.
+  ParticleData*   particleDataPtr;
+
+  // Pointer to the random number generator.
+  Rndm*           rndmPtr;
+
+  // Pointers to incoming beams.
+  BeamParticle*   beamAPtr;
+  BeamParticle*   beamBPtr;
+
+  // Pointer to Standard Model couplings, including alphaS and alphaEM.
+  Couplings*      couplingsPtr;
   
-  // Static pointer to the total/elastic/diffractive cross section object.
-  static SigmaTotal* sigmaTotPtr;
+  // Pointer to the total/elastic/diffractive cross section object.
+  SigmaTotal*     sigmaTotPtr;
 
-  // Static pointer to the SLHA object.
-  static SusyLesHouches* slha;
+  // Pointer to the SLHA object.
+  SusyLesHouches* slhaPtr;
 
-  // Static pointers to LHAinit and LHAevnt for generating external events.
-  static LHAinit* lhaInitPtr;
-  static LHAevnt* lhaEvntPtr;
+  // Pointer to LHAup for generating external events.
+  LHAup*          lhaUpPtr;
+
+  // Initialization data, normally only set once.
+  int    nQuarkIn, renormScale1, renormScale2, renormScale3, renormScale3VV, 
+         factorScale1, factorScale2, factorScale3, factorScale3VV;
+  double Kfactor, mcME, mbME, mmuME, mtauME, renormMultFac, renormFixScale, 
+         factorMultFac, factorFixScale;
+
+  // CP violation parameters for Higgs sector, normally only set once.
+  int    higgsH1parity, higgsH2parity, higgsA3parity;
+  double higgsH1eta, higgsH2eta, higgsA3eta;  
+
+  // Information on incoming beams.
+  int    idA, idB;
+  double mA, mB; 
+  bool   isLeptonA, isLeptonB, hasLeptonBeams;
 
   // Partons in beams, with PDF's.
   vector<InBeam> inBeamA;
   vector<InBeam> inBeamB;
-  void addBeamA(int id) {inBeamA.push_back(InBeam(id));}
-  void addBeamB(int id) {inBeamB.push_back(InBeam(id));}
+  void addBeamA(int idIn) {inBeamA.push_back(InBeam(idIn));}
+  void addBeamB(int idIn) {inBeamB.push_back(InBeam(idIn));}
   int sizeBeamA() const {return inBeamA.size();}
   int sizeBeamB() const {return inBeamB.size();}
  
   // Allowed colliding parton pairs, with pdf's.
   vector<InPair> inPair;
-  void addPair(int idA, int idB) {inPair.push_back(InPair(idA, idB));}
+  void addPair(int idAIn, int idBIn) {
+    inPair.push_back(InPair(idAIn, idBIn));}
   int sizePair() const {return inPair.size();}
+
+  // Store common subprocess kinematics quantities.
+  double mH, sH, sH2;
 
   // Store Q2 renormalization and factorization scales, and related values.
   double Q2RenSave, alpEM, alpS, Q2FacSave, x1Save, x2Save, pdf1Save, 
@@ -290,8 +337,20 @@ protected:
   // Store flavour, colour, anticolour, mass, angles and the whole particle.
   int      id1, id2, id3, id4, id5;
   int      idSave[6], colSave[6], acolSave[6];
-  double   mSave[6], cosTheta, sinTheta, phi, sHMass, sHBeta, pT2Mass;
+  double   mSave[6], cosTheta, sinTheta, phi, sHMass, sHBeta, pT2Mass, pTFin;
   Particle parton[6];
+
+  // Minimal set of saved kinematics for trial interactions when
+  // using the x-dependent matter profile of multiple interactions.
+  Particle partonT[6];
+  double   mSaveT[6], pTFinT, cosThetaT, sinThetaT, phiT;
+
+  // Calculate and store all modified masses and four-vectors 
+  // intended for matrix elements. Return false if failed.
+  virtual bool setupForME() {return true;}
+  bool     setupForMEin();
+  double   mME[5];
+  Vec4     pME[5];
 
   // Store whether tHat and uHat are swapped (= same as swap 3 and 4).
   bool swapTU;
@@ -322,13 +381,9 @@ protected:
   double weightTopDecay( Event& process, int iResBeg, int iResEnd);
   double weightHiggsDecay( Event& process, int iResBeg, int iResEnd);
 
-  // CP violation parameters for Higgs sector.
-  static int    higgsH1parity, higgsH2parity, higgsA3parity;
-  static double higgsH1eta, higgsH2eta, higgsA3eta;  
-
 };
  
-//**************************************************************************
+//==========================================================================
 
 // Sigma0Process is the base class for unresolved and minimum-bias processes. 
 // It is derived from SigmaProcess.
@@ -362,7 +417,7 @@ protected:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // Sigma1Process is the base class for 2 -> 1 processes.
 // It is derived from SigmaProcess.
@@ -384,6 +439,11 @@ public:
   // Evaluate sigmaHat(sHat) for resolved 2 -> 1 processes. 
   virtual double sigmaHat() {return 0.;}
 
+  // Wrapper to sigmaHat, to (a) store current incoming flavours, 
+  // (b) convert from GeV^-2 to mb where required, and
+  // (c) convert from |M|^2 to d(sigmaHat)/d(tHat) where required.
+  virtual double sigmaHatWrap(int id1in = 0, int id2in = 0); 
+
 protected:
 
   // Constructor.
@@ -392,12 +452,12 @@ protected:
   // Store kinematics and set scales for resolved 2 -> 1 process.
   virtual void   store1Kin( double x1in, double x2in, double sHin);
 
-  // Store subprocess kinematics quantities.
-  double mH, sH, sH2;
+  // Calculate modified masses and four-vectors for matrix elements.
+  virtual bool   setupForME();
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // Sigma2Process is the base class for 2 -> 2 processes.
 // It is derived from SigmaProcess.
@@ -428,8 +488,17 @@ public:
   // Evaluate d(sigmaHat)/d(tHat) for resolved 2 -> 2 processes. 
   virtual double sigmaHat() {return 0.;}
 
+  // Wrapper to sigmaHat, to (a) store current incoming flavours, 
+  // (b) convert from GeV^-2 to mb where required, and
+  // (c) convert from |M|^2 to d(sigmaHat)/d(tHat) where required.
+  virtual double sigmaHatWrap(int id1in = 0, int id2in = 0) {
+    id1 = id1in; id2 = id2in; double sigmaTmp = sigmaHat(); 
+    if (convertM2())  sigmaTmp /= 16. * M_PI * sH2; 
+    if (convert2mb()) sigmaTmp *= CONVERT2MB; return sigmaTmp;}
+
   // Perform kinematics for a Multiple Interaction, in its rest frame.
-  virtual bool   final2KinMI();
+  virtual bool   final2KinMI( int i1Res = 0, int i2Res = 0, Vec4 p1Res = 0., 
+    Vec4 p2Res = 0., double m1Res = 0., double m2Res = 0.);
 
 protected:
 
@@ -444,12 +513,15 @@ protected:
     double tHin, double uHin, double alpSin, double alpEMin, 
     bool needMasses, double m3in, double m4in);
 
+  // Calculate modified masses and four-vectors for matrix elements.
+  virtual bool   setupForME();
+
   // Store subprocess kinematics quantities.
-  double mH, sH, tH, uH, sH2, tH2, uH2, m3, s3, m4, s4, pT2, runBW3, runBW4;
+  double tH, uH, tH2, uH2, m3, s3, m4, s4, pT2, runBW3, runBW4;
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // Sigma3Process is the base class for 2 -> 3 processes.
 // It is derived from SigmaProcess.
@@ -484,13 +556,16 @@ protected:
     Vec4 p3cmIn, Vec4 p4cmIn, Vec4 p5cmIn, double m3in, double m4in, 
     double m5in, double runBW3in, double runBW4in, double runBW5in);
 
+  // Calculate modified masses and four-vectors for matrix elements.
+  virtual bool   setupForME();
+
   // Store subprocess kinematics quantities.
-  double mH, sH, m3, s3, m4, s4, m5, s5, runBW3, runBW4, runBW5;
+  double m3, s3, m4, s4, m5, s5, runBW3, runBW4, runBW5;
   Vec4   p3cm, p4cm, p5cm;
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // SigmaLHAProcess is a wrapper class for Les Houches Accord external input.
 // It is derived from SigmaProcess.
@@ -511,6 +586,9 @@ public:
   // Dummy function: action is put in PhaseSpaceLHA.
   virtual double sigmaPDF() {return 1.;}
 
+  // Set scale, when that is missing for an external LHA process.
+  virtual void   setScale(); 
+
   // Info on the subprocess.
   virtual string name()     const {return "Les Houches User Process(es)";}
   virtual int    code()     const {return 9999;}
@@ -526,13 +604,13 @@ public:
 
   // Special treatment needed if negative cross sections allowed.
   virtual bool   allowNegativeSigma() const {
-    return (lhaInitPtr->strategy() < 0);}
+    return (lhaUpPtr->strategy() < 0);}
 
 private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

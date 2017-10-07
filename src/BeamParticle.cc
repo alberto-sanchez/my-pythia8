@@ -1,5 +1,5 @@
 // BeamParticle.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -10,94 +10,79 @@
 
 namespace Pythia8 {
  
-//**************************************************************************
+//==========================================================================
 
 // The BeamParticle class.
 
-//*********
- 
-// Definitions of static variables.
-// (Values will be overwritten in initStatic call, so are purely dummy.)
-
-int          BeamParticle::maxValQuark           = 3;
-double       BeamParticle::valencePowerMeson     = 0.8;
-double       BeamParticle::valencePowerUinP      = 3.5;
-double       BeamParticle::valencePowerDinP      = 2.0;
-double       BeamParticle::valenceDiqEnhance     = 2.0;
-int          BeamParticle::companionPower        = 4;
-bool         BeamParticle::allowJunction         = true;
-double       BeamParticle::pickQuarkNorm         = 5.;
-double       BeamParticle::pickQuarkPower        = 1.;
-double       BeamParticle::diffPrimKTwidth       = 0.5;
-double       BeamParticle::diffLargeMassSuppress = 2.;
+//--------------------------------------------------------------------------
 
 // Constants: could be changed here if desired, but normally should not.
 // These are of technical nature, as described for each.
 
 // A lepton that takes (almost) the full beam energy does not leave a remnant.
-const double BeamParticle::XMINUNRESOLVED        = 1. - 1e-10;
+const double BeamParticle::XMINUNRESOLVED = 1. - 1e-10;
 
-//*********
+//--------------------------------------------------------------------------
 
-// Initialize static data members.
-
-void BeamParticle::initStatic() {
-
-  // Maximum quark kind in allowed incoming beam hadrons.
-  maxValQuark       = Settings::mode("Beams:maxValQuark");
-
-  // Power of (1-x)^power/sqrt(x) for remnant valence quark distribution.
-  valencePowerMeson = Settings::parm("Beams:valencePowerMeson");
-  valencePowerUinP  = Settings::parm("Beams:valencePowerUinP");
-  valencePowerDinP  = Settings::parm("Beams:valencePowerDinP");
-
-  // Enhancement factor of x of diquark.
-  valenceDiqEnhance = Settings::parm("Beams:valenceDiqEnhance");
-
-  // Assume g(x) ~ (1-x)^power/x to constrain companion to sea quark.
-  companionPower    = Settings::mode("Beams:companionPower");
-
-  // Assume g(x) ~ (1-x)^power/x to constrain companion to sea quark.
-  companionPower    = Settings::mode("Beams:companionPower");
-
-  // Allow or not more than two valence quarks to be kicked out.
-  allowJunction     = Settings::flag("Beams:allowJunction");
-
-  // For diffractive system kick out q/g = norm / mass^power.
-  pickQuarkNorm     = Settings::parm("Beams:pickQuarkNorm");
-  pickQuarkPower    = Settings::parm("Beams:pickQuarkPower");
-
-  // Width of primordial kT distribution in diffractive systems.
-  diffPrimKTwidth   = Settings::parm("Beams:diffPrimKTwidth");
-
-  // Suppress large masses of beam remnant in diffractive systems. 
-  diffLargeMassSuppress = Settings::parm("Beams:diffLargeMassSuppress");
-}
-
-//*********
-
-// Initialize data on a beam particle.
+// Initialize data on a beam particle and save pointers.
 
 void BeamParticle::init( int idIn, double pzIn, double eIn, double mIn, 
-  PDF* pdfInPtr, PDF* pdfHardInPtr, bool isUnresolvedIn) {
+  Info* infoPtrIn, Settings& settings, ParticleData* particleDataPtrIn, 
+  Rndm* rndmPtrIn,PDF* pdfInPtr, PDF* pdfHardInPtr, bool isUnresolvedIn, 
+  StringFlav* flavSelPtrIn) {
+
+  // Store input pointers (and one bool) for future use. 
+  infoPtr           = infoPtrIn;
+  particleDataPtr   = particleDataPtrIn;
+  rndmPtr           = rndmPtrIn;
+  pdfBeamPtr        = pdfInPtr;
+  pdfHardBeamPtr    = pdfHardInPtr;
+  isUnresolvedBeam  = isUnresolvedIn; 
+  flavSelPtr        = flavSelPtrIn;
+
+  // Maximum quark kind in allowed incoming beam hadrons.
+  maxValQuark       = settings.mode("BeamRemnants:maxValQuark");
+
+  // Power of (1-x)^power/sqrt(x) for remnant valence quark distribution.
+  valencePowerMeson = settings.parm("BeamRemnants:valencePowerMeson");
+  valencePowerUinP  = settings.parm("BeamRemnants:valencePowerUinP");
+  valencePowerDinP  = settings.parm("BeamRemnants:valencePowerDinP");
+
+  // Enhancement factor of x of diquark.
+  valenceDiqEnhance = settings.parm("BeamRemnants:valenceDiqEnhance");
+
+  // Assume g(x) ~ (1-x)^power/x to constrain companion to sea quark.
+  companionPower    = settings.mode("BeamRemnants:companionPower");
+
+  // Assume g(x) ~ (1-x)^power/x to constrain companion to sea quark.
+  companionPower    = settings.mode("BeamRemnants:companionPower");
+
+  // Allow or not more than one valence quark to be kicked out.
+  allowJunction     = settings.flag("BeamRemnants:allowJunction");
+
+  // For low-mass diffractive system kick out q/g = norm / mass^power.
+  pickQuarkNorm     = settings.parm("Diffraction:pickQuarkNorm");
+  pickQuarkPower    = settings.parm("Diffraction:pickQuarkPower");
+
+  // Width of primordial kT distribution in low-mass diffractive systems.
+  diffPrimKTwidth   = settings.parm("Diffraction:primKTwidth");
+
+  // Suppress large masses of beam remnant in low-mass diffractive systems. 
+  diffLargeMassSuppress = settings.parm("Diffraction:largeMassSuppress");
 
   // Store info on the incoming beam.
-  idBeam           = idIn; 
+  idBeam            = idIn; 
   initBeamKind(); 
-  pBeam            = Vec4( 0., 0., pzIn, eIn); 
-  mBeam            = mIn; 
-  pdfBeamPtr       = pdfInPtr;
-  pdfHardBeamPtr   = pdfHardInPtr;
-  isUnresolvedBeam = isUnresolvedIn; 
+  pBeam             = Vec4( 0., 0., pzIn, eIn); 
+  mBeam             = mIn; 
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Initialize kind and valence flavour content of incoming beam.
 // For recognized hadrons one can generate multiple interactions.
-// So far we do not handle diagonal mesons or K0S/K0L (or photons), 
-// for which flavour content is only known after first interaction.
+// Dynamic choice of meson valence flavours in newValenceContent below. 
 
 void BeamParticle::initBeamKind() {
 
@@ -119,14 +104,21 @@ void BeamParticle::initBeamKind() {
 
   //  Done if cannot be lowest-lying hadron state.
   if (idBeamAbs < 101 || idBeamAbs > 9999) return;
+
+  // Resolve valence content for assumed Pomeron. 
+  if (idBeamAbs == 990) {
+    isMesonBeam = true;
+    nValKinds = 2; 
+    nVal[0]   = 1 ; 
+    nVal[1]   = 1 ; 
+    newValenceContent();
   
   // Resolve valence content for assumed meson. Flunk unallowed codes.
-  if (idBeamAbs < 1000) {
+  } else if (idBeamAbs < 1000) {
     int id1 = idBeamAbs/100;    
     int id2 = (idBeamAbs/10)%10;
     if ( id1 < 1 || id1 > maxValQuark 
       || id2 < 1 || id2 > maxValQuark ) return;
-    if (id2 == id1 || idBeamAbs == 130 || idBeamAbs == 310) return;
     isMesonBeam = true;
     
     // Store valence content of a confirmed meson.
@@ -140,6 +132,7 @@ void BeamParticle::initBeamKind() {
       idVal[0] = id2; 
       idVal[1] = -id1;
     }      
+    newValenceContent();
   
   // Resolve valence content for assumed baryon. Flunk unallowed codes.
   } else { 
@@ -175,7 +168,39 @@ void BeamParticle::initBeamKind() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
+
+
+// Dynamic choice of meson valence flavours for pi0, K0S, K0L, Pomeron.
+
+void BeamParticle::newValenceContent() {
+
+  // A pi0 oscillates between d dbar and u ubar.
+  if (idBeam == 111) {
+    idVal[0] = (rndmPtr->flat() < 0.5) ? 1 : 2;
+    idVal[1] = -idVal[0];
+
+  // A K0S or K0L oscillates between d sbar and s dbar.
+  } else if (idBeam == 130 || idBeam == 310) {   
+    idVal[0] = (rndmPtr->flat() < 0.5) ?  1 :  3;
+    idVal[1] = (idVal[0] == 1)      ? -3 : -1;
+
+  // For a Pomeron split gluon remnant into d dbar or u ubar.
+  } else if (idBeam == 990) {
+    idVal[0] = (rndmPtr->flat() < 0.5) ? 1 : 2;
+    idVal[1] = -idVal[0];    
+
+  // Other hadrons so far do not require any event-by-event change.
+  } else return;
+
+  // Propagate change to PDF routine(s).
+  pdfBeamPtr->newValenceContent( idVal[0], idVal[1]);   
+  if (pdfHardBeamPtr != pdfBeamPtr && pdfHardBeamPtr != 0)
+    pdfHardBeamPtr->newValenceContent( idVal[0], idVal[1]);   
+
+}
+
+//--------------------------------------------------------------------------
 
 double BeamParticle::xMax(int iSkip) {
 
@@ -186,21 +211,21 @@ double BeamParticle::xMax(int iSkip) {
 
   // Subtract what was carried away by initiators (to date).
   for (int i = 0; i < size(); ++i) 
-    if (i != iSkip) xLeft -= resolved[i].x();
+    if (i != iSkip && resolved[i].isFromBeam()) xLeft -= resolved[i].x();
   return xLeft;
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Parton distributions, reshaped to take into account previous 
 // multiple interactions. By picking a non-negative iSkip value,
 // one particular interaction is skipped, as needed for ISR  
 
-double BeamParticle::xfModified(int iSkip, int id, double x, double Q2) {
+double BeamParticle::xfModified(int iSkip, int idIn, double x, double Q2) {
 
   // Initial values.
-  idSave    = id;
+  idSave    = idIn;
   iSkipSave = iSkip;
   xqVal     = 0.;
   xqgSea    = 0.;
@@ -210,9 +235,13 @@ double BeamParticle::xfModified(int iSkip, int id, double x, double Q2) {
   if (size() == 0) {
     if (x >= 1.) return 0.;
     bool canBeVal = false;
-    for (int i = 0; i < nValKinds; ++i) if (id == idVal[i]) canBeVal = true;
-    if (canBeVal) { xqVal = xfVal( id, x, Q2); xqgSea = xfSea( id, x, Q2); }
-    else xqgSea = xf( id, x, Q2);
+    for (int i = 0; i < nValKinds; ++i) 
+      if (idIn == idVal[i]) canBeVal = true;
+    if (canBeVal) { 
+      xqVal     = xfVal( idIn, x, Q2); 
+      xqgSea    = xfSea( idIn, x, Q2); 
+    }
+    else xqgSea = xf( idIn, x, Q2);
 
   // More complicated procedure for non-first interaction.
   } else { 
@@ -251,17 +280,18 @@ double BeamParticle::xfModified(int iSkip, int id, double x, double Q2) {
     // Calculate total rescaling factor and pdf for sea and gluon.
     double rescaleGS = max( 0., (1. - xValLeft - xCompAdded) 
       / (1. - xValTot) );
-    xqgSea = rescaleGS * xfSea( id, xRescaled, Q2); 
+    xqgSea = rescaleGS * xfSea( idIn, xRescaled, Q2); 
 
     // Find valence part and rescale it to remaining number of quarks. 
     for (int i = 0; i < nValKinds; ++i) 
-    if (id == idVal[i] && nValLeft[i] > 0) 
-      xqVal = xfVal( id, xRescaled, Q2) 
+    if (idIn == idVal[i] && nValLeft[i] > 0) 
+      xqVal = xfVal( idIn, xRescaled, Q2) 
       * double(nValLeft[i]) / double(nVal[i]); 
                                                                                
     // Find companion part, by adding all companion contributions.
     for (int i = 0; i < size(); ++i) 
-    if (i != iSkip && resolved[i].id() == -id && resolved[i].isUnmatched()) {
+    if (i != iSkip && resolved[i].id() == -idIn 
+      && resolved[i].isUnmatched()) {
       double xsRescaled = resolved[i].x() / (xLeft + resolved[i].x());
       double xcRescaled = x / (xLeft + resolved[i].x());  
       double xqCompNow = xCompDist( xcRescaled, xsRescaled); 
@@ -281,13 +311,13 @@ double BeamParticle::xfModified(int iSkip, int id, double x, double Q2) {
   
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Decide whether a quark extracted from the beam is of valence, sea or
 // companion kind; in the latter case also pick its companion.
 // Assumes xfModified has already been called.
 
-  void BeamParticle::pickValSeaComp() {
+int BeamParticle::pickValSeaComp() {
 
   // If parton already has a companion than reset code for this.
   int oldCompanion = resolved[iSkipSave].companion();
@@ -304,7 +334,7 @@ double BeamParticle::xfModified(int iSkip, int id, double x, double Q2) {
 
   // Decide if valence or sea quark.
   else {
-    double xqRndm = xqgTot * Rndm::flat(); 
+    double xqRndm = xqgTot * rndmPtr->flat(); 
     if (xqRndm < xqVal) vsc = -3; 
     else if (xqRndm < xqVal + xqgSea) vsc = -2; 
  
@@ -324,10 +354,13 @@ double BeamParticle::xfModified(int iSkip, int id, double x, double Q2) {
   // Bookkeep assignment; for sea--companion pair both ways.  
   resolved[iSkipSave].companion(vsc);
   if (vsc >= 0) resolved[vsc].companion(iSkipSave);
+  
+  // Done; return code for choice (to distinguish valence/sea in Info).
+  return vsc;
 
 } 
 
-//*********
+//--------------------------------------------------------------------------
 
 // Fraction of hadron momentum sitting in a valence quark distribution.
 // Based on hardcoded parametrizations of CTEQ 5L numbers.
@@ -358,7 +391,7 @@ double BeamParticle::xValFrac(int j, double Q2) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // The momentum integral of a companion quark, with its partner at x_s, 
 // using an approximate gluon density like (1 - x_g)^power / x_g.
@@ -398,7 +431,7 @@ double BeamParticle::xCompFrac(double xs) {
   }
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // The x*f pdf of a companion quark at x_c, with its sea partner at x_s,
 // using an approximate gluon density like (1 - x_g)^power / x_g. 
@@ -438,7 +471,7 @@ double BeamParticle::xCompDist(double xc, double xs) {
   }
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Add required extra remnant flavour content. Also initial colours.
 
@@ -467,13 +500,13 @@ bool BeamParticle::remnantFlavours(Event& event) {
     int iQ1 = nInit;
     int iQ2 = nInit + 1;
     if (nInitPlusVal - nInit == 3) {
-      double pickDq = 3. * Rndm::flat();
+      double pickDq = 3. * rndmPtr->flat();
       if (pickDq > 1.) iQ2 = nInit + 2;
       if (pickDq > 2.) iQ1 = nInit + 1;
     } 
 
     // Pick spin 0 or 1 according to SU(6) wave function factors.
-    int idDq = StringFlav::makeDiquark( resolved[iQ1].id(),
+    int idDq = flavSelPtr->makeDiquark( resolved[iQ1].id(),
       resolved[iQ2].id(), idBeam);
 
     // Overwrite with diquark flavour and remove one slot. No more junction.
@@ -496,13 +529,13 @@ bool BeamParticle::remnantFlavours(Event& event) {
   // If no other remnants found, add a gluon or photon to carry momentum.
   if (size() == nInit) {
     int    idRemnant = (isHadronBeam) ? 21 : 22;
-    append(0, idRemnant, 1., -1);     
+    append(0, idRemnant, 0., -1);     
   }
 
   // Set initiator and remnant masses.
   for (int i = 0; i < size(); ++i) { 
     if (i < nInit) resolved[i].m(0.);
-    else resolved[i].m( ParticleDataTable::m0( resolved[i].id() ) );
+    else resolved[i].m( particleDataPtr->m0( resolved[i].id() ) );
   }
 
   // For debug purposes: reject beams with resolved junction topology.
@@ -510,7 +543,7 @@ bool BeamParticle::remnantFlavours(Event& event) {
 
   // Pick initial colours for remnants.
   for (int i = nInit; i < size(); ++i) {
-    int colType = ParticleDataTable::colType( resolved[i].id() );
+    int colType = particleDataPtr->colType( resolved[i].id() );
     int col = (colType == 1 || colType == 2) ? event.nextColTag() : 0;
     int acol = (colType == -1 || colType == 2) ? event.nextColTag() : 0;
     resolved[i].cols( col, acol);
@@ -521,7 +554,7 @@ bool BeamParticle::remnantFlavours(Event& event) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Correlate all initiators and remnants to make a colour singlet. 
 
@@ -534,15 +567,16 @@ bool BeamParticle::remnantColours(Event& event, vector<int>& colFrom,
   // Copy initiator colour info from the event record to the beam.
   for (int i = 0; i < size(); ++i) {
     int j =  resolved[i].iPos();
-    resolved[i].cols( event[j].col(), event[j].acol()); 
+    resolved[i].cols( event[j].col(), event[j].acol());
   }
 
   // Find number and position of valence quarks, of gluons, and
   // of sea-companion pairs (counted as gluons) in the beam remnants.
-  // Skip gluons with same colour as anticolour.
+  // Skip gluons with same colour as anticolour and rescattering partons.
   vector<int> iVal;
   vector<int> iGlu;
-  for (int i = 0; i < size(); ++i) {
+  for (int i = 0; i < size(); ++i) 
+  if (resolved[i].isFromBeam()) {
     if ( resolved[i].isValence() ) iVal.push_back(i);
     else if ( resolved[i].isCompanion() && resolved[i].companion() > i ) 
       iGlu.push_back(i);
@@ -556,7 +590,7 @@ bool BeamParticle::remnantColours(Event& event, vector<int>& colFrom,
   if (iVal.size() == 2) {
     if ( abs(resolved[iValSel].id()) > 10 ) iValSel = iVal[1];
   } else {
-    double rndmValSel = 3. * Rndm::flat();
+    double rndmValSel = 3. * rndmPtr->flat();
     if (rndmValSel > 1.) iValSel= iVal[1]; 
     if (rndmValSel > 2.) iValSel= iVal[2]; 
   }
@@ -571,7 +605,7 @@ bool BeamParticle::remnantColours(Event& event, vector<int>& colFrom,
   for (int i = 0; i < int(iGlu.size()); ++i)
     iGluRndm.push_back( iGlu[i] );
   for (int iOrder = 0; iOrder < int(iGlu.size()); ++iOrder) {
-    int iRndm = int( double(iGluRndm.size()) * Rndm::flat()); 
+    int iRndm = int( double(iGluRndm.size()) * rndmPtr->flat()); 
     int iGluSel = iGluRndm[iRndm];
     iGluRndm[iRndm] = iGluRndm[iGluRndm.size() - 1];
     iGluRndm.pop_back();
@@ -615,6 +649,7 @@ bool BeamParticle::remnantColours(Event& event, vector<int>& colFrom,
   vector<int> colList;
   vector<int> acolList;
   for (int i = 0; i < size(); ++i) 
+  if ( resolved[i].isFromBeam() )
   if ( resolved[i].col() != resolved[i].acol() ) {  
     if (resolved[i].col() > 0) colList.push_back( resolved[i].col() ); 
     if (resolved[i].acol() > 0) acolList.push_back( resolved[i].acol() ); 
@@ -627,9 +662,12 @@ bool BeamParticle::remnantColours(Event& event, vector<int>& colFrom,
     for (int iCol = 0; iCol < int(colList.size()); ++iCol) {
       for (int iAcol = 0; iAcol < int(acolList.size()); ++iAcol) {
 	if (acolList[iAcol] == colList[iCol]) { 
-          colList[iCol] = colList.back(); colList.pop_back();     
-          acolList[iAcol] = acolList.back(); acolList.pop_back();     
-          foundPair = true; break;
+          colList[iCol] = colList.back(); 
+          colList.pop_back();     
+          acolList[iAcol] = acolList.back(); 
+          acolList.pop_back();     
+          foundPair = true; 
+          break;
 	}
       } if (foundPair) break;
     }
@@ -639,7 +677,8 @@ bool BeamParticle::remnantColours(Event& event, vector<int>& colFrom,
   if (colList.size() == 1 && acolList.size() == 1) {
     int finalFrom = max( colList[0], acolList[0]);
     int finalTo   = min( colList[0], acolList[0]);
-    for (int i = 0; i < size(); ++i) {  
+    for (int i = 0; i < size(); ++i) 
+    if ( resolved[i].isFromBeam() ) {
       if (resolved[i].col()  == finalFrom) resolved[i].col(finalTo); 
       if (resolved[i].acol() == finalFrom) resolved[i].acol(finalTo); 
     }
@@ -662,7 +701,7 @@ bool BeamParticle::remnantColours(Event& event, vector<int>& colFrom,
 
   // Any other nonvanishing values indicate failure.
   } else if (colList.size() > 0 || acolList.size() > 0) {
-    ErrorMsg::message("Error in BeamParticle::remnantColours: "
+    infoPtr->errorMsg("Error in BeamParticle::remnantColours: "
       "leftover unmatched colours"); 
     return false;
   }
@@ -676,7 +715,7 @@ bool BeamParticle::remnantColours(Event& event, vector<int>& colFrom,
 }
 
 
-//*********
+//--------------------------------------------------------------------------
 
 // Pick unrescaled x values for beam remnant sharing.
 
@@ -697,21 +736,21 @@ double BeamParticle::xRemnant( int i) {
  
     // Loop over (up to) two quarks; add their contributions.
     for (int iId = 0; iId < 2; ++iId) {
-      int id = (iId == 0) ? id1 : id2;
-      if (id == 0) break;
+      int idNow = (iId == 0) ? id1 : id2;
+      if (idNow == 0) break;
       double xPart = 0.; 
 
       // Assume form (1-x)^a / sqrt(x).
       double xPow = valencePowerMeson;
       if (isBaryonBeam) {
         if (nValKinds == 3 || nValKinds == 1) 
-          xPow = (3. * Rndm::flat() < 2.) 
+          xPow = (3. * rndmPtr->flat() < 2.) 
             ? valencePowerUinP : valencePowerDinP ; 
-        else if (nValence(id) == 2) xPow = valencePowerUinP;
+        else if (nValence(idNow) == 2) xPow = valencePowerUinP;
         else xPow = valencePowerDinP;
       }
-      do xPart = pow2( Rndm::flat() );
-      while ( pow(1. - xPart, xPow) < Rndm::flat() ); 
+      do xPart = pow2( rndmPtr->flat() );
+      while ( pow(1. - xPart, xPow) < rndmPtr->flat() ); 
 
       // End loop over (up to) two quarks. Possibly enhancement for diquarks.
       x += xPart; 
@@ -724,14 +763,14 @@ double BeamParticle::xRemnant( int i) {
     // Find rescaled x value of companion.
     double xLeft = 1.;
     for (int iInit = 0; iInit < nInit; ++iInit) 
-      xLeft -= resolved[iInit].x();
+      if (resolved[iInit].isFromBeam()) xLeft -= resolved[iInit].x();
     double xCompanion = resolved[ resolved[i].companion() ].x();
     xCompanion /= (xLeft + xCompanion);  
 
     // Now use ansatz q(x; x_c) < N/(x +x_c) to pick x.
-    do x = pow( xCompanion, Rndm::flat()) - xCompanion; 
+    do x = pow( xCompanion, rndmPtr->flat()) - xCompanion; 
     while ( pow( (1. - x - xCompanion) / (1. - xCompanion), companionPower) 
-      * (pow2(x) + pow2(xCompanion)) / pow2(x + xCompanion) < Rndm::flat() );
+      * (pow2(x) + pow2(xCompanion)) / pow2(x + xCompanion) < rndmPtr->flat() );
 
   // Else, rarely, a single gluon remnant, so value does not matter. 
   } else x = 1.;
@@ -739,44 +778,49 @@ double BeamParticle::xRemnant( int i) {
 
 }
    
-//*********
+//--------------------------------------------------------------------------
 
 // Print the list of resolved partons in a beam.
 
-void BeamParticle::list(ostream& os) {
+void BeamParticle::list(ostream& os) const {
 
   // Header.
-  os << "\n --------  PYTHIA Partons resolved in beam  ------------" 
-     << "--------------------------------------------------------\n"
-     << "\n    i  iPos      id       x    comp   xqcomp      colours" 
-     << "      p_x        p_y        p_z         e          m \n";
+  os << "\n --------  PYTHIA Partons resolved in beam  -----------------" 
+     << "-------------------------------------------------------------\n"
+     << "\n    i  iPos      id       x    comp   xqcomp    pTfact      " 
+     << "colours      p_x        p_y        p_z         e          m \n";
   
   // Loop over list of removed partons and print it. 
-  double xSum = 0.;
-  Vec4 pSum;
+  double xSum  = 0.;
+  Vec4   pSum;
   for (int i = 0; i < size(); ++i) {
     ResolvedParton res = resolved[i];
     os << fixed << setprecision(6) << setw(5) << i << setw(6) << res.iPos() 
        << setw(8) << res.id() << setw(10) << res.x() << setw(6) 
-       << res.companion() << setw(10) << res.xqCompanion() 
-       << setprecision(3) << setw(6) << res.col() << setw(6) << res.acol() 
-       << setw(11) << res.px() << setw(11) << res.py() << setw(11) 
-       << res.pz() << setw(11) << res.e() << setw(11) << res.m() << "\n";
+       << res.companion() << setw(10) << res.xqCompanion() << setw(10)
+       << res.pTfactor() << setprecision(3) << setw(6) << res.col() 
+       << setw(6) << res.acol() << setw(11) << res.px() << setw(11) 
+       << res.py() << setw(11) << res.pz() << setw(11) << res.e() 
+       << setw(11) << res.m() << "\n";
 
-    // Also find and print sum of x and p values. Endline.
-    xSum += res.x();  
-    pSum += res.p();
+    // Also find sum of x and p values. 
+    if (res.companion() != -10) {
+      xSum  += res.x(); 
+      pSum  += res.p();
+    }
   }
+
+  // Print sum and endline.
   os << setprecision(6) << "             x sum:" << setw(10) << xSum 
-     << setprecision(3) << "                      p sum:" << setw(11) 
-     << pSum.px() << setw(11) << pSum.py() << setw(11) << pSum.pz() 
-     << setw(11) << pSum.e() 
-     << "\n\n --------  End PYTHIA Partons resolved in beam  ------" 
-     << "----------------------------------------------------------"
+     << setprecision(3) << "                                p sum:" 
+     << setw(11) << pSum.px() << setw(11) << pSum.py() << setw(11) 
+     << pSum.pz() << setw(11) << pSum.e() 
+     << "\n\n --------  End PYTHIA Partons resolved in beam  -----------" 
+     << "---------------------------------------------------------------"
      << endl; 
 }
    
-//*********
+//--------------------------------------------------------------------------
 
 // Test whether a lepton is to be considered as unresolved.
 
@@ -784,12 +828,12 @@ bool BeamParticle::isUnresolvedLepton() {
  
   // Require record to consist of lepton with full energy plus a photon. 
   if (!isLeptonBeam || resolved.size() > 2 || resolved[1].id() != 22
-    && resolved[0].x() < XMINUNRESOLVED) return false; 
+    || resolved[0].x() < XMINUNRESOLVED) return false; 
   return true;
   
 }
    
-//*********
+//--------------------------------------------------------------------------
 
 // For a diffractive system, decide whether to kick out gluon or quark.
 
@@ -797,11 +841,11 @@ bool BeamParticle::pickGluon(double mDiff) {
   
   // Relative weight to pick a quark, assumed falling with energy.
   double probPickQuark = pickQuarkNorm / pow( mDiff, pickQuarkPower);
-  return  ( (1. + probPickQuark) * Rndm::flat() < 1. );
+  return  ( (1. + probPickQuark) * rndmPtr->flat() < 1. );
   
 }
    
-//*********
+//--------------------------------------------------------------------------
 
 // Pick a valence quark at random. (Used for diffractive systems.)
 
@@ -809,7 +853,7 @@ int BeamParticle::pickValence() {
 
   // Pick one valence quark at random.
   int nTotVal = (isBaryonBeam) ? 3 : 2;
-  double rnVal = Rndm::flat() * nTotVal;
+  double rnVal = rndmPtr->flat() * nTotVal;
   int iVal = (rnVal < 1.) ? 1 : ( (rnVal < 2.) ? 2 : 3 );
 
   // This valence in slot 1, the rest thereafter.
@@ -826,14 +870,14 @@ int BeamParticle::pickValence() {
   }
 
   // Construct diquark if baryon.
-  if (idVal3 != 0) idVal2 = StringFlav::makeDiquark( idVal2, idVal3);
+  if (idVal3 != 0) idVal2 = flavSelPtr->makeDiquark( idVal2, idVal3);
 
   // Done.
   return idVal1;
 
 }
    
-//*********
+//--------------------------------------------------------------------------
 
 // Share lightcone momentum between two remnants in a diffractive system.
 
@@ -850,8 +894,9 @@ double BeamParticle::zShare( double mDiff, double m1, double m2) {
     double x1 = xRemnant(0);
     double x2 = xRemnant(0);
     zRel = x1 / (x1 + x2);
-    pxRel = diffPrimKTwidth * Rndm::gauss();
-    pyRel = diffPrimKTwidth * Rndm::gauss();
+    pair<double, double> gauss2 = rndmPtr->gauss2();
+    pxRel = diffPrimKTwidth * gauss2.first;
+    pyRel = diffPrimKTwidth * gauss2.second;
 
     // Suppress large invariant masses of remnant system.
     double mTS1 = m1*m1 + pxRel*pxRel + pyRel*pyRel;
@@ -859,13 +904,13 @@ double BeamParticle::zShare( double mDiff, double m1, double m2) {
     double m2Sys = mTS1 / zRel + mTS2 / (1. - zRel);
     wtAcc = (m2Sys < m2Diff) 
       ? pow( 1. - m2Sys / m2Diff, diffLargeMassSuppress) : 0.;
-  } while (wtAcc < Rndm::flat());
+  } while (wtAcc < rndmPtr->flat());
 
   // Done.
   return zRel;
 
 }
 
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8

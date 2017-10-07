@@ -1,5 +1,5 @@
 // SigmaCompositeness.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -13,7 +13,7 @@
 
 namespace Pythia8 {
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for q g -> q^* (excited quark state).
 
@@ -57,9 +57,9 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
-// A derived class for l gamma -> q^* (excited lepton state).
+// A derived class for l gamma -> l^* (excited lepton state).
 
 class Sigma1lgm2lStar : public Sigma1Process {
 
@@ -101,7 +101,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for q q' -> q^* q' (excited quark state).
 
@@ -124,6 +124,9 @@ public:
   // Select flavour, colour and anticolour.
   virtual void setIdColAcol();
 
+  // Evaluate weight for q* decay angles (else inactive).
+  virtual double weightDecay(Event& process, int iResBeg, int iResEnd); 
+
   // Info on the subprocess.
   virtual string name()       const {return nameSave;}
   virtual int    code()       const {return codeSave;}
@@ -139,7 +142,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for q qbar -> l^* lbar (excited lepton state).
 
@@ -162,6 +165,9 @@ public:
   // Select flavour, colour and anticolour.
   virtual void setIdColAcol();
 
+  // Evaluate weight for l* decay angles (else inactive).
+  virtual double weightDecay(Event& process, int iResBeg, int iResEnd); 
+
   // Info on the subprocess.
   virtual string name()       const {return nameSave;}
   virtual int    code()       const {return codeSave;}
@@ -176,8 +182,94 @@ private:
   double Lambda, preFac, openFracPos, openFracNeg, sigma;
 
 };
- 
-//**************************************************************************
+
+//==========================================================================
+
+// A derived class for q q -> q q (quark contact interactions).
+// Based on, Sigma2qq2qq (QCD).
+
+class Sigma2QCqq2qq : public Sigma2Process {
+
+public:
+
+  // Constructor.
+  Sigma2QCqq2qq(){}
+
+  // Initialize process. 
+  virtual void initProc(); 
+
+  // Calculate flavour-independent parts of cross section.
+  virtual void sigmaKin();
+
+  // Evaluate d(sigmaHat)/d(tHat). 
+  virtual double sigmaHat();
+
+  // Select flavour, colour and anticolour.
+  virtual void setIdColAcol();
+
+  // Info on the subprocess.
+  virtual string name()   const {return "q q(bar)' -> (QC) -> q q(bar)'";}
+  virtual int    code()   const {return 4201;}
+  virtual string inFlux() const {return "qq";}
+
+ private:
+
+  // Values stored for colour flow selection.
+  double sigT, sigU, sigTU, sigST, sigSum, sigQCSTU, sigQCUTS;
+
+  // Compositeness parameters.
+  double qCLambda2;
+  int    qCetaLL, qCetaRR, qCetaLR;
+
+};
+
+//==========================================================================
+
+// A derived class for q qbar -> q' qbar' (quark contact interactions).
+// Based on, Sigma2qqbar2qqbarNew(QCD). 
+// Note: This process give the same contributions for q == q' and q != q'.
+
+class Sigma2QCqqbar2qqbar : public Sigma2Process {
+
+public:
+
+  // Constructor.
+  Sigma2QCqqbar2qqbar(){}
+
+  // Initialize process. 
+  virtual void initProc(); 
+
+  // Calculate flavour-independent parts of cross section.
+  virtual void sigmaKin();
+
+  // Evaluate d(sigmaHat)/d(tHat). 
+  virtual double sigmaHat() {return sigma;}
+
+  // Select flavour, colour and anticolour.
+  virtual void setIdColAcol();
+
+  // Info on the subprocess.
+  virtual string name()   const {return "q qbar -> (QC) -> q' qbar' (uds)";}
+  virtual int    code()   const {return 4202;}
+  virtual string inFlux() const {return "qqbarSame";}
+
+ private:
+
+  // Number of outgoing quark flavours to be considered, given that
+  // matrix elements are calculated in the massless approximation.
+  int    qCnQuarkNew;
+
+  // Values stored for colour flow selection.
+  int    idNew;
+  double mNew, m2New, sigS, sigma;
+
+  // Compositeness parameters.
+  double qCLambda2;
+  int    qCetaLL, qCetaRR, qCetaLR;
+
+};
+
+//==========================================================================
 
 } // end namespace Pythia8
 

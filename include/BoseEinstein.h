@@ -1,5 +1,5 @@
 // Bose-Einstein.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -18,7 +18,7 @@
 
 namespace Pythia8 {
  
-//**************************************************************************
+//==========================================================================
  
 // The BoseEinsteinHadron class is a simple container for studied hadrons.
 
@@ -39,7 +39,7 @@ public:
 
 };
 
-//**************************************************************************
+//==========================================================================
 
 // The BoseEinstein class shifts the momenta of identical particles relative 
 // to each other, to simulate Bose-Einstein effects to some approximation.
@@ -52,7 +52,7 @@ public:
   BoseEinstein() {}
 
   // Find settings. Precalculate table used to find momentum shifts.
-  bool init();
+  bool init(Info* infoPtrIn, Settings& settings, ParticleData& particleData);
 
   // Perform Bose-Einstein corrections on an event.
   bool shiftEvent( Event& event); 
@@ -66,6 +66,9 @@ private:
   // Initialization data, read from Settings.
   bool   doPion, doKaon, doEta;
   double lambda, QRef;
+
+  // Pointer to various information on the generation.
+  Info* infoPtr;
 
   // Table of momentum shifts for different hadron species.
   int    nStep[4], nStep3[4], nStored[10];
@@ -81,7 +84,7 @@ private:
   
 };
  
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

@@ -1,6 +1,8 @@
 <html>
 <head>
 <title>Particle Decays</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
 </head>
 <body>
 
@@ -17,8 +19,9 @@ more massive <a href="ResonanceDecays.html" target="page">resonances</a>, such a
 <p/>
 The decay description essentially copies the one present in 
 PYTHIA since many years, but with some improvements, e.g. in the decay
-tables and the number of decay models available. Some issues may need 
-further polishing.
+tables and the number of decay models available. Recently a more
+sophisticated handling of <i>tau</i> decays has also been introduced.
+Some issues may need further polishing.
 
 <h3>Variables determining whether a particle decays</h3>
 
@@ -44,7 +47,7 @@ When on, only particles with <i>tau0 &lt; tau0Max</i> are decayed.
   
 
 <p/><code>parm&nbsp; </code><strong> ParticleDecays:tau0Max &nbsp;</strong> 
- (<code>default = <strong>1.</strong></code>; <code>minimum = 0.</code>)<br/>
+ (<code>default = <strong>10.</strong></code>; <code>minimum = 0.</code>)<br/>
 The above <i>tau0Max</i>, expressed in mm/c.
   
 
@@ -58,7 +61,7 @@ When on, only particles with <i>tau &lt; tauMax</i> are decayed.
   
 
 <p/><code>parm&nbsp; </code><strong> ParticleDecays:tauMax &nbsp;</strong> 
- (<code>default = <strong>1.</strong></code>; <code>minimum = 0.</code>)<br/>
+ (<code>default = <strong>10.</strong></code>; <code>minimum = 0.</code>)<br/>
 The above <i>tauMax</i>, expressed in mm/c.<br/>
 In order for this and the subsequent tests to work, a <i>tau</i> 
 is selected and stored for each particle, whether in the end it
@@ -78,9 +81,9 @@ detector effects.
   
 
 <p/><code>parm&nbsp; </code><strong> ParticleDecays:rMax &nbsp;</strong> 
- (<code>default = <strong>1.</strong></code>; <code>minimum = 0.</code>)<br/>
-The above <i>rMax</i>, expressed in mm/c.
-  
+ (<code>default = <strong>10.</strong></code>; <code>minimum = 0.</code>)<br/>
+The above <i>rMax</i>, expressed in mm.
+   
 
 <p/>
 (vi) Particles may be requested to decay within a given cylidrical 
@@ -95,14 +98,14 @@ detector effects.
   
 
 <p/><code>parm&nbsp; </code><strong> ParticleDecays:xyMax &nbsp;</strong> 
- (<code>default = <strong>1.</strong></code>; <code>minimum = 0.</code>)<br/>
-The above <i>xyMax</i>, expressed in mm/c.
-  
+ (<code>default = <strong>10.</strong></code>; <code>minimum = 0.</code>)<br/>
+The above <i>xyMax</i>, expressed in mm.
+   
 
 <p/><code>parm&nbsp; </code><strong> ParticleDecays:zMax &nbsp;</strong> 
- (<code>default = <strong>1.</strong></code>; <code>minimum = 0.</code>)<br/>
-The above <i>zMax</i>, expressed in mm/c.
-  
+ (<code>default = <strong>10.</strong></code>; <code>minimum = 0.</code>)<br/>
+The above <i>zMax</i>, expressed in mm.
+   
 
 <h3>Mixing</h3>
 
@@ -115,13 +118,66 @@ Allow or not <i>B^0 - B^0bar</i> and <i>B_s^0 - B_s^0bar</i> mixing.
  (<code>default = <strong>0.776</strong></code>; <code>minimum = 0.74</code>; <code>maximum = 0.81</code>)<br/>
 The mixing parameter <i>x_d = Delta(m_B^0)/Gamma_B^0</i> in the 
 <i>B^0 - B^0bar</i> system. (Default from RPP2006.)
-  
+   
 
 <p/><code>parm&nbsp; </code><strong> ParticleDecays:xBsMix &nbsp;</strong> 
  (<code>default = <strong>26.05</strong></code>; <code>minimum = 22.0</code>; <code>maximum = 30.0</code>)<br/>
 The mixing parameter <i>x_s = Delta(m_B_s^0)/Gamma_B_s^0</i> in the 
 <i>B_s^0 - B_s^0bar</i> system. (Delta-m from CDF hep-ex-0609040,
 Gamma from RPP2006.)
+   
+
+<h3>Tau decays</h3>
+
+A new machinery has been introduced to handle <i>tau</i> lepton decays, 
+with helicity information related to the production process and with
+the form of the hadronic current fitted to data. It is largely based
+on the corresponding Herwig++ implementation [<a href="Bibliography.html" target="page">Gre07</a>], with
+some input from Tauola [<a href="Bibliography.html" target="page">Jad90</a>]. A complete writeup is 
+in preparation [<a href="Bibliography.html" target="page">Ilt11</a>].
+
+This new machinery is on by default, but it is possible to revert to 
+the simpler old decay handling, e.g. to study differences. Furthermore
+the spin tracing framework does not yet cover all possibilities; notably 
+it cannot handle taus coming from SUSY decay chains, so it makes sense 
+to switch off the new machinery in such instances, for speed reasons if 
+nothing else. In case only one tau mother species is undefined, the 
+polarization involved can be set by hand.
+
+<p/><code>mode&nbsp; </code><strong> ParticleDecays:sophisticatedTau &nbsp;</strong> 
+ (<code>default = <strong>1</strong></code>; <code>minimum = 0</code>; <code>maximum = 3</code>)<br/>
+Choice of <i>tau</i> decay model.
+<br/><code>option </code><strong> 0</strong> : old decay model, with isotropic decays.  
+<br/><code>option </code><strong> 1</strong> : sophisticated decays where <i>tau</i> polarization is 
+calculated from the <i>tau</i> production mechanism.  
+<br/><code>option </code><strong> 2</strong> : sophisticated decays as above, but additionally <i>tau</i> 
+polarization is set to <code>ParticleDecaus:tauPolarization</code> for 
+<i>tau</i>s produced from <code>ParticleDecays:tauMother</code>.  
+<br/><code>option </code><strong> 3</strong> : sophisticated decays where <i>tau</i> polarization is set 
+to <code>ParticleDecaus:tauPolarization</code> for all <i>tau</i> decays.
+  
+<br/><b>Note</b>: options <code>2</code> and <code>3</code>, 
+to force a specific <i>tau</i> polarization, only affect the decay 
+of the <i>tau</i>. The angular distribution of the <i>tau</i> itself, 
+given by its production, is not modified by these options. If you want, e.g., 
+a righthanded <i>W</i>, or a SUSY decay chain, the kinematics should 
+be handled by the corresponding cross section class(es), supplemented by 
+the resonance decay one(s). The options here could then still be used 
+to ensure the correct polarization at the <i>tau</i> decay stage.
+  
+
+<p/><code>parm&nbsp; </code><strong> ParticleDecays:tauPolarization &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = -1.</code>; <code>maximum = 1.</code>)<br/>
+Polarization of the <i>tau</i> when mode <i>2</i> or <i>3</i> of 
+<code>ParticleDecays:sophisticatedTau</code> is selected.
+  
+
+<p/><code>mode&nbsp; </code><strong> ParticleDecays:tauMother &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = 0</code>)<br/>
+Mother of the <i>tau</i> for forced polarization when mode <i>2</i> of 
+<code>ParticleDecays:sophisticatedTau</code> is selected. You should give the
+positive identity code; to the extent an antiparticle exists it will
+automatically obtain the inverse polarization.
   
 
 <h3>Other variables</h3>
@@ -131,7 +187,7 @@ Gamma from RPP2006.)
 Minimum mass difference required between the decaying mother mass 
 and the sum of the daughter masses, kept as a safety margin to avoid
 numerical problems in the decay generation.
-  
+   
 
 <p/><code>parm&nbsp; </code><strong> ParticleDecays:sigmaSoft &nbsp;</strong> 
  (<code>default = <strong>0.5</strong></code>; <code>minimum = 0.2</code>; <code>maximum = 2.</code>)<br/>
@@ -142,7 +198,7 @@ dampened in momentum by an explicit weight factor
 three-momentum in the rest frame of the decaying particle.
 This takes into account that such further particles come from the
 fragmentation of the spectator parton and thus should be soft.   
-  
+   
 
 <p/>
 When a decay mode is defined in terms of a partonic content, a random 
@@ -164,19 +220,28 @@ imply that the actual average multiplicity does not quite agree with
 the formula above.
 
 <p/><code>parm&nbsp; </code><strong> ParticleDecays:multIncrease &nbsp;</strong> 
- (<code>default = <strong>4.5</strong></code>; <code>minimum = 3.</code>; <code>maximum = 6.</code>)<br/>
-The above <i>multIncrease</i> parameter.
-  
+ (<code>default = <strong>4.</strong></code>; <code>minimum = 2.</code>; <code>maximum = 6.</code>)<br/>
+The above <i>multIncrease</i> parameter, except for 
+<code>meMode = 23</code>.
+   
+
+<p/><code>parm&nbsp; </code><strong> ParticleDecays:multIncreaseWeak &nbsp;</strong> 
+ (<code>default = <strong>2.5</strong></code>; <code>minimum = 1.</code>; <code>maximum = 4.</code>)<br/>
+The above <i>multIncrease</i> parameter, specifically for 
+<code>meMode = 23</code>. Here the weak decay implies that only the 
+virtual W mass should contribute to the production of new particles, 
+rather than the full meson mass.
+   
 
 <p/><code>parm&nbsp; </code><strong> ParticleDecays:multRefMass &nbsp;</strong> 
  (<code>default = <strong>0.7</strong></code>; <code>minimum = 0.2</code>; <code>maximum = 2.0</code>)<br/>
 The above <i>multRefMass</i> parameter.
-  
+   
 
 <p/><code>parm&nbsp; </code><strong> ParticleDecays:multGoffset &nbsp;</strong> 
  (<code>default = <strong>0.5</strong></code>; <code>minimum = 0.0</code>; <code>maximum = 2.0</code>)<br/>
 The above <i>multGoffset</i> parameter.
-  
+   
 
 <p/><code>parm&nbsp; </code><strong> ParticleDecays:colRearrange &nbsp;</strong> 
  (<code>default = <strong>0.5</strong></code>; <code>minimum = 0.</code>; <code>maximum = 1.0</code>)<br/>
@@ -186,7 +251,7 @@ listed in pairs, as a first and a second colour singlet, which could
 give rise to separate sets of hadrons. Here <i>colRearrange</i> is 
 the probability that this original assignment is not respected, and 
 default corresponds to no memory of this original colour topology.
-  
+   
 
 <p/><code>flag&nbsp; </code><strong> ParticleDecays:FSRinDecays &nbsp;</strong> 
  (<code>default = <strong>true</strong></code>)<br/>
@@ -211,7 +276,7 @@ PYTHIA 6 ones, but several obsolete choices have been removed,
 a few new introduced, and most have been moved for better consistency. 
 Here is the list of currently allowed <code>meMode()</code> codes:
 <ul>
-<li>  0 : pure phace space of produced particles ("default");
+<li>  0 : pure phase space of produced particles ("default");
 input of partons is allowed and then the partonic content is 
 converted into the minimal number of hadrons (i.e. one per
 parton pair, but at least two particles in total)</li>
@@ -275,5 +340,5 @@ multiplicity than the simple string assumed for 82, see the
 </body>
 </html>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
 

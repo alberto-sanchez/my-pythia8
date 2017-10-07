@@ -1,5 +1,5 @@
 // BeamRemnants.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -13,15 +13,16 @@
 #include "BeamParticle.h"
 #include "Event.h"
 #include "FragmentationFlavZpT.h"
-#include "Information.h"
+#include "Info.h"
 #include "ParticleData.h"
 #include "PartonDistributions.h"
+#include "PartonSystems.h"
 #include "PythiaStdlib.h"
 #include "Settings.h"
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // This class matches the kinematics of the hard-scattering subsystems
 // (with primordial kT added) to that of the two beam remnants.  
@@ -34,8 +35,13 @@ public:
   BeamRemnants() { }  
 
   // Initialization.
-  bool init( Info* infoPtrIn, BeamParticle* beamAPtrIn, 
-    BeamParticle* beamBPtrIn);
+  bool init( Info* infoPtrIn, Settings& settings, Rndm* rndmPtrIn, 
+    BeamParticle* beamAPtrIn, BeamParticle* beamBPtrIn, 
+    PartonSystems* partonSystemsPtrIn);
+
+  // New beams possible for handling of hard diffraction.
+  void reassignBeamPtrs( BeamParticle* beamAPtrIn, BeamParticle* beamBPtrIn) 
+    {beamAPtr = beamAPtrIn; beamBPtr = beamBPtrIn;}
 
   // Select the flavours/kinematics/colours of the two beam remnants. 
   bool add( Event& event);
@@ -43,10 +49,11 @@ public:
 private: 
 
   // Constants: could only be changed in the code itself.
+  static const bool   ALLOWCOLOURTWICE, CORRECTMISMATCH;
   static const int    NTRYCOLMATCH, NTRYKINMATCH;
 
   // Initialization data, read from Settings.
-  bool   doPrimordialKT, doReconnect;
+  bool   doPrimordialKT, allowRescatter, doRescatterRestoreY, doReconnect;
   double primordialKTsoft, primordialKThard, primordialKTremnant,
          halfScaleForKT, halfMassForKT, reconnectRange, 
          pT0Ref, ecmRef, ecmPow;
@@ -59,11 +66,17 @@ private:
   vector<int> colFrom, colTo;
 
   // Pointer to various information on the generation.
-  Info* infoPtr;
+  Info*          infoPtr;
+
+  // Pointer to the random number generator.
+  Rndm*          rndmPtr;
 
   // Pointers to the two incoming beams.
-  BeamParticle* beamAPtr;
-  BeamParticle* beamBPtr;
+  BeamParticle*  beamAPtr;
+  BeamParticle*  beamBPtr;
+
+  // Pointer to information on subcollision parton locations.
+  PartonSystems* partonSystemsPtr;
 
   // Do the kinematics of the collision subsystems and two beam remnants. 
   bool setKinematics( Event& event);
@@ -76,7 +89,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

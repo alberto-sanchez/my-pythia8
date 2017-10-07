@@ -1,5 +1,5 @@
 // ProcessLevel.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -12,18 +12,22 @@
 #include "Basics.h"
 #include "BeamParticle.h"
 #include "Event.h"
-#include "Information.h"
+#include "Info.h"
 #include "ParticleData.h"
 #include "PartonDistributions.h"
 #include "ProcessContainer.h"
 #include "PythiaStdlib.h"
 #include "ResonanceDecays.h"
 #include "Settings.h"
+#include "SigmaTotal.h"
+#include "SusyCouplings.h"
+#include "SusyLesHouches.h"
+#include "StandardModel.h"
 #include "UserHooks.h"
 
 namespace Pythia8 {
   
-//**************************************************************************
+//==========================================================================
 
 // The ProcessLevel class contains the top-level routines to generate
 // the characteristic "hard" process of an event.
@@ -33,15 +37,22 @@ class ProcessLevel {
 public:
 
   // Constructor. 
-  ProcessLevel() {} 
+  ProcessLevel() : iLHACont(-1) {} 
 
   // Destructor to delete processes in containers.
   ~ProcessLevel();
  
   // Initialization.
-  bool init( Info* infoPtrIn, BeamParticle* beamAPtrIn, 
-    BeamParticle* beamBPtrIn, bool doLHAin, UserHooks* userHooksPtrIn, 
-    vector<SigmaProcess*>& sigmaPtrs, ostream& os = cout);
+  bool init( Info* infoPtrIn, Settings& settings,
+    ParticleData* particleDataPtrIn, Rndm* rndmPtrIn, 
+    BeamParticle* beamAPtrIn, BeamParticle* beamBPtrIn, Couplings* couplingsPtrIn, 
+    SigmaTotal* sigmaTotPtrIn, bool doLHAin, SusyLesHouches* slhaPtrIn,
+    UserHooks* userHooksPtrIn, vector<SigmaProcess*>& sigmaPtrs, 
+    ostream& os = cout);
+
+  // Store or replace Les Houches pointer.
+  void setLHAPtr( LHAup* lhaUpPtrIn) {lhaUpPtr = lhaUpPtrIn;
+  if (iLHACont >= 0) containerPtrs[iLHACont]->setLHAPtr(lhaUpPtr);}
  
   // Generate the next "hard" process.
   bool next( Event& process); 
@@ -50,18 +61,26 @@ public:
   void accumulate();
 
   // Print statistics on cross sections and number of events.
-  void statistics(ostream& os = cout);
+  void statistics(bool reset = false, ostream& os = cout);
+
+  // Add any junctions to the process event record list. 
+  void findJunctions( Event& junEvent);
 
 private: 
 
+  // Constants: could only be changed in the code itself.
+  static const int MAXLOOP;
+
   // Generic info for process generation.
-  bool   doSecondHard, allHardSame, noneHardSame, someHardSame, doResDecays;
-  int    nImpact, startColTag2;
-  double sigmaND, sumImpactFac, sum2ImpactFac;
+  bool   doSecondHard, doSameCuts, allHardSame, noneHardSame, 
+         someHardSame, cutsAgree, cutsOverlap, doResDecays;
+  int    nImpact, startColTag;
+  double mHatMin1, mHatMax1, pTHatMin1, pTHatMax1, mHatMin2, mHatMax2, 
+         pTHatMin2, pTHatMax2, sigmaND, sumImpactFac, sum2ImpactFac;
 
   // Vector of containers of internally-generated processes.
   vector<ProcessContainer*> containerPtrs;
-  int    iContainer;
+  int    iContainer, iLHACont;
   double sigmaMaxSum;
 
   // Ditto for optional choice of a second hard process.
@@ -70,17 +89,35 @@ private:
   double sigma2MaxSum;
 
   // Pointer to various information on the generation.
-  Info* infoPtr;
+  Info*           infoPtr;
+
+  // Pointer to the particle data table.
+  ParticleData*   particleDataPtr;
+
+  // Pointer to the random number generator.
+  Rndm*           rndmPtr;
 
   // Pointers to the two incoming beams.
-  BeamParticle* beamAPtr;
-  BeamParticle* beamBPtr;
+  BeamParticle*   beamAPtr;
+  BeamParticle*   beamBPtr;
+
+  // Pointer to Standard Model couplings, including alphaS and alphaEM.
+  Couplings*      couplingsPtr;
+
+  // Pointer to SigmaTotal object needed to handle soft QCD processes.
+  SigmaTotal*     sigmaTotPtr;
+
+  // Pointer to SusyLesHouches object for interface to SUSY spectra.
+  SusyLesHouches* slhaPtr;
 
   // Pointer to userHooks object for user interaction with program.
-  UserHooks* userHooksPtr;
+  UserHooks*      userHooksPtr;
 
-  // SigmaTotal object needed to handle soft QCD processes.
-  SigmaTotal sigmaTot;
+  // Pointer to LHAup for generating external events.
+  LHAup*          lhaUpPtr;
+
+  // Initialization routine for SUSY spectra.
+  bool initSLHA(Settings& settings);
 
   // ResonanceDecay object does sequential resonance decays.
   ResonanceDecays resonanceDecays;
@@ -94,22 +131,18 @@ private:
   // Append the second to the first process list.
   void combineProcessRecords( Event& process, Event& process2);
 
-  // Add any junctions to the process event record list.
-  void findJunctions( Event& process);
-
   // Check that colours match up.
   bool checkColours( Event& process);
 
   // Print statistics when two hard processes allowed.
-  void statistics2(ostream& os = cout);
+  void statistics2(bool reset, ostream& os = cout);
 
   // Statistics for Les Houches event classification.
   vector<int> codeLHA, nEvtLHA;
 
-
 };
 
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

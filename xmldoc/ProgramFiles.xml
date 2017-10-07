@@ -59,6 +59,11 @@ the overall energy-momentum picture. Also ties together all the
 colour lines into consistent singlets. 
 </file>
 
+<file name="BeamShape">
+generates momentum spread of beams, and spread of collision vertex
+position. 
+</file>
+
 <file name="BoseEinstein"> 
 provides a simple method to impose Bose-Einstein correlations on 
 pairs of identical mesons.
@@ -88,6 +93,14 @@ by applying string fragmentation (with special treatment for low-mass
 systems) and secondary decays, and optionally Bose-Einstein corrections.
 </file>
 
+<file name="HelicityBasics">
+basic classes for the handling of helicities in tau lepton decays.
+</file>
+
+<file name="HelicityMatrixElements">
+helicity-dependent decay matrix elements for the tau lepton.
+</file>
+
 <file name="HepMCInterface">
 contains an interface to convert the PYTHIA 8 event record into the 
 HepMC format. The <code>HepMCInterface.cc</code> file is located in
@@ -95,7 +108,13 @@ the subdirectory <code>hepmcinterface</code> and is used to build a
 separate <code>libhepmcinterface</code> library. 
 </file>
 
-<file name="Information">
+<file name="HiddenValleyFragmentation">
+hadronization in models with a hidden sector that contains an unbroken
+<ei>SU(N)</ei>, which gives confinement. The model and code is largely
+derived from the normal fragmentation classes.
+</file>
+
+<file name="Info">
 is a simple container that gives access to some information on the
 nature of the current process, such as Mandelstam variables.
 Also contains a small database for errors and warnings encountered 
@@ -104,14 +123,14 @@ during program execution.
 
 <file name="LesHouches">
 gives the possibility to feed in parton configurations for the 
-subsequent event generation. Two containers are defined, one for 
-initialization and one for events, that can be read from 
-<code>Pythia</code>. Should be linked to external programs or files.
+subsequent event generation. One base class is defined, with containers
+for initialization and event information, that can be read from 
+<code>Pythia</code>. Derived classes allow for a few different cases.
 </file>
 
 <file name="LHAFortran">
-is a header file only, for two classes derived from the above LesHouches 
-ones, to be used for runtime interfacing to Fortran programs, such as
+is a header file only, for a class derived from the above LesHouches 
+one, to be used for runtime interfacing to Fortran programs, such as
 PYTHIA 6. 
 </file>
 
@@ -158,6 +177,12 @@ adding initial- and final-state radiation, multiple parton--parton
 interactions, and beam remnants.
 </file>
 
+<file name="PartonSystems">
+keeps track of which partons belong to which partonic susbsystem,
+i.e. one of the multiple (semi)hard interactiosn with associated
+showers.
+</file>
+
 <file name="PhaseSpace">
 selects a point in phase space for the hard-process generation,
 optimized separately for each process to give improved Monte Carlo 
@@ -187,24 +212,21 @@ so only a <code>Pythia</code> object needs to be explicitly instantiated
 and addressed   by the user.
 </file>
 
-<file name="Pythia6Interface">
-is a header file only, with interfaces to the key PYTHIA 6 routines,
-as needed for a runtime Les Houches interface to this program. 
-</file>
-
 <file name="PythiaComplex">
 is only a <code>.h</code> file, containing a <code>typedef</code> for 
 double precision complex numbers.
 </file>
 
 <file name="PythiaStdlib">
-is only a <code>.h</code> file, containing most of the <code>Stdlib</code> 
-headers used in PYTHIA 8, with <code>using</code> directives. It defines 
-<code>M_PI</code> if this is not already done. Also a few simple inline 
-methods: <code>pow2(x)</code>, <code>pow3(x)</code>, <code>pow4(x)</code> 
-and <code>pow5(x)</code> for small integer powers, and 
-<code>sqrtpos(x)</code> where a <code>max(0., x)</code> ensures that one 
-does not take the square root of a negative number.
+contains most of the <code>Stdlib</code> headers used in PYTHIA 8, 
+with <code>using</code> directives. It defines <code>M_PI</code> if 
+this is not already done. Also a few simple inline methods: 
+<code>pow2(x)</code>, <code>pow3(x)</code>, <code>pow4(x)</code>,
+<code>pow5(x)</code> and <code>pow6(x)</code> for small integer 
+powers, and <code>sqrtpos(x)</code> where a <code>max(0., x)</code> 
+ensures that one does not take the square root of a negative number. 
+Also non-inlined <code>GammaReal(x)</code> for the <ei>Gamma</ei>
+function value of a real argument.
 </file>
 
 <file name="ResonanceDecays"> 
@@ -215,6 +237,11 @@ decays resonances as part of the hard-process stage, in many cases
 <file name="ResonanceWidths"> 
 encodes some properties of resonances, in particular the dynamic 
 calculation of widths.
+</file>
+
+<file name="RHadrons"> 
+handles the production and decay of hadrons formed by long-lived
+gluinos, stops or sbottoms.
 </file>
 
 <file name="Settings"> 
@@ -238,6 +265,11 @@ processes involving photons, <ei>Z^0</ei>'s and <ei>W^+-</ei>'s.
 <file name="SigmaExtraDim">
 contains the cross sections and matrix elements for processes in
 scenarios involving extra dimensions.
+</file>
+
+<file name="SigmaGeneric">
+contains the cross sections and matrix elements for some generic
+processes, to be used as building blocks for a few BSM scenarios.
 </file>
 
 <file name="SigmaHiggs">
@@ -273,8 +305,8 @@ cross sections are found in several separate files of derived classes:
 <code>SigmaQCD</code>, <code>SigmaEW</code>, <code>SigmaOnia</code>, 
 <code>SigmaHiggs</code>, <code>SigmaSUSY</code>,  
 <code>SigmaNewGaugeBosons</code>, <code>SigmaLeftRightSym</code>,
-<code>SigmaLeptoquark</code>, <code>SigmaCompositeness</code> and
-<code>SigmaExtraDim</code>.
+<code>SigmaLeptoquark</code>, <code>SigmaCompositeness</code>,
+<code>SigmaExtraDim</code> and <code>SigmaGeneric</code>.
 </file>
 
 <file name="SigmaQCD">
@@ -308,9 +340,20 @@ CKM mixing matrices, and a few other parameters such as
 performs string fragmentation of a given set of partons.
 </file>
 
+<file name="SusyCouplings">
+stores the various couplings used for SUSY cross sections and
+decays, as calculated from input e.g. based on the SUSY Les Houches 
+Accord.
+</file>
+
 <file name="SusyLesHouches">
 contains information on SUSY parameters and particle data as specified
 by the SUSY Les Houches Accord.
+</file>
+
+<file name="TauDecays"> 
+the main routines for handling tau lepton decays with helicity
+information.
 </file>
 
 <file name="TimeShower"> 
@@ -326,4 +369,4 @@ its cross-section weight.
 
 </chapter>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->

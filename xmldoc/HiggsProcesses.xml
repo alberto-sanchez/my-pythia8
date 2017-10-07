@@ -5,7 +5,7 @@
 This page documents Higgs production within and beyond the Standard Model
 (SM and BSM for short). This includes several different processes and, 
 for the BSM scenarios, a large set of parameters that would only be fixed 
-within a more specific framework such as MSSM. One choice can be made 
+within a more specific framework such as MSSM. Two choices can be made 
 irrespective of the particular model:
 
 <flag name="Higgs:cubicWidth" default="off">
@@ -19,8 +19,18 @@ dependence on <ei>mHat</ei>, i.e. a width proportional to
 <ei>m_Higgs^2 * mHat</ei>, while <code>on</code> gives a 
 <ei>mHat^3</ei> dependence. This does not affect the widths to 
 fermions, which only depend linearly on <ei>mHat</ei>.
-This flag is used both for SM and BSM Higgses, and for the 
-latter is extended also to apply to decays to other Higgses.
+This flag is used both for SM and BSM Higgses.
+</flag>
+
+<flag name="Higgs:runningLoopMass" default="on">
+The partial width of a Higgs particle to a pair of gluons or photons,
+or a <ei>gamma Z^0</ei> pair, proceeds in part through quark loops,
+mainly <ei>b</ei> and <ei>t</ei>. There is some ambiguity what kind
+of masses to use. Default is running MSbar ones, but alternatively 
+fixed pole masses are allowed (as was standard in PYTHIA 6), which 
+typically gives a noticeably higher cross section for these channels.
+(For a decay to a pair of fermions, such as top, the running mass is
+used for couplings and the fixed one for phase space.)
 </flag>
 
 <h3>Standard-Model Higgs, basic processes</h3>
@@ -29,7 +39,7 @@ This section provides the standard set of processes that can be
 run together to provide a reasonably complete overview of possible
 production channels for a single SM Higgs. 
 The main parameter is the choice of Higgs mass, which can be set in the
-normal <code>ParticleDataTable</code> database; thereafter the properties 
+normal <code>ParticleData</code> database; thereafter the properties 
 within the SM are essentially fixed. 
 
 <flag name="HiggsSM:all" default="off">
@@ -175,7 +185,7 @@ Code 914.
  
 <flag name="HiggsSM:qg2Hq(l:t)" default="off">
 Scattering <ei>q g -> H^0 q</ei> via loop contributions primarily 
-from top. Not to be confused with the <code>HiggsSM:bg2Hb</code>
+from top. Not to be confused with the <code>HiggsSM:qg2Hq</code>
 process above, with its direct fermion-to-Higgs coupling.
 Code 915.
 </flag>
@@ -528,7 +538,7 @@ Code 1014.
  
 <flag name="HiggsBSM:qg2H1q(l:t)" default="off">
 Scattering <ei>q g -> h^0 q</ei> via loop contributions primarily 
-from top. Not to be confused with the <code>HiggsBSM:bg2H1b</code>
+from top. Not to be confused with the <code>HiggsBSM:qg2H1q</code>
 process above, with its direct fermion-to-Higgs coupling.
 Code 1015.
 </flag>
@@ -586,7 +596,7 @@ Code 1034.
  
 <flag name="HiggsBSM:qg2H2q(l:t)" default="off">
 Scattering <ei>q g -> H^0 q</ei> via loop contributions primarily 
-from top. Not to be confused with the <code>HiggsBSM:bg2H1b</code>
+from top. Not to be confused with the <code>HiggsBSM:qg2H1q</code>
 process above, with its direct fermion-to-Higgs coupling.
 Code 1035.
 </flag>
@@ -644,7 +654,7 @@ Code 1054.
  
 <flag name="HiggsBSM:qg2A3q(l:t)" default="off">
 Scattering <ei>q g -> A^0 q</ei> via loop contributions primarily 
-from top. Not to be confused with the <code>HiggsBSM:bg2H1b</code>
+from top. Not to be confused with the <code>HiggsBSM:qg2H1q</code>
 process above, with its direct fermion-to-Higgs coupling.
 Code 1055.
 </flag>
@@ -670,7 +680,7 @@ of the internal calculations of partial widths from the parameters provided
 do not include mixing between the scalar and pseudoscalar states. 
 
 <p/>
-Masses would be set in the <code>ParticleDataTable</code> database,
+Masses would be set in the <code>ParticleData</code> database,
 while couplings are set below. When possible, the couplings of the Higgs 
 states are normalized to the corresponding coupling within the SM. 
 When not, their values within the MSSM are indicated, from which
@@ -757,7 +767,7 @@ Vanishes in the MSSM.
 
 <parm name="HiggsH2:coup2HchgW" default="0.">
 The <ei>H^0(H_2^0)</ei> coupling to a <ei>H^+- W-+</ei> pair.
-Vanishes in the MSSM.
+Is <ei>sin(beta - alpha)</ei> in the MSSM.
 </parm>
 
 <parm name="HiggsA3:coup2d" default="1.">
@@ -802,9 +812,9 @@ The <ei>A^0(H_3^0)</ei> coupling to <ei>H^+-</ei>.
 Vanishes in the MSSM.
 </parm>
 
-<parm name="HiggsA3:coup2HchgW" default="0.">
+<parm name="HiggsA3:coup2HchgW" default="1.">
 The <ei>A^0(H_3^0)</ei> coupling to a <ei>H^+- W-+</ei> pair.
-Vanishes in the MSSM.
+Is 1 in the MSSM.
 </parm>
 
 <parm name="HiggsHchg:tanBeta" default="5.">
@@ -821,7 +831,7 @@ Is <ei>cos(beta - alpha)</ei> in the MSSM.
 
 <parm name="HiggsHchg:coup2H2W" default="0.">
 The <ei>H^+-</ei> coupling to a <ei>H^0(H_2^0) W^+-</ei> pair.
-Is <ei>1 - cos(beta - alpha)</ei> in the MSSM.
+Is <ei>sin(beta - alpha)</ei> in the MSSM.
 </parm>
 
 <p/>
@@ -896,5 +906,5 @@ The <ei>eta</ei> value of CP-violation in the
 
 </chapter>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
 

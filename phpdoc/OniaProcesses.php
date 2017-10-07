@@ -1,6 +1,8 @@
 <html>
 <head>
 <title>Onia Processes</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
 </head>
 <body>
 
@@ -51,16 +53,15 @@ echo "<a href='TimelikeShowers.php?filepath=".$filepath."' target='page'>";?>fin
 is in this case based on some further model assumptions.
 
 <p/>
-Most of the processes below are divergent in the limit 
-<i>pT -> 0</i>, and therefore a <i>pTmin</i> scale should 
-be set. Comparisons with data indicate that this divergence 
-can be tamed the same way as for the normal QCD <i>2 -> 2</i> cross 
-sections, which makes sense, since they are all dominated by the
-same kind of <i>t</i>-channel gluon exchange. It is therefore
-possible to use the <?php $filepath = $_GET["filepath"];
-echo "<a href='UserHooks.php?filepath=".$filepath."' target='page'>";?>SuppressSmallPT</a>
-user hook to impose a reweighting that cancels the low-<i>pT</i>
-divergence.
+Most of the processes below are divergent in the limit <i>pT -> 0</i>, 
+and therefore a <i>pTmin</i> scale should be set. Comparisons with 
+data indicate that this divergence can be tamed the same way as for 
+the normal QCD <i>2 -> 2</i> cross sections [<a href="Bibliography.php" target="page">Bar06,Kra08</a>], 
+which makes sense, since they are all dominated by the same kind of 
+<i>t</i>-channel gluon exchange. It is therefore possible to use the 
+<?php $filepath = $_GET["filepath"];
+echo "<a href='UserHooks.php?filepath=".$filepath."' target='page'>";?>SuppressSmallPT</a> user hook to impose a 
+reweighting that cancels the low-<i>pT</i> divergence.
 
 <p/>
 An eikonalized description of these processes is included in the 
@@ -393,11 +394,11 @@ are taken from [<a href="Bibliography.php" target="page">Nas00</a>]; see also [<
 <i>&lt;O(Upsilon)[1S0(8)]&gt;</i>.
   
 
-<br/><br/><table><tr><td><strong>Bottomonium:OUpsilon3P08 </td><td></td><td> <input type="text" name="49" value="0.48" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.48</strong></code>; <code>minimum = 0.0</code>)</td></tr></table>
+<br/><br/><table><tr><td><strong>Bottomonium:OUpsilon3P08 </td><td></td><td> <input type="text" name="49" value="0.02" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.02</strong></code>; <code>minimum = 0.0</code>)</td></tr></table>
 <i>&lt;O(Upsilon)[3P0(8)]&gt;/m_b^2</i>.
   
 
-<br/><br/><table><tr><td><strong>Bottomonium:Ochib03P01 </td><td></td><td> <input type="text" name="50" value="0.09" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.09</strong></code>; <code>minimum = 0.0</code>)</td></tr></table>
+<br/><br/><table><tr><td><strong>Bottomonium:Ochib03P01 </td><td></td><td> <input type="text" name="50" value="0.085" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.085</strong></code>; <code>minimum = 0.0</code>)</td></tr></table>
 <i>&lt;O(chi_b0)[3P0(8)]&gt;/m_b^2</i>.
   
 
@@ -657,12 +658,12 @@ if($_POST["48"] != "0.02")
 $data = "Bottomonium:OUpsilon1S08 = ".$_POST["48"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["49"] != "0.48")
+if($_POST["49"] != "0.02")
 {
 $data = "Bottomonium:OUpsilon3P08 = ".$_POST["49"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["50"] != "0.09")
+if($_POST["50"] != "0.085")
 {
 $data = "Bottomonium:Ochib03P01 = ".$_POST["50"]."\n";
 fwrite($handle,$data);
@@ -674,5 +675,5 @@ fclose($handle);
 </body>
 </html>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
 

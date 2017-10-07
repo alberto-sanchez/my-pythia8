@@ -1,5 +1,5 @@
 // UserHooks.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -9,11 +9,11 @@
 
 namespace Pythia8 {
  
-//**************************************************************************
+//==========================================================================
 
 // The UserHooks class.
 
-//*********
+//--------------------------------------------------------------------------
 
 // multiplySigmaBy allows the user to introduce a multiplicative factor 
 // that modifies the cross section of a hard process. Since it is called
@@ -63,7 +63,109 @@ double UserHooks::multiplySigmaBy( const SigmaProcess* sigmaProcessPtr,
 
 }
 
-//*********
+//--------------------------------------------------------------------------
+
+// biasSelectionBy allows the user to introduce a multiplicative factor 
+// that modifies the cross section of a hard process. The event is assigned
+// a wegith that is the inverse of the selection bias, such that the
+// cross section is unchanged. Since it is called from before the 
+// event record is generated in full, the normal analysis does not work. 
+// The code here provides a rather extensive summary of which methods 
+// actually do work. It is a convenient starting point for writing 
+// your own derived routine.
+
+double UserHooks::biasSelectionBy( const SigmaProcess* sigmaProcessPtr, 
+  const PhaseSpace* phaseSpacePtr, bool inEvent) {
+
+  // Process code, necessary when some to be treated differently.
+  //int code       = sigmaProcessPtr->code();
+
+  // Final multiplicity, i.e. whether 2 -> 1 or 2 -> 2.
+  //int nFinal     = sigmaProcessPtr->nFinal();
+
+  // Incoming x1 and x2 to the hard collision, and factorization scale.
+  //double x1      = phaseSpacePtr->x1();
+  //double x2      = phaseSpacePtr->x2();
+  //double Q2Fac   = sigmaProcessPtr->Q2Fac();
+
+  // Renormalization scale and assumed alpha_strong and alpha_EM.
+  //double Q2Ren   = sigmaProcessPtr->Q2Ren();
+  //double alphaS  = sigmaProcessPtr->alphaSRen();
+  //double alphaEM = sigmaProcessPtr->alphaEMRen();
+  
+  // Subprocess mass-square.
+  //double sHat = phaseSpacePtr->sHat();
+
+  // Now methods only relevant for 2 -> 2.
+  //if (nFinal == 2) {
+    
+    // Mandelstam variables and hard-process pT.
+    //double tHat  = phaseSpacePtr->tHat();
+    //double uHat  = phaseSpacePtr->uHat();
+    //double pTHat = phaseSpacePtr->pTHat();
+  
+    // Masses of the final-state particles. (Here 0 for light quarks.)
+    //double m3    = sigmaProcessPtr->m(3);
+    //double m4    = sigmaProcessPtr->m(4);
+  //}
+
+  // Insert here your calculation of the selection bias. 
+  // Here illustrated by a weighting up of events at high pT.
+  //selBias = pow4(phaseSpacePtr->pTHat()); 
+
+  // Return the selBias weight. 
+  // Warning: if you use another variable than selBias
+  // the compensating weight will not be set correctly.
+  //return selBias;
+
+  // Dummy statement to avoid compiler warnings.
+  return ((inEvent && sigmaProcessPtr->code() == 0 
+    && phaseSpacePtr->sHat() < 0.) ? 0. : 1.);
+}
+
+//--------------------------------------------------------------------------
+
+// omitResonanceDecays omits resonance decay chains from process record.
+
+void UserHooks::omitResonanceDecays(const Event& process) {
+
+  // Reset work event to be empty
+  workEvent.clear(); 
+
+  // Loop through all partons. Beam particles should be copied.
+  for (int i = 0; i < process.size(); ++i) {
+    bool doCopy  = false;
+    bool isFinal = false;
+    if (i < 3) doCopy = true;
+
+    // Daughters of beams should be copied.
+    else {
+      int iMother = process[i].mother1();
+      if (iMother == 1 || iMother == 2) doCopy = true;
+       
+      // Granddaughters of beams should be copied and are final.
+      else if (iMother > 2) {
+        int iGrandMother =  process[iMother].mother1(); 
+        if (iGrandMother == 1 || iGrandMother == 2) {
+          doCopy  = true;
+          isFinal = true;
+        }  
+      }
+    }
+   
+    // Do copying and modify status/daughters of final.
+    if (doCopy) {
+      int iNew = workEvent.append( process[i]);
+      if (isFinal) {
+        workEvent[iNew].statusPos();
+        workEvent[iNew].daughters( 0, 0);
+      }
+    }
+  }
+
+}
+
+//--------------------------------------------------------------------------
 
 // subEvent extracts currently resolved partons in the hard process.
 
@@ -74,11 +176,11 @@ void UserHooks::subEvent(const Event& event, bool isHardest) {
 
   // Find which subsystem to study.
   int iSys = 0;
-  if (!isHardest) iSys = event.sizeSystems() - 1;
+  if (!isHardest) iSys = partonSystemsPtr->sizeSys() - 1;
 
   // Loop through all the final partons of the given subsystem.
-  for (int i = 2; i < event.sizeSystem(iSys); ++i) {
-    int iOld = event.getInSystem( iSys, i);
+  for (int i = 0; i < partonSystemsPtr->sizeOut(iSys); ++i) {
+    int iOld = partonSystemsPtr->getOut( iSys, i);
 
     // Copy partons to work event.
     int iNew = workEvent.append( event[iOld]); 
@@ -90,11 +192,11 @@ void UserHooks::subEvent(const Event& event, bool isHardest) {
  
 }
  
-//**************************************************************************
+//==========================================================================
 
 // The SuppressSmallPT class, derived from UserHooks.
 
-//*********
+//--------------------------------------------------------------------------
 
 // Modify event weight at the trial level, before selection.
 
@@ -107,9 +209,9 @@ double SuppressSmallPT::multiplySigmaBy( const SigmaProcess* sigmaProcessPtr,
     // Calculate pT0 as for multiple interactions.
     // Fudge factor allows offset relative to MI framework.
     double eCM    = phaseSpacePtr->ecm();
-    double pT0Ref = Settings::parm("MultipleInteractions:pT0Ref");
-    double ecmRef = Settings::parm("MultipleInteractions:ecmRef");
-    double ecmPow = Settings::parm("MultipleInteractions:ecmPow");
+    double pT0Ref = settingsPtr->parm("MultipleInteractions:pT0Ref");
+    double ecmRef = settingsPtr->parm("MultipleInteractions:ecmRef");
+    double ecmPow = settingsPtr->parm("MultipleInteractions:ecmPow");
     double pT0    = pT0timesMI * pT0Ref * pow(eCM / ecmRef, ecmPow);
     pT20          = pT0 * pT0;
   
@@ -118,11 +220,11 @@ double SuppressSmallPT::multiplySigmaBy( const SigmaProcess* sigmaProcessPtr,
     double alphaSvalue;
     int    alphaSorder;    
     if (useSameAlphaSasMI) {
-      alphaSvalue = Settings::parm("MultipleInteractions:alphaSvalue");
-      alphaSorder = Settings::mode("MultipleInteractions:alphaSorder");
+      alphaSvalue = settingsPtr->parm("MultipleInteractions:alphaSvalue");
+      alphaSorder = settingsPtr->mode("MultipleInteractions:alphaSorder");
     } else {
-      alphaSvalue = Settings::parm("SigmaProcess:alphaSvalue");
-      alphaSorder = Settings::mode("SigmaProcess:alphaSorder");
+      alphaSvalue = settingsPtr->parm("SigmaProcess:alphaSvalue");
+      alphaSorder = settingsPtr->mode("SigmaProcess:alphaSorder");
     }
     alphaS.init( alphaSvalue, alphaSorder); 
 
@@ -156,6 +258,6 @@ double SuppressSmallPT::multiplySigmaBy( const SigmaProcess* sigmaProcessPtr,
 }
 
  
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8

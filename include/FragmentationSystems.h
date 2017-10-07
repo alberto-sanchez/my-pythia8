@@ -1,5 +1,5 @@
 // FragmentationSystems.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -15,13 +15,14 @@
 #include "Basics.h"
 #include "Event.h"
 #include "FragmentationFlavZpT.h"
+#include "Info.h"
 #include "ParticleData.h"
 #include "PythiaStdlib.h"
 #include "Settings.h"
 
 namespace Pythia8 {
  
-//**************************************************************************
+//==========================================================================
 
 // The ColSinglet class contains info on an individual singlet.
 // Only to be used inside ColConfig, so no private members. 
@@ -51,7 +52,7 @@ public:
   
 };
  
-//**************************************************************************
+//==========================================================================
 
 // The ColConfig class describes the colour configuration of the whole event. 
 
@@ -60,10 +61,10 @@ class ColConfig {
 public:
 
   // Constructor.
-  ColConfig() {}
+  ColConfig() {singlets.resize(0);}
 
-  // Initialize static data members.
-  static void initStatic();
+  // Initialize and save pointers.
+  void init(Info* infoPtrIn, Settings& settings, StringFlav* flavSelPtrIn);
 
   // Number of colour singlets.
   int size() const {return singlets.size();}
@@ -76,18 +77,33 @@ public:
 
   // Insert a new colour singlet system in ascending mass order. 
   // Calculate its properties. Join nearby partons.
-  void insert( vector<int>& iPartonIn, Event& event); 
+  bool insert( vector<int>& iPartonIn, Event& event); 
+
+  // Erase a colour singlet system. (Rare operation.)
+  void erase(int iSub) {singlets.erase(singlets.begin() + iSub);}  
 
   // Collect all partons of singlet to be consecutively ordered.
-  void collect(int iSub, Event& event); 
+  void collect(int iSub, Event& event, bool skipTrivial = true); 
+
+  // Find to which singlet system a particle belongs.
+  int findSinglet(int i);
 
   // List all currently identified singlets.
-  void list(ostream& os = cout);
+  void list(ostream& os = cout) const;
 
 private:
 
-  // Static initialization data, to be read from Settings.
-  static double mJoin, mJoinJunction, mStringMin;
+  // Constants: could only be changed in the code itself.
+  static const double CONSTITUENTMASS;
+
+  // Pointer to various information on the generation.
+  Info*       infoPtr;
+
+  // Pointer to class for flavour generation.
+  StringFlav* flavSelPtr;
+
+  // Initialization data, to be read from Settings.
+  double mJoin, mJoinJunction, mStringMin;
  
   // List of all separate colour singlets.
   vector<ColSinglet> singlets;
@@ -98,7 +114,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // The StringRegion class contains the information related to 
 // one string section in the evolution of a multiparton system. 
@@ -112,14 +128,8 @@ public:
   // Constructor. 
   StringRegion() : isSetUp(false), isEmpty(true) {}
 
-  // Initialize static data members.
-  static void initStatic();
-
-  // Static initialization data, to be read from Settings.
-  static double mJoin, m2Join;
-
   // Constants: could only be changed in the code itself.
-  static const double TINY;
+  static const double MJOIN, TINY;
 
   // Data members.
   bool   isSetUp, isEmpty;
@@ -130,13 +140,13 @@ public:
   void setUp(Vec4 p1, Vec4 p2, bool isMassless = false);
 
   // Construct a four-momentum from (x+, x-, px, py).
-  Vec4 pHad( double xPos, double xNeg, double px, double py) 
-    { return xPos * pPos + xNeg * pNeg + px * eX + py * eY; }
+  Vec4 pHad( double xPosIn, double xNegIn, double pxIn, double pyIn) 
+    { return xPosIn * pPos + xNegIn * pNeg + pxIn * eX + pyIn * eY; }
 
   // Project a four-momentum onto (x+, x-, px, py). Read out projection.
   void project(Vec4 pIn);
-  void project( double px, double py, double pz, double e) 
-    { project( Vec4( px, py, pz, e) ); }
+  void project( double pxIn, double pyIn, double pzIn, double eIn) 
+    { project( Vec4( pxIn, pyIn, pzIn, eIn) ); }
   double xPos() const {return xPosProj;} 
   double xNeg() const {return xNegProj;} 
   double px() const {return pxProj;} 
@@ -144,7 +154,7 @@ public:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // The StringSystem class contains the complete set of all string regions.
 // Only to be used inside StringFragmentation, so no private members.
@@ -174,11 +184,12 @@ public:
   vector<StringRegion> system;
 
   // Other data members.
-  int sizePartons, sizeStrings, sizeRegions, indxReg, iMax; 
+  int    sizePartons, sizeStrings, sizeRegions, indxReg, iMax; 
+  double mJoin, m2Join;
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

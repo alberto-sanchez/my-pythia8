@@ -1,24 +1,26 @@
 <chapter name="Index">
 
-<img src='pythiapicture.gif' alt='Pythia picture' hspace=10/>
+<img src='pythia99.gif' alt='Pythia logo' hspace=10/>
 
 <h2>PYTHIA 8 Index</h2>
 
-<h3><a href="pythia8100.pdf" target="page">Brief Introduction</a> (pdf)</h3>
-
-<h3>Program Overview</h3>
+<h4>Program Overview</h4>
 
 <aidx href="Frontpage">Frontpage</aidx><br/>
 <aidx href="ProgramFlow">Program Flow</aidx><br/>
 <aidx href="SettingsScheme">Settings Scheme</aidx><br/>
 <aidx href="ParticleDataScheme">Particle Data Scheme</aidx><br/>
 <aidx href="ProgramFiles">Program Files</aidx><br/>
+<aidx href="ProgramClasses">Program Classes</aidx><br/>
+<aidx href="ProgramMethods">Program Methods</aidx><br/>
+<aidx href="SampleMainPrograms">Sample Main Programs</aidx><br/>
 
-<h3>Setup Run Tasks</h3>
+<h4>Setup Run Tasks</h4>
 
 <INDEXPHP>
 <aidx href="SaveSettings"><b>Save Settings</b></aidx><br/>
 <aidx href="MainProgramSettings">Main-Program Settings</aidx><br/>
+<aidx href="BeamParameters">Beam Parameters</aidx><br/>
 <aidx href="RandomNumberSeed">Random-Number Seed</aidx><br/>
 <aidx href="PDFSelection">PDF Selection</aidx><br/>
 <aidx href="MasterSwitches">Master Switches</aidx><br/>
@@ -46,6 +48,8 @@
 &nbsp;&nbsp;--&nbsp;&nbsp; 
 <aidx href="CompositenessProcesses">Compositeness</aidx><br/>
 &nbsp;&nbsp;--&nbsp;&nbsp; 
+<aidx href="HiddenValleyProcesses">Hidden Valleys</aidx><br/>
+&nbsp;&nbsp;--&nbsp;&nbsp; 
 <aidx href="ExtraDimensionalProcesses">Extra Dimensions</aidx><br/>
 <aidx href="ASecondHardProcess">A Second Hard Process</aidx><br/>
 <aidx href="PhaseSpaceCuts">Phase Space Cuts</aidx><br/>
@@ -57,16 +61,18 @@
 <aidx href="SpacelikeShowers">Spacelike Showers</aidx><br/>
 <aidx href="MultipleInteractions">Multiple Interactions</aidx><br/>
 <aidx href="BeamRemnants">Beam Remnants</aidx><br/>
+<aidx href="Diffraction">Diffraction</aidx><br/>
 <aidx href="Fragmentation">Fragmentation</aidx><br/>
 <aidx href="FlavourSelection">Flavour Selection</aidx><br/>
 <aidx href="ParticleDecays">Particle Decays</aidx><br/>
+<aidx href="RHadrons">R-hadrons</aidx><br/>
 <aidx href="BoseEinsteinEffects">Bose-Einstein Effects</aidx><br/>
 <aidx href="ParticleData">Particle Data</aidx><br/>
 <aidx href="ErrorChecks">Error Checks</aidx><br/>
 <aidx href="Tunes">Tunes</aidx><br/>
 </INDEXPHP>
 
-<h3>Study Output</h3>
+<h4>Study Output</h4>
 
 <INDEXPHP>
 <aidx href="FourVectors">Four-Vectors</aidx><br/>
@@ -74,36 +80,45 @@
 <aidx href="EventRecord">Event Record</aidx><br/>
 <aidx href="EventInformation">Event Information</aidx><br/>
 <aidx href="EventStatistics">Event Statistics</aidx><br/>
-<aidx href="Histograms">Histograms</aidx><br/>
 <aidx href="EventAnalysis">Event Analysis</aidx><br/>
-<aidx href="HepMCInterface">HepMC Interface</aidx><br/>
+<aidx href="Histograms">Histograms</aidx><br/>
+<aidx href="AdvancedUsage">Advanced Usage</aidx><br/>
 </INDEXPHP>
 
-<h3>Link to Other Programs</h3>
+<h4>Link to Other Programs</h4>
 
 <INDEXPHP>
 <aidx href="LesHouchesAccord">Les Houches Accord</aidx><br/>
-<aidx href="AccessPYTHIA6Processes">Access PYTHIA 6 Processes</aidx><br/>
+<aidx href="SUSYLesHouchesAccord">SUSY Les Houches Accord</aidx><br/>
+<aidx href="HepMCInterface">HepMC Interface</aidx><br/>
+<aidx href="ROOTusage">ROOT usage</aidx><br/>
+<aidx href="RIVETusage">RIVET usage</aidx><br/>
 <aidx href="SemiInternalProcesses">Semi-Internal Processes</aidx><br/>
 <aidx href="SemiInternalResonances">Semi-Internal Resonances</aidx><br/>
+<aidx href="MadGraph5Processes">MadGraph 5 Processes</aidx><br/>
 <aidx href="HadronLevelStandalone">Hadron-Level Standalone</aidx><br/>
-<aidx href="SUSYLesHouchesAccord">SUSY Les Houches Accord</aidx><br/>
-<aidx href="PartonDistributions">Parton Distributions</aidx><br/>
 <aidx href="ExternalDecays">External Decays</aidx><br/>
-<aidx href="UserHooks">User Hooks</aidx><br/>
+<aidx href="BeamShape">Beam Shape</aidx><br/>
+<aidx href="PartonDistributions">Parton Distributions</aidx><br/>
+<aidx href="JetFinders">Jet Finders</aidx><br/>
 <aidx href="RandomNumbers">Random Numbers</aidx><br/>
+<aidx href="UserHooks">User Hooks</aidx><br/>
 <aidx href="ImplementNewShowers">Implement New Showers</aidx><br/>
 </INDEXPHP>
 
-<h3>Reference Materiel</h3>
+<h4>Reference Materiel</h4>
 
+<aidx href="PYTHIA6TranslationTable">PYTHIA 6 Translation Table</aidx><br/>
+<aidx href="UpdateHistory">Update History</aidx><br/>
 <aidx href="Bibliography">Bibliography</aidx><br/>
-<aidx href="Glossary">Glossary</aidx>
+<aidx href="Glossary">Glossary</aidx><br/>
+<aidx href="Version">Version</aidx>
 
-<h3>Internal</h3>
+<h4>Separate documents</h4>
 
-<aidx href="Version">Version</aidx><br/>
+<a href="pythia8100.pdf" target="page">Brief Introduction</a><br/>
+<a href="worksheet.pdf" target="page">Worksheet</a> 
 
 </chapter>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->

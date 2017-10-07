@@ -1,50 +1,91 @@
 // main21.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
 // This is a simple test program. 
-// It illustrates how to feed in toy parton-level configurations.
+// It illustrates how to feed in a single particle 
+// or a toy parton-level configurations.
 
 #include "Pythia.h"
 using namespace Pythia8; 
 
-//**************************************************************************
+//==========================================================================
 
-// Simple method to do the filling of partons into the event record.
+// Single-particle gun. The particle must be a colour singlet.
+// Input: flavour, energy, direction (theta, phi).
+// If theta < 0 then random choice over solid angle. 
 
-void fillPartons(int type, double ee, Event& event) {
+void fillParticle(int id, double ee, double thetaIn, double phiIn, 
+		  Event& event, ParticleData& pdt, Rndm& rndm) {
 
   // Reset event record to allow for new event.
   event.reset();
 
-  // Information on a q qbar or g g system, to be hadronized.
-  if (type == 1 || type == 2) {
-    int id1 = (type == 1) ?  2 : 21;
-    int id2 = (type == 1) ? -2 : 21;
-    event.append( id1, 1, 101,   0, 0., 0.,  ee, ee); 
-    event.append( id2, 1,   0, 101, 0., 0., -ee, ee);
+  // Select particle mass; where relevant according to Breit-Wigner. 
+  double mm = pdt.mass(id);
+  double pp = sqrtpos(ee*ee - mm*mm);
+
+  // Angles as input or uniform in solid angle.
+  double cThe, sThe, phi;
+  if (thetaIn >= 0.) {
+    cThe = cos(thetaIn);
+    sThe = sin(thetaIn);
+    phi  = phiIn;
+  } else {
+    cThe = 2. * rndm.flat() - 1.;
+    sThe = sqrtpos(1. - cThe * cThe);
+    phi = 2. * M_PI * rndm.flat();
+  }
+
+  // Store the particle in the event record.
+  event.append( id, 1, 0, 0, pp * sThe * cos(phi), pp * sThe * sin(phi), 
+    pp * cThe, ee, mm); 
+}
+
+//==========================================================================
+
+// Simple method to do the filling of partons into the event record.
+
+void fillPartons(int type, double ee, Event& event, ParticleData& pdt, 
+  Rndm& rndm) {
+
+  // Reset event record to allow for new event.
+  event.reset();
+
+  // Information on a q qbar system, to be hadronized.
+  if (type == 1) {
+    int    id = 2;
+    double mm = pdt.m0(id);
+    double pp = sqrtpos(ee*ee - mm*mm);
+    event.append(  id, 23, 101,   0, 0., 0.,  pp, ee, mm); 
+    event.append( -id, 23,   0, 101, 0., 0., -pp, ee, mm);
+
+  // Information on a g g system, to be hadronized.
+  } else if (type == 2) {  
+    event.append( 21, 23, 101, 102, 0., 0.,  ee, ee); 
+    event.append( 21, 23, 102, 101, 0., 0., -ee, ee); 
 
   // Information on a g g g system, to be hadronized.
   } else if (type == 3) {  
-    event.append( 21, 1, 101, 102,        0., 0.,        ee, ee); 
-    event.append( 21, 1, 102, 103,  0.8 * ee, 0., -0.6 * ee, ee); 
-    event.append( 21, 1, 103, 101, -0.8 * ee, 0., -0.6 * ee, ee); 
+    event.append( 21, 23, 101, 102,        0., 0.,        ee, ee); 
+    event.append( 21, 23, 102, 103,  0.8 * ee, 0., -0.6 * ee, ee); 
+    event.append( 21, 23, 103, 101, -0.8 * ee, 0., -0.6 * ee, ee); 
 
   // Information on a q q q junction system, to be hadronized.
   } else if (type == 4 || type == 5) { 
 
     // Need a colour singlet mother parton to define junction origin.
-    event.append( 1000022, -1, 0, 0, 2, 4, 0, 0, 
+    event.append( 1000022, -21, 0, 0, 2, 4, 0, 0, 
                   0., 0., 1.01 * ee, 1.01 * ee); 
 
     // The three endpoint q q q; the minimal system. 
     double rt75 = sqrt(0.75);  
-    event.append( 2, 1, 1, 0, 0, 0, 101, 0,
+    event.append( 2, 23, 1, 0, 0, 0, 101, 0,
                           0., 0., 1.01 * ee, 1.01 * ee); 
-    event.append( 2, 1, 1, 0, 0, 0, 102, 0, 
+    event.append( 2, 23, 1, 0, 0, 0, 102, 0, 
                    rt75 * ee, 0., -0.5 * ee,        ee ); 
-    event.append( 1, 1, 1, 0, 0, 0, 103, 0,
+    event.append( 1, 23, 1, 0, 0, 0, 103, 0,
                   -rt75 * ee, 0., -0.5 * ee,        ee );
 
     // Define the qqq configuration as starting point for adding gluons.
@@ -60,12 +101,12 @@ void fillPartons(int type, double ee, Event& event) {
       
       // Add a few gluons (almost) at random. 
       for (int nglu = 0; nglu < 5; ++nglu) { 
-        int iq = 1 + int( 2.99999 * Rndm::flat() );
+        int iq = 1 + int( 2.99999 * rndm.flat() );
         double px, py, pz, e, prod; 
         do {
-          e =  ee * Rndm::flat();
-          double cThe = 2. * Rndm::flat() - 1.;
-          double phi = 2. * M_PI * Rndm::flat(); 
+          e =  ee * rndm.flat();
+          double cThe = 2. * rndm.flat() - 1.;
+          double phi = 2. * M_PI * rndm.flat(); 
           px = e * sqrt(1. - cThe*cThe) * cos(phi);
           py = e * sqrt(1. - cThe*cThe) * sin(phi);
           pz = e * cThe;
@@ -73,7 +114,7 @@ void fillPartons(int type, double ee, Event& event) {
             / e;
         } while (prod < cosThetaMin); 
         int colNew = 104 + nglu;
-        event.append( 21, 1, 1, 0, 0, 0, colNew, colNow[iq], 
+        event.append( 21, 23, 1, 0, 0, 0, colNew, colNow[iq], 
           px, py, pz, e, 0.);
         colNow[iq] = colNew;   
       }
@@ -99,45 +140,46 @@ void fillPartons(int type, double ee, Event& event) {
 
     // The four endpoint q q qbar qbar; the minimal system. 
     // Two additional fictitious partons to make up original beams.
-    event.append(  2,   1, 1, 0, 0, 0, 101, 0,
+    event.append(  2,   23, 1, 0, 0, 0, 101, 0,
                   ee * sThe, 0.,  ee * cThe, ee, 0.); 
-    event.append(  1,   1, 1, 0, 0, 0, 102, 0, 
+    event.append(  1,   23, 1, 0, 0, 0, 102, 0, 
                  -ee * sThe, 0.,  ee * cThe, ee, 0.); 
     event.append(  2, -21, 1, 0, 0, 0, 103, 0,     
                          0., 0.,  ee       , ee, 0.); 
-    event.append( -2,   1, 2, 0, 0, 0, 0, 104, 
+    event.append( -2,   23, 2, 0, 0, 0, 0, 104, 
                   ee * sThe, 0., -ee * cThe, ee, 0.); 
-    event.append( -1,   1, 2, 0, 0, 0, 0, 105, 
+    event.append( -1,   23, 2, 0, 0, 0, 0, 105, 
                  -ee * sThe, 0., -ee * cThe, ee, 0.); 
     event.append( -2, -21, 2, 0, 0, 0, 0, acol,    
                          0., 0., -ee       , ee, 0.); 
 
     // Add extra gluons on string between junctions.
     if (type == 7) {
-      event.append( 21, 1, 5, 8, 0, 0, 103, 106, 0., ee, 0., ee, 0.); 
+      event.append( 21, 23, 5, 8, 0, 0, 103, 106, 0., ee, 0., ee, 0.); 
     } else if (type == 8) {
-      event.append( 21, 1, 5, 8, 0, 0, 103, 108, 0., ee, 0., ee, 0.); 
-      event.append( 21, 1, 5, 8, 0, 0, 108, 106, 0.,-ee, 0., ee, 0.); 
+      event.append( 21, 23, 5, 8, 0, 0, 103, 108, 0., ee, 0., ee, 0.); 
+      event.append( 21, 23, 5, 8, 0, 0, 108, 106, 0.,-ee, 0., ee, 0.); 
     } else if (type == 9) {
-      event.append( 21, 1, 5, 8, 0, 0, 103, 107, 0., ee, 0., ee, 0.); 
-      event.append( 21, 1, 5, 8, 0, 0, 107, 108, ee, 0., 0., ee, 0.); 
-      event.append( 21, 1, 5, 8, 0, 0, 108, 106, 0.,-ee, 0., ee, 0.); 
+      event.append( 21, 23, 5, 8, 0, 0, 103, 107, 0., ee, 0., ee, 0.); 
+      event.append( 21, 23, 5, 8, 0, 0, 107, 108, ee, 0., 0., ee, 0.); 
+      event.append( 21, 23, 5, 8, 0, 0, 108, 106, 0.,-ee, 0., ee, 0.); 
     } else if (type == 10) {
-      event.append( 21, 1, 5, 8, 0, 0, 103, 107, 0., ee, 0., ee, 0.); 
-      event.append( 21, 1, 5, 8, 0, 0, 107, 108, ee, 0., 0., ee, 0.); 
-      event.append( 21, 1, 5, 8, 0, 0, 108, 109, 0.,-ee, 0., ee, 0.); 
-      event.append( 21, 1, 5, 8, 0, 0, 109, 106,-ee, 0., 0., ee, 0.); 
+      event.append( 21, 23, 5, 8, 0, 0, 103, 107, 0., ee, 0., ee, 0.); 
+      event.append( 21, 23, 5, 8, 0, 0, 107, 108, ee, 0., 0., ee, 0.); 
+      event.append( 21, 23, 5, 8, 0, 0, 108, 109, 0.,-ee, 0., ee, 0.); 
+      event.append( 21, 23, 5, 8, 0, 0, 109, 106,-ee, 0., 0., ee, 0.); 
     }
 
   // No more cases: done.
   } 
 }
 
-//**************************************************************************
+//==========================================================================
 
 int main() {
 
   // Pick kind of events to generate:
+  // 0 = single-particle gun.
   // 1 = q qbar.
   // 2 = g g. 
   // 3 = g g g.
@@ -145,7 +187,11 @@ int main() {
   // 5 = q q q junction topology with gluons on the strings.
   // 6 = q q qbar qbar dijunction topology, no gluons.
   // 7 - 10 : ditto, but with 1 - 4 gluons on string between junctions.
-  int type = 1;
+  int type = 0;
+
+  // Set particle species and energy for single-particle gun.
+  int    idGun = 15;
+  double eeGun = 20.; 
 
   // Set typical energy per parton.
   double ee = 20.0;
@@ -154,15 +200,16 @@ int main() {
   int nEvent = 10000;
   int nList = 3;
 
-  // Generator; shorthand for event.                           
+  // Generator; shorthand for event and particleData.                           
   Pythia pythia;  
-  Event& event = pythia.event;
+  Event& event      = pythia.event;
+  ParticleData& pdt = pythia.particleData;
 
   // Key requirement: switch off ProcessLevel, and thereby also PartonLevel.
   pythia.readString("ProcessLevel:all = off");
 
   // Optionally switch off decays.
-  pythia.readString("HadronLevel:Decay = off");
+  //pythia.readString("HadronLevel:Decay = off");
 
   // Provide printout of initial information.        
   pythia.settings.listChanged();
@@ -191,8 +238,11 @@ int main() {
     if (iEvent%(max(1,nEvent/20)) == 0) cout << " Now begin event " 
       << iEvent << endl;
 
+    // Set up single particle, with random direction in solid angle.
+    if (type == 0) fillParticle( idGun, eeGun, -1., 0., event, pdt, pythia.rndm);
+
     // Set up parton-level configuration.
-    fillPartons( type, ee, event); 
+    else fillPartons( type, ee, event, pdt, pythia.rndm); 
 
     // Generate events. Quit if failure.
     if (!pythia.next()) {
@@ -210,6 +260,7 @@ int main() {
     // Initialize statistics. 
     Vec4 pSum = - event[0].p();
     double chargeSum = 0.;
+    if (type == 0) chargeSum = -event[1].charge();
     if (type == 4 || type == 5) chargeSum = -1;
     int nFin = 0;  
     int n85 = 0;
@@ -223,7 +274,7 @@ int main() {
 
       // Find any unrecognized particle codes.
       int id = event[i].id();
-      if (id == 0 || !ParticleDataTable::isParticle(id))
+      if (id == 0 || !pdt.isParticle(id))
         cout << " Error! Unknown code id = " << id << "\n"; 
 
       // Find particles with E-p mismatch.

@@ -13,8 +13,9 @@ more massive <aloc href="ResonanceDecays">resonances</aloc>, such as top,
 <p/>
 The decay description essentially copies the one present in 
 PYTHIA since many years, but with some improvements, e.g. in the decay
-tables and the number of decay models available. Some issues may need 
-further polishing.
+tables and the number of decay models available. Recently a more
+sophisticated handling of <ei>tau</ei> decays has also been introduced.
+Some issues may need further polishing.
 
 <h3>Variables determining whether a particle decays</h3>
 
@@ -38,7 +39,7 @@ be on; tested by the <code>mayDecay()</code> method of <code>Event</code>
 When on, only particles with <ei>tau0 &lt; tau0Max</ei> are decayed.
 </flag>
 
-<parm name="ParticleDecays:tau0Max" default="1." min="0.">
+<parm name="ParticleDecays:tau0Max" default="10." min="0.">
 The above <ei>tau0Max</ei>, expressed in mm/c.
 </parm>
 
@@ -50,7 +51,7 @@ The above <ei>tau0Max</ei>, expressed in mm/c.
 When on, only particles with <ei>tau &lt; tauMax</ei> are decayed.
 </flag>
 
-<parm name="ParticleDecays:tauMax" default="1." min="0."> 
+<parm name="ParticleDecays:tauMax" default="10." min="0."> 
 The above <ei>tauMax</ei>, expressed in mm/c.<br/>
 In order for this and the subsequent tests to work, a <ei>tau</ei> 
 is selected and stored for each particle, whether in the end it
@@ -68,8 +69,8 @@ are decayed. There is assumed to be no magnetic field or other
 detector effects.
 </flag>
 
-<parm name="ParticleDecays:rMax" default="1." min="0.">
-The above <ei>rMax</ei>, expressed in mm/c.
+<parm name="ParticleDecays:rMax" default="10." min="0.">
+The above <ei>rMax</ei>, expressed in mm.
 </parm> 
 
 <p/>
@@ -83,12 +84,12 @@ are decayed. There is assumed to be no magnetic field or other
 detector effects.
 </flag>
 
-<parm name="ParticleDecays:xyMax" default="1." min="0.">
-The above <ei>xyMax</ei>, expressed in mm/c.
+<parm name="ParticleDecays:xyMax" default="10." min="0.">
+The above <ei>xyMax</ei>, expressed in mm.
 </parm> 
 
-<parm name="ParticleDecays:zMax" default="1." min="0.">
-The above <ei>zMax</ei>, expressed in mm/c.
+<parm name="ParticleDecays:zMax" default="10." min="0.">
+The above <ei>zMax</ei>, expressed in mm.
 </parm> 
 
 <h3>Mixing</h3>
@@ -107,6 +108,56 @@ The mixing parameter <ei>x_s = Delta(m_B_s^0)/Gamma_B_s^0</ei> in the
 <ei>B_s^0 - B_s^0bar</ei> system. (Delta-m from CDF hep-ex-0609040,
 Gamma from RPP2006.)
 </parm> 
+
+<h3>Tau decays</h3>
+
+A new machinery has been introduced to handle <ei>tau</ei> lepton decays, 
+with helicity information related to the production process and with
+the form of the hadronic current fitted to data. It is largely based
+on the corresponding Herwig++ implementation <ref>Gre07</ref>, with
+some input from Tauola <ref>Jad90</ref>. A complete writeup is 
+in preparation <ref>Ilt11</ref>.
+
+This new machinery is on by default, but it is possible to revert to 
+the simpler old decay handling, e.g. to study differences. Furthermore
+the spin tracing framework does not yet cover all possibilities; notably 
+it cannot handle taus coming from SUSY decay chains, so it makes sense 
+to switch off the new machinery in such instances, for speed reasons if 
+nothing else. In case only one tau mother species is undefined, the 
+polarization involved can be set by hand.
+
+<modepick name="ParticleDecays:sophisticatedTau" default="1" min="0" max="3">
+Choice of <ei>tau</ei> decay model.
+<option value="0">old decay model, with isotropic decays.</option>
+<option value="1">sophisticated decays where <ei>tau</ei> polarization is 
+calculated from the <ei>tau</ei> production mechanism.</option>
+<option value="2">sophisticated decays as above, but additionally <ei>tau</ei> 
+polarization is set to <code>ParticleDecaus:tauPolarization</code> for 
+<ei>tau</ei>s produced from <code>ParticleDecays:tauMother</code>.</option>
+<option value="3">sophisticated decays where <ei>tau</ei> polarization is set 
+to <code>ParticleDecaus:tauPolarization</code> for all <ei>tau</ei> decays.
+</option>
+<note>Note</note>: options <code>2</code> and <code>3</code>, 
+to force a specific <ei>tau</ei> polarization, only affect the decay 
+of the <ei>tau</ei>. The angular distribution of the <ei>tau</ei> itself, 
+given by its production, is not modified by these options. If you want, e.g., 
+a righthanded <ei>W</ei>, or a SUSY decay chain, the kinematics should 
+be handled by the corresponding cross section class(es), supplemented by 
+the resonance decay one(s). The options here could then still be used 
+to ensure the correct polarization at the <ei>tau</ei> decay stage.
+</modepick>
+
+<parm name="ParticleDecays:tauPolarization" default="0" min="-1." max="1.">
+Polarization of the <ei>tau</ei> when mode <ei>2</ei> or <ei>3</ei> of 
+<code>ParticleDecays:sophisticatedTau</code> is selected.
+</parm>
+
+<modeopen name="ParticleDecays:tauMother" default="0" min="0">
+Mother of the <ei>tau</ei> for forced polarization when mode <ei>2</ei> of 
+<code>ParticleDecays:sophisticatedTau</code> is selected. You should give the
+positive identity code; to the extent an antiparticle exists it will
+automatically obtain the inverse polarization.
+</modeopen>
 
 <h3>Other variables</h3>
 
@@ -145,8 +196,16 @@ new try is made, including a new multiplicity. These constraints
 imply that the actual average multiplicity does not quite agree with
 the formula above.
 
-<parm name="ParticleDecays:multIncrease" default="4.5" min="3." max="6.">
-The above <ei>multIncrease</ei> parameter.
+<parm name="ParticleDecays:multIncrease" default="4." min="2." max="6.">
+The above <ei>multIncrease</ei> parameter, except for 
+<code>meMode = 23</code>.
+</parm> 
+
+<parm name="ParticleDecays:multIncreaseWeak" default="2.5" min="1." max="4.">
+The above <ei>multIncrease</ei> parameter, specifically for 
+<code>meMode = 23</code>. Here the weak decay implies that only the 
+virtual W mass should contribute to the production of new particles, 
+rather than the full meson mass.
 </parm> 
 
 <parm name="ParticleDecays:multRefMass" default="0.7"min="0.2" max="2.0">
@@ -188,7 +247,7 @@ PYTHIA 6 ones, but several obsolete choices have been removed,
 a few new introduced, and most have been moved for better consistency. 
 Here is the list of currently allowed <code>meMode()</code> codes:
 <ul>
-<li>  0 : pure phace space of produced particles ("default");
+<li>  0 : pure phase space of produced particles ("default");
 input of partons is allowed and then the partonic content is 
 converted into the minimal number of hadrons (i.e. one per
 parton pair, but at least two particles in total)</li>
@@ -251,5 +310,5 @@ multiplicity than the simple string assumed for 82, see the
 
 </chapter>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
 

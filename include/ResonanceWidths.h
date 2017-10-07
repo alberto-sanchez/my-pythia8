@@ -1,5 +1,5 @@
 // ResonanceWidths.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -11,6 +11,7 @@
 #define Pythia8_ResonanceWidths_H
 
 #include "Basics.h"
+#include "Info.h"
 #include "ParticleData.h"
 #include "PythiaStdlib.h"
 #include "Settings.h"
@@ -18,16 +19,15 @@
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // Forward references to ParticleData and StandardModel classes.
 class DecayChannel;
-class DecayTable;
+class ParticleData;
 class ParticleDataEntry;
-class AlphaStrong;
-class AlphaEM;
-  
-//**************************************************************************
+class Couplings;
+
+//==========================================================================
 
 // The ResonanceWidths is the base class. Also used for generic resonaces.
 
@@ -38,21 +38,21 @@ public:
   // Destructor.
   virtual ~ResonanceWidths() {}
 
-  // Initialize static data members in base class.
-  static void initStatic();
-
   // Set up standard properties.
-  bool initBasic(int idResIn);
+  void initBasic(int idResIn, bool isGenericIn = false) {
+    idRes = idResIn; isGeneric = isGenericIn;}
  
   // Calculate and store partial and total widths at the nominal mass. 
-  void init();
+  virtual bool init(Info* infoPtrIn, Settings* settingsPtrIn,
+    ParticleData* particleDataPtrIn, Couplings* couplingsPtrIn);
 
   // Return identity of particle species.
   int id() const {return idRes;}
  
   // Calculate the total/open width for given mass, charge and instate.
-  double width(int idSgn, double mHatIn, int idInFlavIn = 0, 
-    bool openOnly = false, bool setBR = false); 
+  double width(int idSgn, double mHatIn, int idInFlavIn = 0,  
+    bool openOnly = false, bool setBR = false, int idOutFlav1 = 0, 
+    int idOutFlav2 = 0); 
 
   // Special case to calculate open final-state width.
   double widthOpen(int idSgn, double mHatIn, int idIn = 0) {
@@ -68,40 +68,46 @@ public:
   // Return forced rescaling factor of resonance width.
   double widthRescaleFactor() {return forceFactor;} 
 
-  // For Higgs only: return pretabulated width for particular channel.
-  // Usage: widthChan( mHat, idAbs1, idAbs2).
-  virtual double widthChan(double, int = 0, int = 0) {return 1.;} 
+  // Special case to calculate one final-state width.
+  // Currently only used for Higgs -> qqbar, g g or gamma gamma. 
+  double widthChan(double mHatIn, int idOutFlav1, int idOutFlav2) {
+    return width( 1, mHatIn, 0, false, false, idOutFlav1, idOutFlav2);}  
 
 protected:
 
   // Constructor.
   ResonanceWidths() {}
 
-  // Static initialization data, normally only set once.
-  static int    alphaSorder, alphaEMorder;
-  static double alphaSvalue, minWidth, minThreshold;
-
-  // Static alphaStrong and alphaElectromagnetic calculation.
-  static AlphaStrong alphaS;
-  static AlphaEM     alphaEM;
-
   // Constants: could only be changed in the code itself.
   static const int    NPOINT;
   static const double MASSMARGIN;
 
-  // Pointer to properties of the particle species.
-  ParticleDataEntry* particlePtr;
-
-  // Particle properties always locally present.
+  // Particle properties always present.
   int    idRes, hasAntiRes;
-  bool   doForceWidth;
-  double mRes, GammaRes, m2Res, GamMRat, openPos, openNeg, forceFactor;
+  bool   doForceWidth, isGeneric;
+  double minWidth, minThreshold, mRes, GammaRes, m2Res, GamMRat, 
+         openPos, openNeg, forceFactor;
 
   // Properties for currently studied decay channel(s).
   int    iChannel, onMode, meMode, mult, id1, id2, id3, id1Abs, 
          id2Abs, id3Abs, idInFlav;
   double widNow, mHat, mf1, mf2, mf3, mr1, mr2, mr3, ps, kinFac,
          alpEM, alpS, colQ, preFac; 
+
+  // Pointer to properties of the particle species.
+  ParticleDataEntry* particlePtr;
+
+  // Pointer to various information on the generation.
+  Info*         infoPtr;
+
+  // Pointer to the settings database.
+  Settings*     settingsPtr;
+
+  // Pointer to the particle data table.
+  ParticleData* particleDataPtr;
+
+  // Pointers to Standard Model and SUSY couplings.
+  Couplings*    couplingsPtr;
  
   // Initialize constants.
   virtual void initConstants() {} 
@@ -111,18 +117,18 @@ protected:
   virtual void calcPreFac(bool = false) {}
 
   // Calculate width for currently considered channel.
-  // Optional argument calledFromInit only used for Z0 and Higgses.
+  // Optional argument calledFromInit only used for Z0.
   virtual void calcWidth(bool = false) {}
 
   // Simple routines for matrix-element integration over Breit-Wigners.
-  double numInt1BW(double mHat, double m1, double Gamma1, double mMin1, 
+  double numInt1BW(double mHatIn, double m1, double Gamma1, double mMin1, 
     double m2, int psMode = 1);
-  double numInt2BW(double mHat, double m1, double Gamma1, double mMin1, 
+  double numInt2BW(double mHatIn, double m1, double Gamma1, double mMin1, 
     double m2, double Gamma2, double mMin2, int psMode = 1);
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceGeneric class handles a generic resonance.
 // Only needs a constructor; for the rest uses defaults in base class. 
@@ -132,11 +138,11 @@ class ResonanceGeneric : public ResonanceWidths {
 public:
 
   // Constructor. 
-  ResonanceGeneric(int idResIn) {initBasic(idResIn);} 
+  ResonanceGeneric(int idResIn) {initBasic(idResIn, true);} 
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceGmZ class handles the gamma*/Z0 resonance.
 
@@ -164,7 +170,7 @@ private:
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceW class handles the W+- resonance.
 
@@ -191,7 +197,7 @@ private:
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceTop class handles the top/antitop resonance.
 
@@ -218,7 +224,7 @@ private:
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceFour class handles fourth-generation resonances.
 
@@ -245,7 +251,7 @@ private:
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceH class handles the SM and BSM Higgs resonance.
 // higgsType = 0 : SM H; = 1: h^0/H_1; = 2 : H^0/H_2; = 3 : A^0/A_3.
@@ -258,8 +264,6 @@ public:
   ResonanceH(int higgsTypeIn, int idResIn) : higgsType(higgsTypeIn)
     {initBasic(idResIn);} 
 
-  virtual double widthChan(double mHatIn, int id1Abs = 0, int = 0); 
-
 private: 
 
   // Constants: could only be changed in the code itself.
@@ -269,11 +273,11 @@ private:
   int    higgsType;
 
   // Locally stored properties and couplings.
-  bool   useCubicWidth; 
-  double sin2tW, cos2tW, mZ, mW, mHchg, GammaZ, GammaW, GammaT, 
+  bool   useCubicWidth, useRunLoopMass; 
+  double sin2tW, cos2tW, mT, mZ, mW, mHchg, GammaT, GammaZ, GammaW,
          coup2d, coup2u, coup2l, coup2Z, coup2W, coup2Hchg, coup2H1H1, 
          coup2A3A3, coup2H1Z, coup2A3Z, coup2A3H1, coup2HchgW,
-         widTable[25];
+         kinFacT[101], kinFacZ[101], kinFacW[101];
  
   // Initialize constants.
   virtual void initConstants(); 
@@ -282,7 +286,7 @@ private:
   virtual void calcPreFac(bool = false);
 
   // Caclulate width for currently considered channel.
-  virtual void calcWidth(bool calledFromInit = false);
+  virtual void calcWidth(bool = false);
 
   // Sum up loop contributions in Higgs -> g + g.
   double eta2gg();
@@ -295,7 +299,7 @@ private:
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceHchg class handles the H+- resonance.
 
@@ -323,7 +327,7 @@ private:
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceZprime class handles the gamma*/Z0 /Z'^0 resonance.
 
@@ -353,7 +357,7 @@ private:
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceWprime class handles the W'+- resonance.
 
@@ -380,7 +384,7 @@ private:
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceRhorizontal class handles the R^0 resonance.
 
@@ -407,7 +411,7 @@ private:
 
 };
    
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceExcited class handles excited-fermion resonances.
 
@@ -434,7 +438,7 @@ private:
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceGraviton class handles the excited Graviton resonance.
 
@@ -448,8 +452,12 @@ public:
 private: 
 
   // Locally stored properties and couplings.
+  bool   m_smbulk;
   double kappaMG;
  
+  // Couplings between graviton and SM (map from particle id to coupling).
+  double m_coupling[26];
+
   // Initialize constants.
   virtual void initConstants(); 
  
@@ -461,7 +469,43 @@ private:
 
 };
 
-//**************************************************************************
+//==========================================================================
+
+// The ResonanceKKgluon class handles the g^*/KK-gluon^* resonance.
+
+class ResonanceKKgluon : public ResonanceWidths {
+
+public:
+
+  // Constructor. 
+  ResonanceKKgluon(int idResIn) {initBasic(idResIn);} 
+ 
+private: 
+
+  // Locally stored properties.
+  double normSM, normInt, normKK;
+
+  // Couplings between kk gluon and SM (indexed by particle id).
+  // Helicity dependent couplings. Use vector/axial-vector
+  // couplings internally, gv/ga = 0.5 * (gL +/- gR).
+  double m_gv[10], m_ga[10];
+
+  // Interference parameter.
+  int interfMode;
+
+  // Initialize constants.
+  virtual void initConstants(); 
+ 
+  // Calculate various common prefactors for the current mass.
+  virtual void calcPreFac(bool calledFromInit = false);
+
+  // Caclulate width for currently considered channel.
+  virtual void calcWidth(bool calledFromInit = false);
+
+};
+
+
+//==========================================================================
 
 // The ResonanceLeptoquark class handles the LQ/LQbar resonance.
 
@@ -488,7 +532,7 @@ private:
 
 };
 
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceNuRight class handles righthanded Majorana neutrinos.
 
@@ -515,7 +559,7 @@ private:
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceZRight class handles the Z_R^0 resonance.
 
@@ -542,7 +586,7 @@ private:
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceWRight class handles the W_R+- resonance.
 
@@ -569,7 +613,7 @@ private:
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceHchgchgLeft class handles the H++/H-- (left) resonance.
 
@@ -596,7 +640,7 @@ private:
 
 };
    
-//**************************************************************************
+//==========================================================================
 
 // The ResonanceHchgchgRight class handles the H++/H-- (right) resonance.
 
@@ -624,7 +668,7 @@ private:
 
 };
   
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

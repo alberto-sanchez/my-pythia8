@@ -1,5 +1,5 @@
 // FragmentationFlavZpT.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -18,8 +18,7 @@
 
 namespace Pythia8 {
 
-
-//**************************************************************************
+//==========================================================================
 
 // The FlavContainer class is a simple container for flavour, 
 // including the extra properties needed for popcorn baryon handling.
@@ -54,15 +53,18 @@ public:
     id = -flav.id; rank = flav.rank; nPop = flav.nPop; idPop = flav.idPop;
     idVtx = flav.idVtx; } return *this; }
 
+  // Check whether is diquark.
+  bool isDiquark() {int idAbs = abs(id); 
+    return (idAbs > 1000 && idAbs < 10000 && (idAbs/10)%10 == 0);}
+
   // Stored properties.
   int id, rank, nPop, idPop, idVtx;
   
 };
 
-//**************************************************************************
+//==========================================================================
 
 // The StringFlav class is used to select quark and hadron flavours.
-// Purely static, since current values are stored in the calling routines. 
 
 class StringFlav {
 
@@ -71,45 +73,53 @@ public:
   // Constructor. 
   StringFlav() {}
 
-  // Initialize static data members.
-  static void initStatic();
+  // Destructor. 
+  virtual ~StringFlav() {}
+
+  // Initialize data members.
+  virtual void init(Settings& settings, Rndm* rndmPtrIn);
 
   // Pick a light d, u or s quark according to fixed ratios.
-  static int pickLightQ() { double rndmFlav = probQandS * Rndm::flat();
+  int pickLightQ() { double rndmFlav = probQandS * rndmPtr->flat();
     if (rndmFlav < 1.) return 1; if (rndmFlav < 2.) return 2; return 3; }
 
   // Pick a new flavour (including diquarks) given an incoming one.
-  static FlavContainer pick(FlavContainer& flavOld);
+  virtual FlavContainer pick(FlavContainer& flavOld);
 
   // Combine two flavours (including diquarks) to produce a hadron.
-  static int combine(FlavContainer& flav1, FlavContainer& flav2);
+  virtual int combine(FlavContainer& flav1, FlavContainer& flav2);
 
   // Assign popcorn quark inside an original (= rank 0) diquark.
-  static void assignPopQ(FlavContainer& flav);
+  void assignPopQ(FlavContainer& flav);
 
   // Combine two quarks to produce a diquark.
-  static int makeDiquark(int id1, int id2, int idHad = 0);
+  int makeDiquark(int id1, int id2, int idHad = 0);
+
+protected:
+
+  // Pointer to the random number generator.
+  Rndm*  rndmPtr;
 
 private: 
 
-  // Static initialization data, to be read from Settings.
-  static double probQQtoQ, probStoUD, probSQtoQQ, probQQ1toQQ0, 
-                probQandQQ, probQandS, probQandSinQQ, probQQ1corr, 
-                probQQ1corrInv, probQQ1norm, mesonRate[4][6], 
-                mesonRateSum[4], mesonMix1[2][6], mesonMix2[2][6], 
-                etaSup, etaPrimeSup, decupletSup, baryonCGOct[6], 
-                baryonCGDec[6], baryonCGSum[6], baryonCGMax[6],
-                popcornRate, popcornSpair, popcornSmeson, scbBM[3], 
-                popFrac, popS[3], dWT[3][7], lightLeadingBSup, 
-                heavyLeadingBSup;
-  static bool   suppressLeadingB;
-  static int    mesonMultipletCode[6];
+  // Constants: could only be changed in the code itself.
+  static const int    mesonMultipletCode[6];
+  static const double baryonCGOct[6], baryonCGDec[6]; 
+
+  // Initialization data, to be read from Settings.
+  bool   suppressLeadingB;
+  double probQQtoQ, probStoUD, probSQtoQQ, probQQ1toQQ0, probQandQQ, 
+         probQandS, probQandSinQQ, probQQ1corr, probQQ1corrInv, probQQ1norm, 
+         mesonRate[4][6], mesonRateSum[4], mesonMix1[2][6], mesonMix2[2][6], 
+         etaSup, etaPrimeSup, decupletSup, baryonCGSum[6], baryonCGMax[6], 
+         popcornRate, popcornSpair, popcornSmeson, scbBM[3], popFrac, 
+         popS[3], dWT[3][7], lightLeadingBSup, heavyLeadingBSup;
+
 };
  
-//**************************************************************************
+//==========================================================================
 
 // The StringZ class is used to sample the fragmentation function f(z).
-// Purely static, since current values are stored in the calling routines. 
 
 class StringZ {
 
@@ -118,32 +128,46 @@ public:
   // Constructor. 
   StringZ() {}
 
-  // Initialize static data members.
-  static void initStatic();
+  // Destructor. 
+  virtual ~StringZ() {}
+
+  // Initialize data members.
+  virtual void init(Settings& settings, ParticleData& particleData, 
+    Rndm* rndmPtrIn);
   
   // Fragmentation function: top-level to determine parameters.
-  static double zFrag( int idOld, int idNew = 0, double mT2 = 1.);
+  virtual double zFrag( int idOld, int idNew = 0, double mT2 = 1.);
 
-private: 
+  // Parameters for stopping in the middle; overloaded for Hidden Valley.
+  virtual double stopMass() {return stopM;} 
+  virtual double stopNewFlav() {return stopNF;} 
+  virtual double stopSmear() {return stopS;} 
 
-  // Static initialization data, to be read from Settings.
-  static bool   usePetersonC, usePetersonB, usePetersonH;
-  static double mc2, mb2, aLund, bLund, aExtraDiquark, rFactC, rFactB, 
-                rFactH, epsilonC, epsilonB, epsilonH;
+  // b fragmentation parameter needed to weight final two solutions.
+  virtual double bAreaLund() {return bLund;}
+
+protected: 
 
   // Constants: could only be changed in the code itself.
-    static const double CFROMUNITY, AFROMZERO, AFROMC, EXPMAX;
+  static const double CFROMUNITY, AFROMZERO, AFROMC, EXPMAX;
+
+  // Initialization data, to be read from Settings.
+  bool   usePetersonC, usePetersonB, usePetersonH;
+  double mc2, mb2, aLund, bLund, aExtraDiquark, rFactC, rFactB, rFactH, 
+         epsilonC, epsilonB, epsilonH, stopM, stopNF, stopS;
 
   // Fragmentation function: select z according to provided parameters.
-  static double zLund( double a, double b, double c = 1.);
-  static double zPeterson( double epsilon);
+  double zLund( double a, double b, double c = 1.);
+  double zPeterson( double epsilon);
+
+  // Pointer to the random number generator.
+  Rndm*  rndmPtr;
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // The StringPT class is used to select select transverse momenta.
-// Purely static, since current values are stored in the calling routines. 
 
 class StringPT {
 
@@ -152,24 +176,33 @@ public:
   // Constructor. 
   StringPT() {}
 
-  // Initialize static data members.
-  static void initStatic();
+  // Destructor. 
+  virtual ~StringPT() {}
 
-  // Return px and py separately, but really same routine.
-  static double px() {return pxy();}
-  static double py() {return pxy();}
+  // Initialize data members.
+  virtual void init(Settings& settings, ParticleData& particleData, 
+    Rndm* rndmPtrIn);
 
-private: 
+  // Return px and py as a pair in the same call.
+  pair<double, double>  pxy();
 
-  // Static initialization data, to be read from Settings.
-  static double sigmaQ, enhancedFraction, enhancedWidth;
+  // Gaussian suppression of given pT2; used in MiniStringFragmentation.
+  double suppressPT2(double pT2) { return exp( -pT2 / sigma2Had); }  
 
-  // pT fragmentation spectrum.
-  static double pxy();
+protected: 
+
+  // Constants: could only be changed in the code itself.
+  static const double SIGMAMIN;
+
+  // Initialization data, to be read from Settings.
+  double sigmaQ, enhancedFraction, enhancedWidth, sigma2Had;
+
+  // Pointer to the random number generator.
+  Rndm*  rndmPtr;
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

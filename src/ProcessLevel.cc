@@ -1,5 +1,5 @@
 // ProcessLevel.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -9,11 +9,19 @@
 
 namespace Pythia8 {
  
-//**************************************************************************
+//==========================================================================
 
 // The ProcessLevel class.
 
-//*********
+//--------------------------------------------------------------------------
+
+// Constants: could be changed here if desired, but normally should not.
+// These are of technical nature, as described for each.
+
+// Allow a few failures in final construction of events.
+const int ProcessLevel::MAXLOOP = 5;
+
+//--------------------------------------------------------------------------
   
 // Destructor.
 
@@ -29,69 +37,125 @@ ProcessLevel::~ProcessLevel() {
 
 } 
 
-//*********
+//--------------------------------------------------------------------------
 
 // Main routine to initialize generation process.
 
-bool ProcessLevel::init( Info* infoPtrIn, BeamParticle* beamAPtrIn, 
-  BeamParticle* beamBPtrIn, bool doLHA, UserHooks* userHooksPtrIn,
-  vector<SigmaProcess*>& sigmaPtrs, ostream& os) {
+bool ProcessLevel::init( Info* infoPtrIn, Settings& settings, 
+  ParticleData* particleDataPtrIn, Rndm* rndmPtrIn, 
+  BeamParticle* beamAPtrIn, BeamParticle* beamBPtrIn, Couplings* couplingsPtrIn,
+  SigmaTotal* sigmaTotPtrIn, bool doLHA, SusyLesHouches* slhaPtrIn, 
+  UserHooks* userHooksPtrIn, vector<SigmaProcess*>& sigmaPtrs, ostream& os) {
 
   // Store input pointers for future use. 
-  infoPtr       = infoPtrIn;
-  beamAPtr      = beamAPtrIn;
-  beamBPtr      = beamBPtrIn;
-  userHooksPtr  = userHooksPtrIn;
+  infoPtr         = infoPtrIn;
+  particleDataPtr = particleDataPtrIn;
+  rndmPtr         = rndmPtrIn;
+  beamAPtr        = beamAPtrIn;
+  beamBPtr        = beamBPtrIn;
+  couplingsPtr    = couplingsPtrIn;
+  sigmaTotPtr     = sigmaTotPtrIn;
+  userHooksPtr    = userHooksPtrIn;
+  slhaPtr         = slhaPtrIn;
 
-  // Initialize static data members in other HadronLevel classes.
-  SigmaProcess::initStatic(); 
-  PhaseSpace::initStatic();
-
-  // Send static pointers to ProcessContainer.
-  ProcessContainer::initStatic( infoPtr, &resonanceDecays);
-
-  // Options to allow second hard interaction and resonance decays.
-  doSecondHard  = Settings::flag("SecondHard:generate");
-  doResDecays   = Settings::flag("ProcessLevel:resonanceDecays");
+  // Send on some input pointers.
+  resonanceDecays.init( infoPtr, particleDataPtr, rndmPtr);
 
   // Set up SigmaTotal. Store sigma_nondiffractive for future use.
+  sigmaTotPtr->init( infoPtr, settings, particleDataPtr);
   int    idA = infoPtr->idA();
   int    idB = infoPtr->idB();
   double eCM = infoPtr->eCM();
-  sigmaTot.init( idA, idB, eCM);
-  sigmaND = sigmaTot.sigmaND();
+  sigmaTotPtr->calc( idA, idB, eCM);
+  sigmaND = sigmaTotPtr->sigmaND();
 
-  // Send beam and cross section info to processes and phase space.
-  SigmaProcess::setStaticPtrs( beamAPtr, beamBPtr, &sigmaTot);
-  PhaseSpace::setStaticPtrs( beamAPtr, beamBPtr, &sigmaTot, userHooksPtr);
+  // Options to allow second hard interaction and resonance decays.
+  doSecondHard  = settings.flag("SecondHard:generate");
+  doSameCuts    = settings.flag("PhaseSpace:sameForSecond");
+  doResDecays   = settings.flag("ProcessLevel:resonanceDecays");
+  startColTag   = settings.mode("Event:startColTag");
+
+  // Second interaction not to be combined with biased phase space.
+  if (doSecondHard && userHooksPtr != 0
+  && userHooksPtr->canBiasSelection()) {
+    infoPtr->errorMsg("Error in ProcessLevel::init: "
+      "cannot combine second interaction with biased phase space"); 
+    return false;
+  }
+
+  // Mass and pT cuts for two hard processes.
+  mHatMin1      = settings.parm("PhaseSpace:mHatMin");
+  mHatMax1      = settings.parm("PhaseSpace:mHatMax");
+  if (mHatMax1 < mHatMin1) mHatMax1 = eCM;
+  pTHatMin1     = settings.parm("PhaseSpace:pTHatMin");
+  pTHatMax1     = settings.parm("PhaseSpace:pTHatMax");
+  if (pTHatMax1 < pTHatMin1) pTHatMax1 = eCM;
+  mHatMin2      = settings.parm("PhaseSpace:mHatMinSecond");
+  mHatMax2      = settings.parm("PhaseSpace:mHatMaxSecond");
+  if (mHatMax2 < mHatMin2) mHatMax2 = eCM;
+  pTHatMin2     = settings.parm("PhaseSpace:pTHatMinSecond");
+  pTHatMax2     = settings.parm("PhaseSpace:pTHatMaxSecond");
+  if (pTHatMax2 < pTHatMin2) pTHatMax2 = eCM;
+  
+  // Check whether mass and pT ranges agree or overlap.
+  cutsAgree     = doSameCuts;
+  if (mHatMin2 == mHatMin1 && mHatMax2 == mHatMax1 && pTHatMin2 == pTHatMin1 
+      && pTHatMax2 == pTHatMax1) cutsAgree = true; 
+  cutsOverlap   = cutsAgree; 
+  if (!cutsAgree) {
+    bool mHatOverlap = (max( mHatMin1, mHatMin2)
+                      < min( mHatMax1, mHatMax2));
+    bool pTHatOverlap = (max( pTHatMin1, pTHatMin2) 
+                       < min( pTHatMax1, pTHatMax2));
+    if (mHatOverlap && pTHatOverlap) cutsOverlap = true;
+  }
 
   // Set up containers for all the internal hard processes.
   SetupContainers setupContainers;
-  setupContainers.init(containerPtrs);
+  setupContainers.init(containerPtrs, settings, particleDataPtr, couplingsPtr);
 
   // Append containers for external hard processes, if any.
   if (sigmaPtrs.size() > 0) {
     for (int iSig = 0; iSig < int(sigmaPtrs.size()); ++iSig)
-      containerPtrs.push_back( new ProcessContainer(sigmaPtrs[iSig]) );
+      containerPtrs.push_back( new ProcessContainer(sigmaPtrs[iSig],
+      true) );
   } 
 
   // Append single container for Les Houches processes, if any.
   if (doLHA) {
     SigmaProcess* sigmaPtr = new SigmaLHAProcess();
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
+
+    // Store location of this container, and send in LHA pointer.
+    iLHACont = containerPtrs.size() - 1;
+    containerPtrs[iLHACont]->setLHAPtr(lhaUpPtr);
   }     
 
   // If no processes found then refuse to do anything.
   if ( int(containerPtrs.size()) == 0) {
-    ErrorMsg::message("Error in ProcessLevel::init: "
+    infoPtr->errorMsg("Error in ProcessLevel::init: "
       "no process switched on"); 
+    return false;
+  }
+
+  // Check that SUSY couplings were indeed initialized where necessary.
+  bool hasSUSY = false;
+  for (int i = 0; i < int(containerPtrs.size()); ++i)
+    if (containerPtrs[i]->isSUSY()) hasSUSY = true;
+
+  //If SUSY processes requested but no SUSY couplings present
+  if(hasSUSY && !couplingsPtr->isSUSY) {
+    infoPtr->errorMsg("Error in ProcessLevel::init: "
+      "SUSY process switched on but no SUSY couplings found"); 
     return false;
   }
 
   // Initialize each process. 
   int numberOn = 0;
   for (int i = 0; i < int(containerPtrs.size()); ++i)
-    if (containerPtrs[i]->init()) ++numberOn;
+    if (containerPtrs[i]->init(true, infoPtr, settings, particleDataPtr, 
+      rndmPtr, beamAPtr, beamBPtr, couplingsPtr, sigmaTotPtr,  
+      &resonanceDecays, slhaPtr, userHooksPtr)) ++numberOn;
 
   // Sum maxima for Monte Carlo choice.
   sigmaMaxSum = 0.;
@@ -101,22 +165,24 @@ bool ProcessLevel::init( Info* infoPtrIn, BeamParticle* beamAPtrIn,
   // Option to pick a second hard interaction: repeat as above.
   int number2On = 0;
   if (doSecondHard) {
-    setupContainers.init2(container2Ptrs);
+    setupContainers.init2(container2Ptrs, settings);
     if ( int(container2Ptrs.size()) == 0) {
-      ErrorMsg::message("Error in ProcessLevel::init: "
+      infoPtr->errorMsg("Error in ProcessLevel::init: "
         "no second hard process switched on"); 
       return false;
     }
     for (int i2 = 0; i2 < int(container2Ptrs.size()); ++i2)
-      if (container2Ptrs[i2]->init()) ++number2On;
+      if (container2Ptrs[i2]->init(false, infoPtr, settings, particleDataPtr, 
+        rndmPtr, beamAPtr, beamBPtr, couplingsPtr, sigmaTotPtr, 
+        &resonanceDecays, slhaPtr, userHooksPtr)) ++number2On;
     sigma2MaxSum = 0.;
     for (int i2 = 0; i2 < int(container2Ptrs.size()); ++i2)
       sigma2MaxSum += container2Ptrs[i2]->sigmaMax();
   }
 
   // Construct string with incoming beams and for cm energy.
-  string collision = "We collide " + ParticleDataTable::name(idA)
-    + " with " + ParticleDataTable::name(idB) + " at a CM energy of "; 
+  string collision = "We collide " + particleDataPtr->name(idA)
+    + " with " + particleDataPtr->name(idB) + " at a CM energy of "; 
   string pad( 51 - collision.length(), ' ');
 
   // Print initialization information: header.
@@ -174,12 +240,12 @@ bool ProcessLevel::init( Info* infoPtrIn, BeamParticle* beamAPtrIn,
 
   // If sum of maxima vanishes then refuse to do anything.
   if ( numberOn == 0  || sigmaMaxSum <= 0.) {
-    ErrorMsg::message("Error in ProcessLevel::init: "
+    infoPtr->errorMsg("Error in ProcessLevel::init: "
       "all processes have vanishing cross sections"); 
     return false;
   }
   if ( doSecondHard && (number2On == 0  || sigma2MaxSum <= 0.) ) {
-    ErrorMsg::message("Error in ProcessLevel::init: "
+    infoPtr->errorMsg("Error in ProcessLevel::init: "
       "all second hard processes have vanishing cross sections"); 
     return false;
   }
@@ -193,6 +259,7 @@ bool ProcessLevel::init( Info* infoPtrIn, BeamParticle* beamAPtrIn,
     // Check for each first process if matched in second.
     for (int i = 0; i < int(containerPtrs.size()); ++i) {
       foundMatch = false;
+      if (cutsOverlap)
       for (int i2 = 0; i2 < int(container2Ptrs.size()); ++i2) 
         if (container2Ptrs[i2]->code() == containerPtrs[i]->code()) 
           foundMatch = true;
@@ -204,6 +271,7 @@ bool ProcessLevel::init( Info* infoPtrIn, BeamParticle* beamAPtrIn,
     // Check for each second process if matched in first.
     for (int i2 = 0; i2 < int(container2Ptrs.size()); ++i2) {
       foundMatch = false;
+      if (cutsOverlap)
       for (int i = 0; i < int(containerPtrs.size()); ++i) 
         if (containerPtrs[i]->code() == container2Ptrs[i2]->code()) 
           foundMatch = true;
@@ -212,6 +280,9 @@ bool ProcessLevel::init( Info* infoPtrIn, BeamParticle* beamAPtrIn,
       if ( foundMatch) noneHardSame = false;   
     }
   }
+
+  // Concluding classification, including cuts.
+  if (!cutsAgree) allHardSame = false;
   someHardSame = !allHardSame && !noneHardSame;
 
   // Reset counters for average impact-parameter enhancement.
@@ -227,7 +298,7 @@ bool ProcessLevel::init( Info* infoPtrIn, BeamParticle* beamAPtrIn,
   return true;
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Main routine to generate the hard process.
 
@@ -243,7 +314,7 @@ bool ProcessLevel::next( Event& process) {
   return physical;
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Accumulate and update statistics (after possible user veto).
   
@@ -259,6 +330,7 @@ void ProcessLevel::accumulate() {
   double sigmaSum   = 0.;
   double delta2Sum  = 0.;
   double sigSelSum  = 0.;
+  double weightSum  = 0.;
   for (int i = 0; i < int(containerPtrs.size()); ++i) 
   if (containerPtrs[i]->sigmaMax() != 0.) {
     nTrySum        += containerPtrs[i]->nTried();
@@ -267,6 +339,7 @@ void ProcessLevel::accumulate() {
     sigmaSum       += containerPtrs[i]->sigmaMC();
     delta2Sum      += pow2(containerPtrs[i]->deltaMC()); 
     sigSelSum      += containerPtrs[i]->sigmaSelMC();
+    weightSum      += containerPtrs[i]->weightSum();
   }
 
   // For Les Houches events find subprocess type and update counter.
@@ -294,7 +367,8 @@ void ProcessLevel::accumulate() {
   // Normally only one hard interaction. Then store info and done.
   if (!doSecondHard) {
     double deltaSum = sqrtpos(delta2Sum);
-    infoPtr->setSigma( nTrySum, nSelSum, nAccSum, sigmaSum, deltaSum); 
+    infoPtr->setSigma( nTrySum, nSelSum, nAccSum, sigmaSum, deltaSum, 
+      weightSum); 
     return;
   }
 
@@ -329,19 +403,20 @@ void ProcessLevel::accumulate() {
   double deltaComb  = sqrtpos(2. / nAccSum + impactErr2) * sigmaComb;
 
   // Store info and done.
-  infoPtr->setSigma( nTrySum, nSelSum, nAccSum, sigmaComb, deltaComb); 
+  infoPtr->setSigma( nTrySum, nSelSum, nAccSum, sigmaComb, deltaComb, 
+    weightSum); 
  
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Print statistics on cross sections and number of events.
 
-void ProcessLevel::statistics(ostream& os) {
+void ProcessLevel::statistics(bool reset, ostream& os) {
 
   // Special processing if two hard interactions selected.
   if (doSecondHard) { 
-    statistics2(os);
+    statistics2(reset, os);
     return;
   } 
     
@@ -393,10 +468,10 @@ void ProcessLevel::statistics(ostream& os) {
 
     // Print subdivision by user code for Les Houches process.
     if (containerPtrs[i]->code() == 9999) 
-    for (int i = 0; i < int(codeLHA.size()); ++i)
+    for (int j = 0; j < int(codeLHA.size()); ++j)
       os << " |    ... whereof user classification code " << setw(10) 
-         << codeLHA[i] << " |                        " << setw(10) 
-         << nEvtLHA[i] << " |                        | \n";
+         << codeLHA[j] << " |                        " << setw(10) 
+         << nEvtLHA[j] << " |                        | \n";
   }
 
   // Print summed process info.
@@ -413,71 +488,39 @@ void ProcessLevel::statistics(ostream& os) {
      << " *-------  End PYTHIA Event and Cross Section Statistics -----"
      << "-----------------------------------------------------*" << endl;
 
+  // Optionally reset statistics contants.
+  if (reset) for (int i = 0; i < int(containerPtrs.size()); ++i) 
+    containerPtrs[i]->reset();
+
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Generate the next event with one interaction.
   
 bool ProcessLevel::nextOne( Event& process) {
-
-  // Loop over tries until trial event succeeds.
-  for ( ; ; ) {
-
-    // Pick one of the subprocesses.
-    double sigmaMaxNow = sigmaMaxSum * Rndm::flat();
-    int iMax = containerPtrs.size() - 1;
-    iContainer = -1;
-    do sigmaMaxNow -= containerPtrs[++iContainer]->sigmaMax();
-    while (sigmaMaxNow > 0. && iContainer < iMax);
-    
-    // Do a trial event of this subprocess; accept or not.
-    if (containerPtrs[iContainer]->trialProcess()) break;
-
-    // Check for end-of-file condition for Les Houches events.
-    if (infoPtr->atEndOfFile()) return false;
-  }
-
-  // Update sum of maxima if current maximum violated.
-  if (containerPtrs[iContainer]->newSigmaMax()) {
-    sigmaMaxSum = 0.;
-    for (int i = 0; i < int(containerPtrs.size()); ++i)
-      sigmaMaxSum += containerPtrs[i]->sigmaMax();
-  }
-
-  // Construct kinematics of acceptable process.
-  if ( !containerPtrs[iContainer]->constructProcess( process) ) return false;
-
-  // Do all resonance decays.
-  if ( doResDecays && !containerPtrs[iContainer]->decayResonances( 
-    process) ) return false;
-
-  // Add any junctions to the process event record list.
-  findJunctions( process);
-
-  // Done.
-  return true;
-}
-
-//*********
-
-// Generate the next event with two hard interactions.
   
-bool ProcessLevel::nextTwo( Event& process) {
+  // Update CM energy for phase space selection.
+  double eCM = infoPtr->eCM();
+  for (int i = 0; i < int(containerPtrs.size()); ++i)
+    containerPtrs[i]->newECM(eCM);
 
-  // Loop over both hard processes to find consistent common kinematics.
-  for ( ; ; ) {
-   
-    // Loop internally over tries for hardest process until succeeds.
+  // Outer loop in case of rare failures.
+  bool physical = true;
+  for (int loop = 0; loop < MAXLOOP; ++loop) {
+    if (!physical) process.clear();
+    physical = true;
+
+    // Loop over tries until trial event succeeds.
     for ( ; ; ) {
 
       // Pick one of the subprocesses.
-      double sigmaMaxNow = sigmaMaxSum * Rndm::flat();
+      double sigmaMaxNow = sigmaMaxSum * rndmPtr->flat();
       int iMax = containerPtrs.size() - 1;
       iContainer = -1;
       do sigmaMaxNow -= containerPtrs[++iContainer]->sigmaMax();
       while (sigmaMaxNow > 0. && iContainer < iMax);
-    
+
       // Do a trial event of this subprocess; accept or not.
       if (containerPtrs[iContainer]->trialProcess()) break;
 
@@ -492,95 +535,184 @@ bool ProcessLevel::nextTwo( Event& process) {
         sigmaMaxSum += containerPtrs[i]->sigmaMax();
     }
 
-    // Loop internally over tries for second hardest process until succeeds.
-    for ( ; ; ) {
+    // Construct kinematics of acceptable process.
+    if ( !containerPtrs[iContainer]->constructProcess( process) )
+      physical = false;
 
-      // Pick one of the subprocesses.
-      double sigma2MaxNow = sigma2MaxSum * Rndm::flat();
-      int i2Max = container2Ptrs.size() - 1;
-      i2Container = -1;
-      do sigma2MaxNow -= container2Ptrs[++i2Container]->sigmaMax();
-      while (sigma2MaxNow > 0. && i2Container < i2Max);
-    
-      // Do a trial event of this subprocess; accept or not.
-      if (container2Ptrs[i2Container]->trialProcess()) break;
-    }
+    // Do all resonance decays.
+    if ( physical && doResDecays 
+      && !containerPtrs[iContainer]->decayResonances( process) ) 
+      physical = false;
 
-    // Update sum of maxima if current maximum violated.
-    if (container2Ptrs[i2Container]->newSigmaMax()) {
-      sigma2MaxSum = 0.;
-      for (int i2 = 0; i2 < int(container2Ptrs.size()); ++i2)
-        sigma2MaxSum += container2Ptrs[i2]->sigmaMax();
-    }
+    // Add any junctions to the process event record list.
+    if (physical) findJunctions( process);
 
-    // Check whether common set of x values is kinematically possible.
-    double xA1      = containerPtrs[iContainer]->x1();
-    double xB1      = containerPtrs[iContainer]->x2();
-    double xA2      = container2Ptrs[i2Container]->x1();
-    double xB2      = container2Ptrs[i2Container]->x2();    
-    if (xA1 + xA2 >= 1. || xB1 + xB2 >= 1.) continue;
-
-    // Reset beam contents. Naive parton densities for second interaction.
-    // (Subsequent procedure could be symmetrized, but would be overkill.)
-    beamAPtr->clear();    
-    beamBPtr->clear();    
-    int    idA1     = containerPtrs[iContainer]->id1();
-    int    idB1     = containerPtrs[iContainer]->id2();
-    int    idA2     = container2Ptrs[i2Container]->id1();
-    int    idB2     = container2Ptrs[i2Container]->id2();
-    double Q2Fac1   = containerPtrs[iContainer]->Q2Fac();
-    double Q2Fac2   = container2Ptrs[i2Container]->Q2Fac();
-    double pdfA2Raw = beamAPtr->xf( idA2, xA2,Q2Fac2);
-    double pdfB2Raw = beamBPtr->xf( idB2, xB2,Q2Fac2);
-
-    // Remove partons in first interaction from beams. 
-    beamAPtr->append( 3, idA1, xA1);
-    beamAPtr->xfISR( 0, idA1, xA1, Q2Fac1);
-    beamAPtr->pickValSeaComp(); 
-    beamBPtr->append( 4, idB1, xB1);
-    beamBPtr->xfISR( 0, idB1, xB1, Q2Fac1);
-    beamBPtr->pickValSeaComp(); 
-
-    // Reevaluate pdf's for second interaction and weight by reduction.
-    double pdfA2Mod = beamAPtr->xfMI( idA2, xA2,Q2Fac2);
-    double pdfB2Mod = beamBPtr->xfMI( idB2, xB2,Q2Fac2);
-    double wtPdfMod = (pdfA2Mod * pdfB2Mod) / (pdfA2Raw * pdfB2Raw); 
-    if (wtPdfMod < Rndm::flat()) continue;
-
-    // Reduce by a factor of 2 for identical processes when others not.
-    if ( someHardSame && containerPtrs[iContainer]->isSame() 
-      && container2Ptrs[i2Container]->isSame() && Rndm::flat() > 0.5) 
-      continue;
-
-    // If come this far then acceptable event.
-    break;
+    // Outer loop should normally work first time around.
+    if (physical) break;
   }
 
-  // Construct kinematics of acceptable processes.
-  Event process2;
-  process2.initColTag();
-  startColTag2 = process2.lastColTag();
-  if ( !containerPtrs[iContainer]->constructProcess( process) ) return false;
-  if ( !container2Ptrs[i2Container]->constructProcess( process2, false) )
-    return false;
-
-  // Do all resonance decays.
-  if ( doResDecays &&  !containerPtrs[iContainer]->decayResonances( 
-    process) ) return false;
-  if ( doResDecays &&  !container2Ptrs[i2Container]->decayResonances( 
-    process2) ) return false;
-
-  // Append second hard interaction to normal process object.
-  combineProcessRecords( process, process2);
-
-  // Add any junctions to the process event record list.
-  findJunctions( process);
-
   // Done.
-  return true;
+  return physical;
 }
 
-//*********
+//--------------------------------------------------------------------------
+
+// Generate the next event with two hard interactions.
+  
+bool ProcessLevel::nextTwo( Event& process) {
+  
+  // Update CM energy for phase space selection.
+  double eCM = infoPtr->eCM();
+  for (int i = 0; i < int(containerPtrs.size()); ++i)
+    containerPtrs[i]->newECM(eCM);
+  for (int i2 = 0; i2 < int(container2Ptrs.size()); ++i2)
+    container2Ptrs[i2]->newECM(eCM);
+
+  // Outer loop in case of rare failures.
+  bool physical = true;
+  for (int loop = 0; loop < MAXLOOP; ++loop) {
+    if (!physical) process.clear();
+    physical = true;
+
+    // Loop over both hard processes to find consistent common kinematics.
+    for ( ; ; ) {
+   
+      // Loop internally over tries for hardest process until succeeds.
+      for ( ; ; ) {
+
+        // Pick one of the subprocesses.
+        double sigmaMaxNow = sigmaMaxSum * rndmPtr->flat();
+        int iMax = containerPtrs.size() - 1;
+        iContainer = -1;
+        do sigmaMaxNow -= containerPtrs[++iContainer]->sigmaMax();
+        while (sigmaMaxNow > 0. && iContainer < iMax);
+      
+        // Do a trial event of this subprocess; accept or not.
+        if (containerPtrs[iContainer]->trialProcess()) break;
+
+        // Check for end-of-file condition for Les Houches events.
+        if (infoPtr->atEndOfFile()) return false;
+      }
+
+      // Update sum of maxima if current maximum violated.
+      if (containerPtrs[iContainer]->newSigmaMax()) {
+        sigmaMaxSum = 0.;
+        for (int i = 0; i < int(containerPtrs.size()); ++i)
+          sigmaMaxSum += containerPtrs[i]->sigmaMax();
+      }
+
+      // Loop internally over tries for second hardest process until succeeds.
+      for ( ; ; ) {
+
+        // Pick one of the subprocesses.
+        double sigma2MaxNow = sigma2MaxSum * rndmPtr->flat();
+        int i2Max = container2Ptrs.size() - 1;
+        i2Container = -1;
+        do sigma2MaxNow -= container2Ptrs[++i2Container]->sigmaMax();
+        while (sigma2MaxNow > 0. && i2Container < i2Max);
+    
+        // Do a trial event of this subprocess; accept or not.
+        if (container2Ptrs[i2Container]->trialProcess()) break;
+      }
+
+      // Update sum of maxima if current maximum violated.
+      if (container2Ptrs[i2Container]->newSigmaMax()) {
+        sigma2MaxSum = 0.;
+        for (int i2 = 0; i2 < int(container2Ptrs.size()); ++i2)
+          sigma2MaxSum += container2Ptrs[i2]->sigmaMax();
+      }
+
+      // Check whether common set of x values is kinematically possible.
+      double xA1      = containerPtrs[iContainer]->x1();
+      double xB1      = containerPtrs[iContainer]->x2();
+      double xA2      = container2Ptrs[i2Container]->x1();
+      double xB2      = container2Ptrs[i2Container]->x2();    
+      if (xA1 + xA2 >= 1. || xB1 + xB2 >= 1.) continue;
+
+      // Reset beam contents. Naive parton densities for second interaction.
+      // (Subsequent procedure could be symmetrized, but would be overkill.)
+      beamAPtr->clear();    
+      beamBPtr->clear();    
+      int    idA1     = containerPtrs[iContainer]->id1();
+      int    idB1     = containerPtrs[iContainer]->id2();
+      int    idA2     = container2Ptrs[i2Container]->id1();
+      int    idB2     = container2Ptrs[i2Container]->id2();
+      double Q2Fac1   = containerPtrs[iContainer]->Q2Fac();
+      double Q2Fac2   = container2Ptrs[i2Container]->Q2Fac();
+      double pdfA2Raw = beamAPtr->xf( idA2, xA2,Q2Fac2);
+      double pdfB2Raw = beamBPtr->xf( idB2, xB2,Q2Fac2);
+
+      // Remove partons in first interaction from beams. 
+      beamAPtr->append( 3, idA1, xA1);
+      beamAPtr->xfISR( 0, idA1, xA1, Q2Fac1);
+      beamAPtr->pickValSeaComp(); 
+      beamBPtr->append( 4, idB1, xB1);
+      beamBPtr->xfISR( 0, idB1, xB1, Q2Fac1);
+      beamBPtr->pickValSeaComp(); 
+
+      // Reevaluate pdf's for second interaction and weight by reduction.
+      double pdfA2Mod = beamAPtr->xfMI( idA2, xA2,Q2Fac2);
+      double pdfB2Mod = beamBPtr->xfMI( idB2, xB2,Q2Fac2);
+      double wtPdfMod = (pdfA2Mod * pdfB2Mod) / (pdfA2Raw * pdfB2Raw); 
+      if (wtPdfMod < rndmPtr->flat()) continue;
+
+      // Reduce by a factor of 2 for identical processes when others not,
+      // and when in same phase space region.
+      bool toLoop = false;
+      if ( someHardSame && containerPtrs[iContainer]->isSame() 
+        && container2Ptrs[i2Container]->isSame()) {
+        if (cutsAgree) {
+          if (rndmPtr->flat() > 0.5) toLoop = true;
+        } else {
+        double mHat1 = containerPtrs[iContainer]->mHat();
+        double pTHat1 = containerPtrs[iContainer]->pTHat();
+        double mHat2 = container2Ptrs[i2Container]->mHat();
+        double pTHat2 = container2Ptrs[i2Container]->pTHat();
+        if (mHat1 > mHatMin2 && mHat1 < mHatMax2 
+           && pTHat1 > pTHatMin2 && pTHat1 < pTHatMax2
+           && mHat2 > mHatMin1 && mHat2 < mHatMax1 
+	   && pTHat2 > pTHatMin1 && pTHat2 < pTHatMax1
+           && rndmPtr->flat() > 0.5) toLoop = true;
+        }
+      }
+      if (toLoop) continue;    
+
+      // If come this far then acceptable event.
+      break;
+    }
+
+    // Construct kinematics of acceptable processes.
+    Event process2;
+    process2.init( "(second hard)", particleDataPtr, startColTag);
+    process2.initColTag();
+    if ( !containerPtrs[iContainer]->constructProcess( process) ) 
+      physical = false;
+    if (physical && !container2Ptrs[i2Container]->constructProcess( process2, 
+      false) ) physical = false;
+
+    // Do all resonance decays.
+    if ( physical && doResDecays 
+      &&  !containerPtrs[iContainer]->decayResonances( process) ) 
+      physical = false;
+    if ( physical && doResDecays 
+      &&  !container2Ptrs[i2Container]->decayResonances( process2) ) 
+      physical = false;
+
+    // Append second hard interaction to normal process object.
+    if (physical) combineProcessRecords( process, process2);
+
+    // Add any junctions to the process event record list.
+    if (physical) findJunctions( process);
+
+    // Outer loop should normally work first time around.
+    if (physical) break;
+  }
+
+  // Done.
+  return physical;
+}
+
+//--------------------------------------------------------------------------
 
 // Append second hard interaction to normal process object.
 // Complication: all resonance decay chains must be put at the end.
@@ -606,7 +738,7 @@ void ProcessLevel::combineProcessRecords( Event& process, Event& process2) {
 
   // Find amount of necessary position and colour offset for second process.
   int addPos  = nHard  - 3;
-  int addCol  = process.lastColTag() - startColTag2;
+  int addCol  = process.lastColTag() - startColTag;
 
   // Loop over all particles (except beams) from second process.
   for (int i = 3; i < nSize2; ++i) {
@@ -655,56 +787,205 @@ void ProcessLevel::combineProcessRecords( Event& process, Event& process2) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Add any junctions to the process event record list.
-// First try, so still incomplete. ??
+// Also check that do not doublebook if called repeatedly.
 
-void ProcessLevel::findJunctions( Event& process) {
+void ProcessLevel::findJunctions( Event& junEvent) {
 
-  // Loop though event; isolate all uncoloured particles.
-  for (int i = 0; i < process.size(); ++i) 
-  if ( process[i].col() == 0 && process[i].acol() == 0) {
+  // DEBUG OUTPUT
+  // junEvent.list();
 
-    // Find all daughters and store daughter colours and anticolours.
-    vector<int> daughters = process.daughterList(i);
-    vector<int> cols, acols;
-    for (int j = 0; j < int(daughters.size()); ++j) {
-      int colDau  = process[ daughters[j] ].col();
-      int acolDau = process[ daughters[j] ].acol();
-      if (colDau > 0)  cols.push_back( colDau);      
-      if (acolDau > 0) acols.push_back( acolDau);      
-    }
-
-    // Remove all matching colour-anticolour pairs.
-    bool foundPair = true;
-    while (foundPair && cols.size() > 0 && acols.size() > 0) {
-      foundPair = false;
-      for (int j = 0; j < int(cols.size()); ++j) {
-        for (int k = 0; k < int(acols.size()); ++k) {
-	  if (acols[k] == cols[j]) { 
-            cols[j]  = cols.back();  
-            cols.pop_back();     
-            acols[k] = acols.back(); 
-            acols.pop_back();     
-            foundPair = true; 
-            break;
-	  }
-	} if (foundPair) break;
+  // Find the total number of unmatched colours & anticolours in the event
+  map<int,int> colMap, acolMap;
+  colMap.clear();
+  acolMap.clear();
+  for (int i = 0; i < junEvent.size(); ++i) {
+    // Consider all external lines (including initial incoming ones)
+    int col  = junEvent[i].col();
+    int acol = junEvent[i].acol();
+    if (junEvent[i].isFinal() || junEvent[i].status() == -21) {
+      if (junEvent[i].status() == -21) {
+	col  = junEvent[i].acol();
+	acol = junEvent[i].col();
       }
-    } 
-
-    // Store an (anti)junction when three (anti)coloured daughters.
-    if (cols.size() == 3 && acols.size() == 0) 
-      process.appendJunction( 1, cols[0], cols[1], cols[2]);
-    if (acols.size() == 3 && cols.size() == 0) 
-      process.appendJunction( 2, acols[0], acols[1], acols[2]);
+      if (col > 0) {
+	// If unmatched (so far), add end. Else erase matching parton. 
+	if (acolMap.find(col) == acolMap.end() ) colMap[col] = i;
+	else acolMap.erase(col);
+      }
+      if (acol > 0) {
+	// If unmatched (so far), add end. Else erase matching parton. 
+	if (colMap.find(acol) == colMap.end()) acolMap[acol] = i;
+	else colMap.erase(acol);
+      }
+      // Colour sextets: negative colour = anticolour and vice versa
+      if (acol < 0) {
+	// If unmatched (so far), add end. Else erase matching parton. 
+	if (acolMap.find(-acol) == acolMap.end() ) colMap[-acol] = i;
+	else acolMap.erase(-acol);
+      }
+      if (col < 0) {
+	// If unmatched (so far), add end. Else erase matching parton. 
+	if (colMap.find(-col) == colMap.end()) acolMap[-col] = i;
+	else colMap.erase(-col);
+      }
+ 
+    }
   }
 
-  // Done.
-}
+  // If number of dangling tags not divisible by 3, internal JJ lines must exist. 
+  if ( colMap.size() % 3 != 0 || acolMap.size() % 3 != 0) {
 
-//*********
+    // Check each internal vertex 
+    for (int i = 0; i<junEvent.size(); i++) {
+
+      // Ignore stages before hard scattering final-state
+      if (abs(junEvent[i].status()) <= 21) continue;
+      vector<int> motherList   = junEvent.motherList(i);
+      int iMot1 = motherList[0];
+      vector<int> daughterList = junEvent.daughterList(iMot1);        
+      // Check baryon number of vertex
+      int barSum = 0;      
+      map<int,int> colVertex, acolVertex;
+      // Incoming partons enter with a minus sign in barSum
+      for (unsigned int indx = 0; indx < motherList.size(); indx++) {
+	int iMot = motherList[indx];
+	if ( abs(junEvent[iMot].colType()) == 1 ) 
+	  barSum -= junEvent[iMot].colType();
+	// Cross colors and anticolors
+	int col  = junEvent[iMot].acol();
+	int acol  = junEvent[iMot].col();
+	if (col > 0) {
+	  // If unmatched (so far), add end. Else erase matching parton. 
+	  if (acolVertex.find(col) == acolVertex.end() ) colVertex[col] = iMot;
+	  else acolVertex.erase(col);
+	}
+	if (acol > 0) {
+	  // If unmatched (so far), add end. Else erase matching parton. 
+	  if (colVertex.find(acol) == colVertex.end()) acolVertex[acol] = iMot;
+	  else colVertex.erase(acol);
+	}
+      }
+      // Outgoing partons enter with a plus sign in barSum
+      for (unsigned int indx = 0; indx < daughterList.size(); indx++) {
+	int iDau = daughterList[indx];
+	if ( abs(junEvent[iDau].colType()) == 1 ) 
+	  barSum += junEvent[iDau].colType();
+	// Do not cross colors and anticolors
+	int col  = junEvent[iDau].col();
+	int acol  = junEvent[iDau].acol();
+	if (col > 0) {
+	  // If unmatched (so far), add end. Else erase matching parton. 
+	  if (acolVertex.find(col) == acolVertex.end() ) colVertex[col] = iDau;
+	  else acolVertex.erase(col);
+	}
+	if (acol > 0) {
+	  // If unmatched (so far), add end. Else erase matching parton. 
+	  if (colVertex.find(acol) == colVertex.end()) acolVertex[acol] = iDau;
+	  else colVertex.erase(acol);
+	}
+      }      
+      // If BNV vertex found, check if all colours accounted for
+      if (barSum != 0) {	
+	for (map<int,int>::iterator it = colVertex.begin(); 
+	     it != colVertex.end(); it++) {
+	  int col  = it->first;
+	  int iCol = it->second;
+	  if ( colMap.find(col) == colMap.end() ) colMap[col]=iCol;
+	}
+	for (map<int,int>::iterator it = acolVertex.begin(); 
+	     it != acolVertex.end(); it++) {
+	  int acol = it->first;
+	  int iCol = it->second;
+	  if ( acolMap.find(acol) == acolMap.end() ) acolMap[acol]=iCol;
+	}
+      }	    
+    }
+  }
+
+  // Check (and skip) any that have already been added
+  for (int iJun = 0; iJun < junEvent.sizeJunction(); ++iJun) {
+    // Remove the tags corresponding to each of the 3 existing junction legs
+    for (int j = 0; j < 3; ++j) { 
+      int colNow = junEvent.colJunction(iJun, j); 
+      if (junEvent.kindJunction(iJun) % 2 == 1) colMap.erase(colNow);
+      else acolMap.erase(colNow);
+    }
+  }
+
+  // If no more junctions expected, return without doing anything more
+  if (colMap.size() == 0 && acolMap.size() == 0) return;
+
+  // Size of each array must be divisible by 3 at this point
+  if (colMap.size() %3 != 0 || acolMap.size() %3 != 0) {
+    infoPtr->errorMsg("Error in ProcessLevel::findJunctions: "
+		      "N(unmatched (anti)colour tags) != 3");
+    return;
+  } 
+
+  // Loop: first colours, then anticolours
+  for (int mAcol = 0; mAcol <= 1; mAcol++) { 
+    map<int,int>& cMap = colMap;
+    if (mAcol == 1) cMap = acolMap;
+    int nJun = cMap.size() / 3;
+
+    // While unmatched colour tags still exist ...
+    for (int mJun = 0; mJun < nJun ; ++ mJun) {
+
+      // Connect to junctions ordered in color line number
+      vector<int> colJu, iJu;
+      colJu.resize(0);
+      // Order in decreasing color tag number
+      for (int jCol=0; jCol<=2; jCol++) {
+	colJu.push_back(0);
+	iJu.push_back(0);
+	for (map<int,int>::iterator it = cMap.begin(); it != cMap.end(); it++) {
+	  int colTag = it->first;
+	  int i      = it->second;
+	  if (i != 0 && colTag >= colJu[jCol]) {
+	    colJu[jCol] = colTag;
+	    iJu[jCol]   = i;
+	  }
+	}
+	// Mark these colour tags deleted
+	cMap[colJu[jCol]]=0;
+      }
+      // Kind is determined by how many legs have "crossed" color tags
+      int kindJun = 1 + mAcol;      
+      vector<int> colJuOrd(0);
+      for (int jLeg=0; jLeg<3; jLeg++) {
+	bool foundCrossed = false;
+	for (int i=0; i<junEvent.size(); i++) 
+	  // Note if the tag for this leg exists as crossed 
+	  if ( (mAcol == 0 && junEvent[i].acol() == colJu[jLeg]) ||
+	       (mAcol == 1 && junEvent[i].col() == colJu[jLeg]) ) foundCrossed = true;  
+	// If no crossed version exists, this is a final-state leg: add to back
+	if (!foundCrossed) colJuOrd.push_back(colJu[jLeg]);
+	// Else this is an initial-state leg: add to front and increase kindJun
+	else {
+	  //
+	  colJuOrd.insert(colJuOrd.begin(),colJu[jLeg]);
+	  kindJun += 2;
+	}
+      }
+
+      // Last error check
+      if (colJuOrd.size() != 3) {
+	infoPtr->errorMsg("Error in ProcessLevel::findJunctions: "
+			  "unable to order junction legs"); 
+	return;
+      }
+
+      // Add junction with these tags
+      junEvent.appendJunction( kindJun, colJuOrd[0], colJuOrd[1], colJuOrd[2]);         
+    }
+    
+  }
+
+}
+//--------------------------------------------------------------------------
 
 // Check that colours match up.
 
@@ -725,7 +1006,12 @@ bool ProcessLevel::checkColours( Event& process) {
     else if (colType ==  1 && (col <= 0 || acol != 0)) physical = false;
     else if (colType == -1 && (col != 0 || acol <= 0)) physical = false;
     else if (colType ==  2 && (col <= 0 || acol <= 0)) physical = false;
-    else if (colType < -1 || colType > 2)              physical = false; 
+    // Preparations for colour-sextet assignments 
+    // (colour,colour) = (colour,negative anticolour)
+    else if (colType ==  3 && (col <= 0 || acol >= 0)) physical = false;
+    else if (colType == -3 && (col >= 0 || acol <= 0)) physical = false;
+    // All other cases
+    else if (colType < -1 || colType > 3)              physical = false; 
 
     // Add to the list of colour tags.
     if (col > 0) {
@@ -738,14 +1024,39 @@ bool ProcessLevel::checkColours( Event& process) {
       for (int ic = 0; ic < int(colTags.size()) ; ++ic)
         if (acol == colTags[ic]) match = true;
       if (!match) colTags.push_back(acol);
+    } 
+    // Colour sextets : map negative colour -> anticolour and vice versa
+    else if (col < 0) {
+      match = false;
+      for (int ic = 0; ic < int(colTags.size()) ; ++ic)
+        if (-col == colTags[ic]) match = true;
+      if (!match) colTags.push_back(-col);
+    } else if (acol < 0) {
+      match = false;
+      for (int ic = 0; ic < int(colTags.size()) ; ++ic)
+        if (-acol == colTags[ic]) match = true;
+      if (!match) colTags.push_back(-acol);
     }
   }
 
   // Warn and give up if particles did not have the expected colours.
   if (!physical) {
-    ErrorMsg::message("Error in ProcessLevel::checkColours: "
+    infoPtr->errorMsg("Error in ProcessLevel::checkColours: "
       "incorrect colour assignment"); 
     return false;
+  }
+
+  // Remove (anti)colours coming from an (anti)junction.
+  for (int iJun = 0; iJun < process.sizeJunction(); ++iJun) {    
+    for (int j = 0; j < 3; ++j) { 
+      int colJun = process.colJunction(iJun, j);
+      for (int ic = 0; ic < int(colTags.size()) ; ++ic)
+	if (colJun == colTags[ic]) {
+	  colTags[ic] = colTags[colTags.size() - 1]; 
+	  colTags.pop_back();
+	  break;
+	} 
+    }
   }
 
   // Loop through all colour tags and find their positions (by sign). 
@@ -754,8 +1065,10 @@ bool ProcessLevel::checkColours( Event& process) {
     colPos.resize(0);
     acolPos.resize(0);
     for (int i = 0; i < process.size(); ++i) {
-      if (process[i].col() == col) colPos.push_back(i); 
-      if (process[i].acol() == col) acolPos.push_back(i); 
+      if (process[i].col() == col || process[i].acol() == -col) 
+	colPos.push_back(i); 
+      if (process[i].acol() == col || process[i].col() == -col) 
+	acolPos.push_back(i); 
     }
 
     // Trace colours back through decays; remove daughters.
@@ -795,24 +1108,24 @@ bool ProcessLevel::checkColours( Event& process) {
       iNowA = acolPos[0];
       if ( process[iNow].status() == -21 &&  process[iNowA].status() == -21 );
       else if ( (process[iNow].mother1() != process[iNowA].mother1()) 
-             || (process[iNow].mother2() != process[iNowA].mother2()) ) 
-             physical = false;
+	     || (process[iNow].mother2() != process[iNowA].mother2()) ) 
+	physical = false;
     }
 
   }
 
   // Error message if problem found. Done.
-  if (!physical) ErrorMsg::message("Error in ProcessLevel::checkColours: "
+  if (!physical) infoPtr->errorMsg("Error in ProcessLevel::checkColours: "
     "unphysical colour flow"); 
   return physical;
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Print statistics when two hard processes allowed.
 
-void ProcessLevel::statistics2(ostream& os) {
+void ProcessLevel::statistics2(bool reset, ostream& os) {
 
   // Average impact-parameter factor and error.
   double invN          = 1. / max(1, nImpact);
@@ -975,9 +1288,18 @@ void ProcessLevel::statistics2(ostream& os) {
      << "                                                |\n"
      << " *-------  End PYTHIA Event and Cross Section Statistics -----"
      << "------------------------------------------------*" << endl;
+
+  // Optionally reset statistics contants.
+  if (reset) {
+    for (int i = 0; i < int(containerPtrs.size()); ++i) 
+      containerPtrs[i]->reset();
+    for (int i2 = 0; i2 < int(container2Ptrs.size()); ++i2)
+      container2Ptrs[i2]->reset();
+  }
      
 }
 
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
+

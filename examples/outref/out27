@@ -1,0 +1,606 @@
+
+ *------------------------------------------------------------------------------------* 
+ |                                                                                    | 
+ |  *------------------------------------------------------------------------------*  | 
+ |  |                                                                              |  | 
+ |  |                                                                              |  | 
+ |  |   PPP   Y   Y  TTTTT  H   H  III    A      Welcome to the Lund Monte Carlo!  |  | 
+ |  |   P  P   Y Y     T    H   H   I    A A     This is PYTHIA version 8.150      |  | 
+ |  |   PPP     Y      T    HHHHH   I   AAAAA    Last date of change: 20 Apr 2011  |  | 
+ |  |   P       Y      T    H   H   I   A   A                                      |  | 
+ |  |   P       Y      T    H   H  III  A   A    Now is 20 Apr 2011 at 12:40:50    |  | 
+ |  |                                                                              |  | 
+ |  |   Torbjorn Sjostrand;  Department of Astronomy and Theoretical Physics,      |  | 
+ |  |      Lund University, Solvegatan 14A, SE-223 62 Lund, Sweden;                |  | 
+ |  |      phone: + 46 - 46 - 222 48 16; e-mail: torbjorn@thep.lu.se               |  | 
+ |  |   Stefan Ask;  Department of Physics, University of Cambridge,               |  | 
+ |  |      Cavendish Laboratory, JJ Thomson Ave., Cambridge CB3 0HE, UK;           |  | 
+ |  |      phone: + 41 - 22 - 767 6707; e-mail: Stefan.Ask@cern.ch                 |  | 
+ |  |   Richard Corke;  Department of Astronomy and Theoretical Physics,           |  | 
+ |  |      Lund University, Solvegatan 14A, SE-223 62 Lund, Sweden;                |  | 
+ |  |      phone: + 46 - 46 - 222 31 92; e-mail: richard.corke@thep.lu.se          |  | 
+ |  |   Stephen Mrenna;  Computing Division, Simulations Group,                    |  | 
+ |  |      Fermi National Accelerator Laboratory, MS 234, Batavia, IL 60510, USA;  |  | 
+ |  |      phone: + 1 - 630 - 840 - 2556; e-mail: mrenna@fnal.gov                  |  | 
+ |  |   Peter Skands;  Theoretical Physics, CERN, CH-1211 Geneva 23, Switzerland;  |  | 
+ |  |      phone: + 41 - 22 - 767 2447; e-mail: peter.skands@cern.ch               |  | 
+ |  |                                                                              |  | 
+ |  |   The main program reference is the 'Brief Introduction to PYTHIA 8.1',      |  | 
+ |  |   T. Sjostrand, S. Mrenna and P. Skands, Comput. Phys. Comm. 178 (2008) 85   |  | 
+ |  |   [arXiv:0710.3820]                                                          |  | 
+ |  |                                                                              |  | 
+ |  |   The main physics reference is the 'PYTHIA 6.4 Physics and Manual',         |  | 
+ |  |   T. Sjostrand, S. Mrenna and P. Skands, JHEP05 (2006) 026 [hep-ph/0603175]. |  | 
+ |  |                                                                              |  | 
+ |  |   An archive of program versions and documentation is found on the web:      |  | 
+ |  |   http://www.thep.lu.se/~torbjorn/Pythia.html                                |  | 
+ |  |                                                                              |  | 
+ |  |   This program is released under the GNU General Public Licence version 2.   |  | 
+ |  |   Please respect the MCnet Guidelines for Event Generator Authors and Users. |  | 
+ |  |                                                                              |  | 
+ |  |   Disclaimer: this program comes without any guarantees.                     |  | 
+ |  |   Beware of errors and use common sense when interpreting results.           |  | 
+ |  |                                                                              |  | 
+ |  |   Copyright (C) 2011 Torbjorn Sjostrand                                      |  | 
+ |  |                                                                              |  | 
+ |  |                                                                              |  | 
+ |  *------------------------------------------------------------------------------*  | 
+ |                                                                                    | 
+ *------------------------------------------------------------------------------------* 
+
+ PYTHIA Warning in ParticleDataEntry::initBWmass: switching off width for id = 10313
+ PYTHIA Warning in ParticleDataEntry::initBWmass: switching off width for id = 10323
+ PYTHIA Warning in ParticleDataEntry::initBWmass: switching off width for id = 10333
+
+ *-------  PYTHIA Process Initialization  --------------------------*
+ |                                                                  |
+ | We collide p+ with p+ at a CM energy of 1.400e+04 GeV            |
+ |                                                                  |
+ |------------------------------------------------------------------|
+ |                                                    |             |
+ | Subprocess                                    Code |   Estimated |
+ |                                                    |    max (mb) |
+ |                                                    |             |
+ |------------------------------------------------------------------|
+ |                                                    |             |
+ | g g -> g g                                     111 |   4.816e+00 |
+ | g g -> q qbar (uds)                            112 |   5.395e-02 |
+ | q g -> q g                                     113 |   2.661e+00 |
+ | q q(bar)' -> q q(bar)'                         114 |   2.483e-01 |
+ | q qbar -> g g                                  115 |   1.704e-03 |
+ | q qbar -> q' qbar' (uds)                       116 |   7.451e-04 |
+ | g g -> c cbar                                  121 |   1.779e-02 |
+ | q qbar -> c cbar                               122 |   2.469e-04 |
+ | g g -> b bbar                                  123 |   1.621e-02 |
+ | q qbar -> b bbar                               124 |   2.340e-04 |
+ |                                                                  |
+ *-------  End PYTHIA Process Initialization -----------------------*
+
+ --------  PYTHIA Info Listing  ---------------------------------------- 
+ 
+ Beam A: id =   2212, pz =  6.998e+03, e =  6.998e+03, m =  9.383e-01.
+ Beam B: id =   2212, pz = -6.998e+03, e =  6.998e+03, m =  9.383e-01.
+
+ In 1: id =   21, x =  1.869e-02, pdf =  5.130e+00 at Q2 =  8.765e+02.
+ In 2: id =   21, x =  9.577e-04, pdf =  3.186e+01 at same Q2.
+
+ Subprocess g g -> c cbar with code 121 is 2 -> 2.
+ It has sHat =  3.506e+03,    tHat = -1.755e+03,    uHat = -1.747e+03,
+       pTHat =  2.957e+01,   m3Hat =  1.500e+00,   m4Hat =  1.500e+00,
+    thetaHat =  1.573e+00,  phiHat =  1.342e-01.
+     alphaEM =  7.719e-03,  alphaS =  1.657e-01    at Q2 =  8.765e+02.
+
+ --------  End PYTHIA Info Listing  ------------------------------------
+
+ --------  PYTHIA Event Listing  (hard process)  -----------------------------------------------------------------------------------
+ 
+    no        id   name            status     mothers   daughters     colours      p_x        p_y        p_z         e          m 
+     0        90   (system)           -11     0     0     0     0     0     0      1.923      0.004     -0.734  13995.986  13995.986
+     1      2212   (p+)               -12     0     0     3     0     0     0      1.006      0.067   6997.626   6997.626      0.938
+     2      2212   (p+)               -12     0     0     4     0     0     0      0.918     -0.063  -6998.360   6998.360      0.938
+     3        21   (g)                -21     1     0     5     6   101   102      0.019      0.001    130.771    130.771      0.000
+     4        21   (g)                -21     2     0     5     6   102   103      0.001     -0.000     -6.702      6.702      0.000
+     5         4   c                   23     3     4     0     0   101     0     29.311      3.957     61.880     68.601      1.500
+     6        -4   cbar                23     3     4     0     0     0   103    -29.291     -3.956     62.189     68.872      1.500
+                                   Charge sum:  0.000           Momentum sum:      0.020      0.001    124.068    137.473     59.210
+
+ --------  End PYTHIA Event Listing  -----------------------------------------------------------------------------------------------
+
+ *-------  PYTHIA Event and Cross Section Statistics  -------------------------------------------------------------*
+ |                                                                                                                 |
+ | Subprocess                                    Code |            Number of events       |      sigma +- delta    |
+ |                                                    |       Tried   Selected   Accepted |     (estimated) (mb)   |
+ |                                                    |                                   |                        |
+ |-----------------------------------------------------------------------------------------------------------------|
+ |                                                    |                                   |                        |
+ | g g -> g g                                     111 |       49971       6051       6051 |   5.854e-01  4.058e-03 |
+ | g g -> q qbar (uds)                            112 |         568        114        114 |   1.124e-02  5.620e-04 |
+ | q g -> q g                                     113 |       27695       3433       3433 |   3.271e-01  3.166e-03 |
+ | q q(bar)' -> q q(bar)'                         114 |        2501        314        314 |   3.174e-02  9.811e-04 |
+ | q qbar -> g g                                  115 |          17          5          5 |   4.334e-04  1.152e-04 |
+ | q qbar -> q' qbar' (uds)                       116 |           7          2          2 |   1.310e-04  7.854e-05 |
+ | g g -> c cbar                                  121 |         196         39         39 |   3.521e-03  2.909e-04 |
+ | q qbar -> c cbar                               122 |           2          0          0 |   0.000e+00  0.000e+00 |
+ | g g -> b bbar                                  123 |         171         40         40 |   3.643e-03  3.189e-04 |
+ | q qbar -> b bbar                               124 |           4          2          2 |   3.988e-05  1.904e-05 |
+ |                                                    |                                   |                        |
+ | sum                                                |       81132      10000      10000 |   9.633e-01  5.289e-03 |
+ |                                                                                                                 |
+ *-------  End PYTHIA Event and Cross Section Statistics ----------------------------------------------------------*
+
+ *-------  PYTHIA Error and Warning Messages Statistics  ----------------------------------------------------------* 
+ |                                                                                                                 | 
+ |  times   message                                                                                                | 
+ |                                                                                                                 | 
+ |      3   Warning in ParticleDataEntry::initBWmass: switching off width                                          | 
+ |                                                                                                                 | 
+ *-------  End PYTHIA Error and Warning Messages Statistics  ------------------------------------------------------* 
+
+
+  2011-04-20 12:40       center-of-mass energy deviation
+
+        5.60*10^ 2                                                    8                                                 
+        5.40*10^ 2                                                 915X14                                               
+        5.20*10^ 2                                                 XXXXXX                                               
+        5.00*10^ 2                                                 XXXXXX8                                              
+        4.80*10^ 2                                                XXXXXXXX                                              
+        4.60*10^ 2                                                XXXXXXXX                                              
+        4.40*10^ 2                                              94XXXXXXXXX                                             
+        4.20*10^ 2                                              XXXXXXXXXXX5                                            
+        4.00*10^ 2                                              XXXXXXXXXXXX5                                           
+        3.80*10^ 2                                              XXXXXXXXXXXXX                                           
+        3.60*10^ 2                                              XXXXXXXXXXXXX                                           
+        3.40*10^ 2                                            45XXXXXXXXXXXXX2                                          
+        3.20*10^ 2                                            XXXXXXXXXXXXXXXX                                          
+        3.00*10^ 2                                           6XXXXXXXXXXXXXXXX                                          
+        2.80*10^ 2                                           XXXXXXXXXXXXXXXXX                                          
+        2.60*10^ 2                                          1XXXXXXXXXXXXXXXXX24                                        
+        2.40*10^ 2                                          XXXXXXXXXXXXXXXXXXXX                                        
+        2.20*10^ 2                                         7XXXXXXXXXXXXXXXXXXXX2                                       
+        2.00*10^ 2                                         XXXXXXXXXXXXXXXXXXXXXX                                       
+        1.80*10^ 2                                         XXXXXXXXXXXXXXXXXXXXXX                                       
+        1.60*10^ 2                                        9XXXXXXXXXXXXXXXXXXXXXX74                                     
+        1.40*10^ 2                                       XXXXXXXXXXXXXXXXXXXXXXXXXX                                     
+        1.20*10^ 2                                      XXXXXXXXXXXXXXXXXXXXXXXXXXX                                     
+        1.00*10^ 2                                      XXXXXXXXXXXXXXXXXXXXXXXXXXX5                                    
+        0.80*10^ 2                                    2XXXXXXXXXXXXXXXXXXXXXXXXXXXXX4                                   
+        0.60*10^ 2                                   7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX7                                  
+        0.40*10^ 2                                 27XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX8                                 
+        0.20*10^ 2                             1157XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX9X6113                           
+
+          Contents                                                                                                      
+            *10^ 2  0000000000000000000000000000000000001112223344455555544433222110000000000000000000000000000000000000
+            *10^ 1  0000000000000000000000000000011235681451492332732252294092440549653111000000000000000000000000000000
+            *10^ 0  0000000000000000000000000003104543309083118078971961760904484380736892236000000000000000000000000000
+            *10^-1  0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+          Low edge  --------------------------------------------------                                                  
+            *10^ 1  2111111111111111111111111100000000000000000000000000000000000000000000000001111111111111111111111111
+            *10^ 0  0998887766655444332221100099888776665544433222110000011222334445566677888990001122233444556667788899
+            *10^-1  0628406284062840628406284062840628406284062840628404826048260482604826048260482604826048260482604826
+
+   Entries  =       10000    Mean = -6.3040e-02    Underflow =  0.0000e+00    Low edge  = -2.0000e+01
+   All chan =  1.0000e+04    Rms  =  2.8831e+00    Overflow  =  0.0000e+00    High edge =  2.0000e+01
+
+
+  2011-04-20 12:40       net pX offset
+
+        6.00*10^ 2                                                    3                                                 
+        5.80*10^ 2                                                    X                                                 
+        5.60*10^ 2                                                 336X33                                               
+        5.40*10^ 2                                                 XXXXXX                                               
+        5.20*10^ 2                                                 XXXXXX4                                              
+        5.00*10^ 2                                                5XXXXXXX                                              
+        4.80*10^ 2                                                XXXXXXXX3                                             
+        4.60*10^ 2                                               5XXXXXXXXX                                             
+        4.40*10^ 2                                               XXXXXXXXXX                                             
+        4.20*10^ 2                                               XXXXXXXXXX                                             
+        4.00*10^ 2                                             5XXXXXXXXXXX7                                            
+        3.80*10^ 2                                             XXXXXXXXXXXXXX                                           
+        3.60*10^ 2                                             XXXXXXXXXXXXXX                                           
+        3.40*10^ 2                                             XXXXXXXXXXXXXX                                           
+        3.20*10^ 2                                            9XXXXXXXXXXXXXX6                                          
+        3.00*10^ 2                                            XXXXXXXXXXXXXXXX2                                         
+        2.80*10^ 2                                           7XXXXXXXXXXXXXXXXX                                         
+        2.60*10^ 2                                           XXXXXXXXXXXXXXXXXX                                         
+        2.40*10^ 2                                           XXXXXXXXXXXXXXXXXX6                                        
+        2.20*10^ 2                                          8XXXXXXXXXXXXXXXXXXX                                        
+        2.00*10^ 2                                          XXXXXXXXXXXXXXXXXXXX1                                       
+        1.80*10^ 2                                         6XXXXXXXXXXXXXXXXXXXXX1                                      
+        1.60*10^ 2                                        9XXXXXXXXXXXXXXXXXXXXXXX                                      
+        1.40*10^ 2                                        XXXXXXXXXXXXXXXXXXXXXXXX3                                     
+        1.20*10^ 2                                      1XXXXXXXXXXXXXXXXXXXXXXXXXX3                                    
+        1.00*10^ 2                                      XXXXXXXXXXXXXXXXXXXXXXXXXXXX                                    
+        0.80*10^ 2                                     9XXXXXXXXXXXXXXXXXXXXXXXXXXXX0                                   
+        0.60*10^ 2                                    7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX4                                  
+        0.40*10^ 2                                   5XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX82                                
+        0.20*10^ 2                        1 111432798XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX853321111                       
+
+          Contents                                                                                                      
+            *10^ 2  0000000000000000000000000000000000001111223344455555554333221111000000000000000000000000000000000000
+            *10^ 1  0000000000000000000000000000001113570157171804844584406981838620643211000000000000000000000000000000
+            *10^ 0  0000000000000000000000201118544750582971648909956165575403421176176550764212100000000000000000000000
+            *10^-1  0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+          Low edge  --------------------------------------------------                                                  
+            *10^ 0  1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+            *10^-1  0999998888877777666665555544444333332222211111000000000111112222233333444445555566666777778888899999
+            *10^-2  0864208642086420864208642086420864208642086420864202468024680246802468024680246802468024680246802468
+
+   Entries  =       10000    Mean =  7.3200e-04    Underflow =  0.0000e+00    Low edge  = -1.0000e+00
+   All chan =  1.0000e+04    Rms  =  1.4100e-01    Overflow  =  0.0000e+00    High edge =  1.0000e+00
+
+
+  2011-04-20 12:40       net pY offset
+
+        5.80*10^ 2                                                   51                                                 
+        5.60*10^ 2                                                   XX                                                 
+        5.40*10^ 2                                                 93XX66X                                              
+        5.20*10^ 2                                               6 XXXXXXX                                              
+        5.00*10^ 2                                               X9XXXXXXX                                              
+        4.80*10^ 2                                               XXXXXXXXX                                              
+        4.60*10^ 2                                               XXXXXXXXX                                              
+        4.40*10^ 2                                              4XXXXXXXXX6                                             
+        4.20*10^ 2                                              XXXXXXXXXXX6                                            
+        4.00*10^ 2                                              XXXXXXXXXXXX5                                           
+        3.80*10^ 2                                             1XXXXXXXXXXXXX                                           
+        3.60*10^ 2                                             XXXXXXXXXXXXXX                                           
+        3.40*10^ 2                                            7XXXXXXXXXXXXXX                                           
+        3.20*10^ 2                                            XXXXXXXXXXXXXXX                                           
+        3.00*10^ 2                                            XXXXXXXXXXXXXXXX3                                         
+        2.80*10^ 2                                           7XXXXXXXXXXXXXXXXX                                         
+        2.60*10^ 2                                          1XXXXXXXXXXXXXXXXXX                                         
+        2.40*10^ 2                                          XXXXXXXXXXXXXXXXXXX1                                        
+        2.20*10^ 2                                         6XXXXXXXXXXXXXXXXXXXX                                        
+        2.00*10^ 2                                         XXXXXXXXXXXXXXXXXXXXX                                        
+        1.80*10^ 2                                         XXXXXXXXXXXXXXXXXXXXX                                        
+        1.60*10^ 2                                        4XXXXXXXXXXXXXXXXXXXXX6                                       
+        1.40*10^ 2                                        XXXXXXXXXXXXXXXXXXXXXXX7                                      
+        1.20*10^ 2                                       8XXXXXXXXXXXXXXXXXXXXXXXX7                                     
+        1.00*10^ 2                                       XXXXXXXXXXXXXXXXXXXXXXXXXX5                                    
+        0.80*10^ 2                                     48XXXXXXXXXXXXXXXXXXXXXXXXXXX0                                   
+        0.60*10^ 2                                   55XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX7                                  
+        0.40*10^ 2                                 24XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX4                                 
+        0.20*10^ 2                   1       123346XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX7663  11  1                     
+
+          Contents                                                                                                      
+            *10^ 2  0000000000000000000000000000000000000112223345455555554432221110000000000000000000000000000000000000
+            *10^ 1  0000000000000000000000000000001225567141473621932763333199825319652211100000000000000000000000000000
+            *10^ 0  0000000000000000010000000246681571186772144383775023193309512331147042270021001000000000000000000000
+            *10^-1  0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+          Low edge  --------------------------------------------------                                                  
+            *10^ 0  1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+            *10^-1  0999998888877777666665555544444333332222211111000000000111112222233333444445555566666777778888899999
+            *10^-2  0864208642086420864208642086420864208642086420864202468024680246802468024680246802468024680246802468
+
+   Entries  =       10000    Mean = -3.9720e-03    Underflow =  0.0000e+00    Low edge  = -1.0000e+00
+   All chan =  1.0000e+04    Rms  =  1.4056e-01    Overflow  =  0.0000e+00    High edge =  1.0000e+00
+
+
+  2011-04-20 12:40       net pZ offset
+
+        3.00*10^ 2                                                    1                                                 
+        2.90*10^ 2                                                    X    5                                            
+        2.80*10^ 2                                               5  5 X   6X                                            
+        2.70*10^ 2                                               X  X X 3 XX5                                           
+        2.60*10^ 2                                               X55X X7X5XXX                                           
+        2.50*10^ 2                                              8XXXX XXXXXXX1 2                                        
+        2.40*10^ 2                                           28 XXXXX1XXXXXXXX9X                                        
+        2.30*10^ 2                                           XXXXXXXXXXXXXXXXXXX4                                       
+        2.20*10^ 2                                           XXXXXXXXXXXXXXXXXXXX                                       
+        2.10*10^ 2                                           XXXXXXXXXXXXXXXXXXXXX                                      
+        2.00*10^ 2                                          8XXXXXXXXXXXXXXXXXXXXX 4                                    
+        1.90*10^ 2                                     5X 66XXXXXXXXXXXXXXXXXXXXXX1X                                    
+        1.80*10^ 2                                    1XX XXXXXXXXXXXXXXXXXXXXXXXXXX                                    
+        1.70*10^ 2                                    XXX XXXXXXXXXXXXXXXXXXXXXXXXXX16                                  
+        1.60*10^ 2                                    XXX8XXXXXXXXXXXXXXXXXXXXXXXXXXXX9                                 
+        1.50*10^ 2                                    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                 
+        1.40*10^ 2                                 2 6XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX7                                
+        1.30*10^ 2                                 X4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX4                               
+        1.20*10^ 2                                 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                               
+        1.10*10^ 2                               X8XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX81                             
+        1.00*10^ 2                            8  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX9                            
+        0.90*10^ 2                           4X94XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX2                           
+        0.80*10^ 2                           XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX6                         
+        0.70*10^ 2                           XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 3                       
+        0.60*10^ 2                         58XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX3X                       
+        0.50*10^ 2                      7 5XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX64                     
+        0.40*10^ 2                     2X8XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX3                    
+        0.30*10^ 2                   23XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX8 45                
+        0.20*10^ 2                945XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX7XX714             
+        0.10*10^ 2        1 3339XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX46543  1 1   
+
+          Contents                                                                                                      
+            *10^ 2  0000000000000000000000000000011111111111122222222222222222222211111111100000000000000000000000000000
+            *10^ 1  0000000000001111122343455898810323789588933347557395657864342189665320098875644321221110000000000000
+            *10^ 0  0000001033390094523278558489408246150866828085555117356551924014169748192063364387457144654300101000
+            *10^-1  0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+          Low edge  --------------------------------------------------                                                  
+            *10^ 1  1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+            *10^ 0  0999998888877777666665555544444333332222211111000000000111112222233333444445555566666777778888899999
+            *10^-1  0864208642086420864208642086420864208642086420864202468024680246802468024680246802468024680246802468
+
+   Entries  =       10000    Mean =  2.2420e-02    Underflow =  0.0000e+00    Low edge  = -1.0000e+01
+   All chan =  1.0000e+04    Rms  =  2.8677e+00    Overflow  =  0.0000e+00    High edge =  1.0000e+01
+
+
+  2011-04-20 12:40       individual abs(pZ) offset
+
+        8.40*10^ 2                                                   2                                                  
+        8.10*10^ 2                                                   X2                                                 
+        7.80*10^ 2                                                 9 XXX                                                
+        7.50*10^ 2                                                 X8XXX                                                
+        7.20*10^ 2                                                 XXXXX74                                              
+        6.90*10^ 2                                              327XXXXXXX                                              
+        6.60*10^ 2                                              XXXXXXXXXXX                                             
+        6.30*10^ 2                                              XXXXXXXXXXX                                             
+        6.00*10^ 2                                             XXXXXXXXXXXX37                                           
+        5.70*10^ 2                                             XXXXXXXXXXXXXX85                                         
+        5.40*10^ 2                                           59XXXXXXXXXXXXXXXX                                         
+        5.10*10^ 2                                          9XXXXXXXXXXXXXXXXXX                                         
+        4.80*10^ 2                                         5XXXXXXXXXXXXXXXXXXX                                         
+        4.50*10^ 2                                        8XXXXXXXXXXXXXXXXXXXX648                                      
+        4.20*10^ 2                                        XXXXXXXXXXXXXXXXXXXXXXXX                                      
+        3.90*10^ 2                                      36XXXXXXXXXXXXXXXXXXXXXXXX4                                     
+        3.60*10^ 2                                      XXXXXXXXXXXXXXXXXXXXXXXXXXX7                                    
+        3.30*10^ 2                                    28XXXXXXXXXXXXXXXXXXXXXXXXXXXX77                                  
+        3.00*10^ 2                                   3XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                  
+        2.70*10^ 2                                   XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX44                                
+        2.40*10^ 2                                  4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1                               
+        2.10*10^ 2                               1 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                               
+        1.80*10^ 2                               X4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX6                              
+        1.50*10^ 2                              3XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX5                             
+        1.20*10^ 2                              XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX6                            
+        0.90*10^ 2                             3XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX4                           
+        0.60*10^ 2                            7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX3                          
+        0.30*10^ 2                           9XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX4                         
+
+          Contents                                                                                                      
+            *10^ 2  0000000000000000000000000000111222333344555666677877776555544433332221110000000000000000000000000000
+            *10^ 1  0000000000000000000000000257286127027746023066874188105796533475225516307310000000000000000000000000
+            *10^ 0  0000000000000000000000000710822039750855748096284770029825483310203128472930000000000000000000000000
+            *10^-1  0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+          Low edge  --------------------------------------------------                                                  
+            *10^ 1  1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+            *10^ 0  0999998888877777666665555544444333332222211111000000000111112222233333444445555566666777778888899999
+            *10^-1  0864208642086420864208642086420864208642086420864202468024680246802468024680246802468024680246802468
+
+   Entries  =       20000    Mean = -3.2020e-02    Underflow =  0.0000e+00    Low edge  = -1.0000e+01
+   All chan =  2.0000e+04    Rms  =  2.0337e+00    Overflow  =  0.0000e+00    High edge =  1.0000e+01
+
+
+  2011-04-20 12:40       vertex x position
+
+        3.00*10^ 2                                                   26                                                 
+        2.90*10^ 2                                                   XX 7                                               
+        2.80*10^ 2                                             6     XX1X8                                              
+        2.70*10^ 2                                             X   18XXXXX                                              
+        2.60*10^ 2                                           5 X 61XXXXXXX 3                                            
+        2.50*10^ 2                                           X X XXXXXXXXX9X  7                                         
+        2.40*10^ 2                                           X X XXXXXXXXXXX 7X                                         
+        2.30*10^ 2                                           X3XXXXXXXXXXXXX9XX                                         
+        2.20*10^ 2                                        7  XXXXXXXXXXXXXXXXXX                                         
+        2.10*10^ 2                                        X7 XXXXXXXXXXXXXXXXXX                                         
+        2.00*10^ 2                                       9XX XXXXXXXXXXXXXXXXXXX                                        
+        1.90*10^ 2                                       XXX8XXXXXXXXXXXXXXXXXXX2                                       
+        1.80*10^ 2                                      2XXXXXXXXXXXXXXXXXXXXXXXX5 6                                    
+        1.70*10^ 2                                      XXXXXXXXXXXXXXXXXXXXXXXXXX7X 8                                  
+        1.60*10^ 2                                    38XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 1                                
+        1.50*10^ 2                                    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX X                                
+        1.40*10^ 2                                  2 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX X                                
+        1.30*10^ 2                                  X9XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX7X5                               
+        1.20*10^ 2                               9 9XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                              
+        1.10*10^ 2                              3X XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1                             
+        1.00*10^ 2                              XX XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX  1                          
+        0.90*10^ 2                              XX8XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX16X                          
+        0.80*10^ 2                            6 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX7                         
+        0.70*10^ 2                           7X5XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX8                        
+        0.60*10^ 2                        5 9XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX  1                     
+        0.50*10^ 2                      27X7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX75X                     
+        0.40*10^ 2                  2   XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX57                   
+        0.30*10^ 2                3 X476XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX852 3              
+        0.20*10^ 2             397X2XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX6X135           
+        0.10*10^ 2  31221342566XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX73384333131
+
+          Contents                                                                                                      
+            *10^ 2  0000000000000000000000000000110111111122122222222222222222221111111111100000000000000000000000000000
+            *10^ 1  0000000000011121322244545676018132557910852735566997874523408767662522088976445332221211100000000000
+            *10^ 0  3122134256639732247627579765398929382977853606118261789397702576087150116178751578526313573384333131
+            *10^-1  0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+          Low edge  --------------------------------------------------                                                  
+            *10^ 0  1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+            *10^-1  0999998888877777666665555544444333332222211111000000000111112222233333444445555566666777778888899999
+            *10^-2  0864208642086420864208642086420864208642086420864202468024680246802468024680246802468024680246802468
+
+   Entries  =       10000    Mean =  8.2975e-04    Underflow =  3.0000e+00    Low edge  = -1.0000e+00
+   All chan =  9.9910e+03    Rms  =  2.9785e-01    Overflow  =  6.0000e+00    High edge =  1.0000e+00
+
+
+  2011-04-20 12:40       vertex y position
+
+        2.90*10^ 2                                                      2                                               
+        2.80*10^ 2                                                  3 X4X                                               
+        2.70*10^ 2                                                  X XXX9                                              
+        2.60*10^ 2                                              9  5X XXXX8                                             
+        2.50*10^ 2                                              X19XX2XXXXX9 5                                          
+        2.40*10^ 2                                            4XXXXXXXXXXXXX X                                          
+        2.30*10^ 2                                          9 XXXXXXXXXXXXXX X6                                         
+        2.20*10^ 2                                        X XXXXXXXXXXXXXXXX8XX7                                        
+        2.10*10^ 2                                        X XXXXXXXXXXXXXXXXXXXX7                                       
+        2.00*10^ 2                                        X1XXXXXXXXXXXXXXXXXXXXX8X                                     
+        1.90*10^ 2                                        XXXXXXXXXXXXXXXXXXXXXXXXX                                     
+        1.80*10^ 2                                      14XXXXXXXXXXXXXXXXXXXXXXXXX                                     
+        1.70*10^ 2                                     2XXXXXXXXXXXXXXXXXXXXXXXXXXX  5                                  
+        1.60*10^ 2                                     XXXXXXXXXXXXXXXXXXXXXXXXXXXX44X7                                 
+        1.50*10^ 2                                  5 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX5                                
+        1.40*10^ 2                                 1X2XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                               
+        1.30*10^ 2                                 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 4                             
+        1.20*10^ 2                                 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX X1                            
+        1.10*10^ 2                                6XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX6XX                            
+        1.00*10^ 2                             449XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                            
+        0.90*10^ 2                             XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX3                           
+        0.80*10^ 2                           11XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX4 1                        
+        0.70*10^ 2                           XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX9X                        
+        0.60*10^ 2                        419XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                        
+        0.50*10^ 2                        XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX88424                   
+        0.40*10^ 2                     XX7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX2                  
+        0.30*10^ 2                   47XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX4 7 6             
+        0.20*10^ 2              17361XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX3X7X11           
+        0.10*10^ 2  2 1334725877XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX73372242 1 
+
+          Contents                                                                                                      
+            *10^ 2  0000000000000000000000000000001111111121222222222222222222222121111111110000000000000000000000000000
+            *10^ 1  0000000000001111122443555779990343567729223454457487865414210905565440218767444443212121100000000000
+            *10^ 0  2013347258771736147007419114496152021401904091953204298985677804457506413491884242437761173372242010
+            *10^-1  0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+          Low edge  --------------------------------------------------                                                  
+            *10^ 0  1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+            *10^-1  0999998888877777666665555544444333332222211111000000000111112222233333444445555566666777778888899999
+            *10^-2  0864208642086420864208642086420864208642086420864202468024680246802468024680246802468024680246802468
+
+   Entries  =       10000    Mean =  5.2141e-03    Underflow =  3.0000e+00    Low edge  = -1.0000e+00
+   All chan =  9.9960e+03    Rms  =  2.9784e-01    Overflow  =  1.0000e+00    High edge =  1.0000e+00
+
+
+  2011-04-20 12:40       vertex z position
+
+        4.50*10^ 2                                                    1                                                 
+        4.35*10^ 2                                                    X                                                 
+        4.20*10^ 2                                                    X                                                 
+        4.05*10^ 2                                                    X                                                 
+        3.90*10^ 2                                                  2 X                                                 
+        3.75*10^ 2                                               3  X X1                                                
+        3.60*10^ 2                                               X1 X XX5                                               
+        3.45*10^ 2                                               XX1X9XXX58                                             
+        3.30*10^ 2                                             19XXXXXXXXXX5                                            
+        3.15*10^ 2                                             XXXXXXXXXXXXX                                            
+        3.00*10^ 2                                             XXXXXXXXXXXXX                                            
+        2.85*10^ 2                                          7 5XXXXXXXXXXXXX154                                         
+        2.70*10^ 2                                          X XXXXXXXXXXXXXXXXX                                         
+        2.55*10^ 2                                          X3XXXXXXXXXXXXXXXXX                                         
+        2.40*10^ 2                                        1 XXXXXXXXXXXXXXXXXXX72 3                                     
+        2.25*10^ 2                                       5X XXXXXXXXXXXXXXXXXXXXX X                                     
+        2.10*10^ 2                                      5XX XXXXXXXXXXXXXXXXXXXXX X                                     
+        1.95*10^ 2                                      XXX8XXXXXXXXXXXXXXXXXXXXX1X                                     
+        1.80*10^ 2                                      XXXXXXXXXXXXXXXXXXXXXXXXXXX8 3                                  
+        1.65*10^ 2                                     6XXXXXXXXXXXXXXXXXXXXXXXXXXXX9X                                  
+        1.50*10^ 2                                   X7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX5                                 
+        1.35*10^ 2                                   XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX4                                
+        1.20*10^ 2                                  9XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                
+        1.05*10^ 2                                7 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                
+        0.90*10^ 2                               3XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX691                             
+        0.75*10^ 2                               XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                             
+        0.60*10^ 2                              7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX7                            
+        0.45*10^ 2                              XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1                           
+        0.30*10^ 2                            87XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX3                          
+        0.15*10^ 2                           4XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX4                         
+
+          Contents                                                                                                      
+            *10^ 2  0000000000000000000000000000001011112221222333333343333322222121111100000000000000000000000000000000
+            *10^ 1  0000000000000000000000000022570915450129847126437436534277732837674288753200000000000000000000000000
+            *10^ 0  0000000000000000000000000675590090592862058685628472372328658107303649652060000000000000000000000000
+            *10^-1  0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+          Low edge  --------------------------------------------------                                                  
+            *10^ 2  1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+            *10^ 1  0999998888877777666665555544444333332222211111000000000111112222233333444445555566666777778888899999
+            *10^ 0  0864208642086420864208642086420864208642086420864202468024680246802468024680246802468024680246802468
+
+   Entries  =       10000    Mean = -1.6120e-01    Underflow =  0.0000e+00    Low edge  = -1.0000e+02
+   All chan =  1.0000e+04    Rms  =  2.0352e+01    Overflow  =  0.0000e+00    High edge =  1.0000e+02
+
+
+  2011-04-20 12:40       vertex time
+
+        4.20*10^ 2                                                   1  6                                               
+        4.05*10^ 2                                                   X  X                                               
+        3.90*10^ 2                                                   X  X                                               
+        3.75*10^ 2                                                   X5 X                                               
+        3.60*10^ 2                                                3  XX3X1                                              
+        3.45*10^ 2                                                X 9XXXXX5                                             
+        3.30*10^ 2                                                X1XXXXXXX7                                            
+        3.15*10^ 2                                             X37XXXXXXXXXX                                            
+        3.00*10^ 2                                             XXXXXXXXXXXXX95                                          
+        2.85*10^ 2                                           X XXXXXXXXXXXXXXX                                          
+        2.70*10^ 2                                        1  X5XXXXXXXXXXXXXXX9                                         
+        2.55*10^ 2                                        X  XXXXXXXXXXXXXXXXXX2                                        
+        2.40*10^ 2                                        XX9XXXXXXXXXXXXXXXXXXX 9                                      
+        2.25*10^ 2                                        XXXXXXXXXXXXXXXXXXXXXX3X                                      
+        2.10*10^ 2                                      1 XXXXXXXXXXXXXXXXXXXXXXXX8                                     
+        1.95*10^ 2                                     7X7XXXXXXXXXXXXXXXXXXXXXXXXX                                     
+        1.80*10^ 2                                     XXXXXXXXXXXXXXXXXXXXXXXXXXXX29                                   
+        1.65*10^ 2                                     XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX9                                  
+        1.50*10^ 2                                  1  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                  
+        1.35*10^ 2                                  X 7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX5                                 
+        1.20*10^ 2                                  X7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 3                               
+        1.05*10^ 2                                 2XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX5X3                              
+        0.90*10^ 2                                7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 2                            
+        0.75*10^ 2                                XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX7X                            
+        0.60*10^ 2                             117XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                            
+        0.45*10^ 2                             XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX2                           
+        0.30*10^ 2                            8XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX2                          
+        0.15*10^ 2                           5XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX7                         
+
+          Contents                                                                                                      
+            *10^ 2  0000000000000000000000000000000011111122222333333433433322222221111010000000000000000000000000000000
+            *10^ 1  0000000000000000000000000024458931399954386101514064143299641306762909773110000000000000000000000000
+            *10^ 0  0000000000000000000000000777756376006060853550073689468582835878947895183800000000000000000000000000
+            *10^-1  0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+          Low edge  --------------------------------------------------                                                  
+            *10^ 2  1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+            *10^ 1  0999998888877777666665555544444333332222211111000000000111112222233333444445555566666777778888899999
+            *10^ 0  0864208642086420864208642086420864208642086420864202468024680246802468024680246802468024680246802468
+
+   Entries  =       10000    Mean =  1.4180e-01    Underflow =  0.0000e+00    Low edge  = -1.0000e+02
+   All chan =  1.0000e+04    Rms  =  2.0415e+01    Overflow  =  0.0000e+00    High edge =  1.0000e+02
+
+
+  2011-04-20 12:40       vertex |x| + |t|
+
+        4.05*10^ 2                                           1     41                                                   
+        3.90*10^ 2                                           X X   XX                                                   
+        3.75*10^ 2                                           X X  3XX3                                                  
+        3.60*10^ 2                                           X X 1XXXX                                                  
+        3.45*10^ 2                                           X X7XXXXX                                                  
+        3.30*10^ 2                                         98X6XXXXXXX                                                  
+        3.15*10^ 2                                        5XXXXXXXXXXX                                                  
+        3.00*10^ 2                                     65 XXXXXXXXXXXX                                                  
+        2.85*10^ 2                                   84XX9XXXXXXXXXXXX                                                  
+        2.70*10^ 2                                7  XXXXXXXXXXXXXXXXX                                                  
+        2.55*10^ 2                               XX92XXXXXXXXXXXXXXXXX                                                  
+        2.40*10^ 2                               XXXXXXXXXXXXXXXXXXXXX                                                  
+        2.25*10^ 2                              5XXXXXXXXXXXXXXXXXXXXX                                                  
+        2.10*10^ 2                            35XXXXXXXXXXXXXXXXXXXXXX                                                  
+        1.95*10^ 2                          3 XXXXXXXXXXXXXXXXXXXXXXXX                                                  
+        1.80*10^ 2                     3779XX9XXXXXXXXXXXXXXXXXXXXXXXX                                                  
+        1.65*10^ 2                     XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                                  
+        1.50*10^ 2                    1XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                                  
+        1.35*10^ 2                  92XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                                  
+        1.20*10^ 2              7134XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                                  
+        1.05*10^ 2            1 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                                  
+        0.90*10^ 2           XX7XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                                  
+        0.75*10^ 2          2XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                                  
+        0.60*10^ 2       254XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                                  
+        0.45*10^ 2     12XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                                  
+        0.30*10^ 2   12XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                                  
+        0.15*10^ 2  5XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX                                                  
+
+          Contents                                                                                                      
+            *10^ 2  0000000000001111111111111122222222222233333333333300000000000000000000000000000000000000000000000000
+            *10^ 1  0113345569981001323677788700156548799802292944699600000000000000000000000000000000000000000000000000
+            *10^ 0  8781382130165691336966805802855332643378724016562500000000000000000000000000000000000000000000000000
+            *10^-1  0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+          Low edge                                                                                                      
+            *10^ 1  0000000000111111111122222222223333333333444444444455555555556666666666777777777788888888889999999999
+            *10^ 0  0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+            *10^-1  0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+   Entries  =       10000    Mean =  3.3373e+01    Underflow =  0.0000e+00    Low edge  =  0.0000e+00
+   All chan =  1.0000e+04    Rms  =  1.1789e+01    Overflow  =  0.0000e+00    High edge =  1.0000e+02

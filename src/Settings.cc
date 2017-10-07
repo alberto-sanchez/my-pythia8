@@ -1,5 +1,5 @@
 // Settings.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -12,21 +12,12 @@
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // Settings class.
 // This class contains flags, modes, parms and words used in generation.
 
-//*********
-
-// Definitions of static variables. 
-map<string, Flag> Settings::flags;
-map<string, Mode> Settings::modes;
-map<string, Parm> Settings::parms;
-map<string, Word> Settings::words;
-bool Settings::isInit = false;
-
-//*********
+//--------------------------------------------------------------------------
 
 // Read in database from specific file.
 
@@ -51,7 +42,7 @@ bool Settings::init(string startFile, bool append, ostream& os) {
     ifstream is(cstring);  
 
     // Check that instream is OK.
-    if (!is) {
+    if (!is.good()) {
       os << "\n PYTHIA Error: settings file " << files[i] 
          << " not found" << endl; 
       return false;
@@ -144,6 +135,12 @@ bool Settings::init(string startFile, bool append, ostream& os) {
     };
   };
 
+  // Set up default e+e- and pp tunes, if positive.
+  int eeTune = mode("Tune:ee");
+  if (eeTune > 0) initTuneEE( eeTune);
+  int ppTune = mode("Tune:pp");
+  if (ppTune > 0) initTunePP( ppTune);
+
   // Done.
   if (nError > 0) return false;
   isInit = true;
@@ -151,11 +148,11 @@ bool Settings::init(string startFile, bool append, ostream& os) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Overwrite existing database by reading from specific file.
 
-bool Settings::reInit(string startFile) {
+bool Settings::reInit(string startFile, ostream& os) {
 
   // Reset maps to empty.
   flags.clear();
@@ -165,11 +162,11 @@ bool Settings::reInit(string startFile) {
 
   // Then let normal init do the rest.
   isInit = false;
-  return init(startFile);
+  return init(startFile, false, os);
 
 } 
 
-//*********
+//--------------------------------------------------------------------------
 
 // Read in updates from a character string, like a line of a file. 
 // Is used by readString (and readFile) in Pythia.
@@ -177,11 +174,11 @@ bool Settings::reInit(string startFile) {
 bool Settings::readString(string line, bool warn, ostream& os) {
 
   // If empty line then done.
-  if (line.find_first_not_of(" ") == string::npos) return true;
+  if (line.find_first_not_of(" \n\t\v\b\r\f\a") == string::npos) return true;
 
   // If first character is not a letter, then taken to be a comment line.
   string lineNow = line;
-  int firstChar = lineNow.find_first_not_of(" ");
+  int firstChar = lineNow.find_first_not_of(" \n\t\v\b\r\f\a");
   if (!isalpha(lineNow[firstChar])) return true; 
 
   // Replace an equal sign by a blank to make parsing simpler.
@@ -260,7 +257,7 @@ bool Settings::readString(string line, bool warn, ostream& os) {
   return true;
 }
 
-//*********
+//--------------------------------------------------------------------------
  
 // Write updates or everything to user-defined file.
 
@@ -270,17 +267,19 @@ bool Settings::writeFile(string toFile, bool writeAll) {
   const char* cstring = toFile.c_str();
   ofstream os(cstring);  
   if (!os) {
-    ErrorMsg::message("Error in Settings::writeFile:"
+    infoPtr->errorMsg("Error in Settings::writeFile:"
       " could not open file", toFile);
     return false;
   }
+
+  // Hand over real work to next method.
   return writeFile( os, writeAll);
 
 }
 
-//*********
+//--------------------------------------------------------------------------
  
-// Write updates or everything to user-defined file.
+// Write updates or everything to user-defined stream (or file).
 
 bool Settings::writeFile(ostream& os, bool writeAll) {
 
@@ -357,18 +356,18 @@ bool Settings::writeFile(ostream& os, bool writeAll) {
   return true;
 }
 
-//*********
+//--------------------------------------------------------------------------
  
 // Print out table of database in lexigraphical order.
 
-void Settings::list(bool listAll,  bool listString, string match,
+void Settings::list(bool doListAll,  bool doListString, string match,
   ostream& os) {
 
   // Table header; output for bool as off/on.
-  if (listAll) 
+  if (doListAll) 
     os << "\n *-------  PYTHIA Flag + Mode + Parm + Word Settings (all) "
        << " -------------------------------------------------------* \n";
-  else if (!listString) 
+  else if (!doListString) 
     os << "\n *-------  PYTHIA Flag + Mode + Parm + Word Settings (chang" 
        << "es only)  ----------------------------------------------* \n" ;
   else
@@ -404,8 +403,8 @@ void Settings::list(bool listAll,  bool listString, string match,
       string state[2] = {"off", "on"};
       bool valNow = flagEntry->second.valNow;
       bool valDefault = flagEntry->second.valDefault;
-      if ( listAll || (!listString && valNow != valDefault)
-        || (listString && flagEntry->first.find(match) != string::npos) )
+      if ( doListAll || (!doListString && valNow != valDefault)
+        || (doListString && flagEntry->first.find(match) != string::npos) )
         os << " | " << setw(45) << left 
            << flagEntry->second.name << " | " << setw(24) << right
            << state[valNow] << " | " << setw(12) << state[valDefault] 
@@ -419,8 +418,8 @@ void Settings::list(bool listAll,  bool listString, string match,
       ) {
       int valNow = modeEntry->second.valNow;
       int valDefault = modeEntry->second.valDefault;
-      if ( listAll || (!listString && valNow != valDefault)
-        || (listString && modeEntry->first.find(match) != string::npos) ) {
+      if ( doListAll || (!doListString && valNow != valDefault)
+        || (doListString && modeEntry->first.find(match) != string::npos) ) {
         os << " | " << setw(45) << left 
            << modeEntry->second.name << " | " << setw(24) << right 
            << valNow << " | " << setw(12) << valDefault; 
@@ -441,8 +440,8 @@ void Settings::list(bool listAll,  bool listString, string match,
       ) {
       double valNow = parmEntry->second.valNow;
       double valDefault = parmEntry->second.valDefault;      
-      if ( listAll || (!listString && valNow != valDefault ) 
-        || (listString && parmEntry->first.find(match) != string::npos) ) {
+      if ( doListAll || (!doListString && valNow != valDefault ) 
+        || (doListString && parmEntry->first.find(match) != string::npos) ) {
         os << " | " << setw(45) << left 
            << parmEntry->second.name << right << " |             ";
 	for (int i = 0; i < 4; ++i) { 
@@ -477,8 +476,8 @@ void Settings::list(bool listAll,  bool listString, string match,
       int blankLeft = max(0, 60 - max(24, int(valNow.length()) ) 
         - max(12, int(valDefault.length()) ) );  
       string blankPad( blankLeft, ' '); 
-      if ( listAll || (!listString && valNow != valDefault)
-        || (listString && wordEntry->first.find(match) != string::npos) )
+      if ( doListAll || (!doListString && valNow != valDefault)
+        || (doListString && wordEntry->first.find(match) != string::npos) )
         os << " | " << setw(45) << left 
            << wordEntry->second.name << " | " << setw(24) << right
            << valNow << " | " << setw(12) << valDefault << blankPad 
@@ -495,7 +494,7 @@ void Settings::list(bool listAll,  bool listString, string match,
 
 }
 
-//*********
+//--------------------------------------------------------------------------
  
 // Reset all values to their defaults.
 
@@ -531,35 +530,87 @@ void Settings::resetAll() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
  
 // Give back current value, with check that key exists.
 
 bool Settings::flag(string keyIn) {
   if (isFlag(keyIn)) return flags[toLower(keyIn)].valNow; 
-  ErrorMsg::message("Error in Settings::flag: unknown key", keyIn);
+  infoPtr->errorMsg("Error in Settings::flag: unknown key", keyIn);
   return false; 
 }
 
 int Settings::mode(string keyIn) {
   if (isMode(keyIn)) return modes[toLower(keyIn)].valNow; 
-  ErrorMsg::message("Error in Settings::mode: unknown key", keyIn);
+  infoPtr->errorMsg("Error in Settings::mode: unknown key", keyIn);
   return 0; 
 }
 
 double Settings::parm(string keyIn) {
   if (isParm(keyIn)) return parms[toLower(keyIn)].valNow; 
-  ErrorMsg::message("Error in Settings::parm: unknown key", keyIn);
+  infoPtr->errorMsg("Error in Settings::parm: unknown key", keyIn);
   return 0.; 
 }
 
 string Settings::word(string keyIn) {
   if (isWord(keyIn)) return words[toLower(keyIn)].valNow; 
-  ErrorMsg::message("Error in Settings::word: unknown key", keyIn);
+  infoPtr->errorMsg("Error in Settings::word: unknown key", keyIn);
   return " "; 
 }
 
-//*********
+//--------------------------------------------------------------------------
+ 
+// Get a map of entries whose names contain the string "match".
+
+map<string, Flag> Settings::getFlagMap(string match) {
+  // Make the match string lower case. Start with an empty map.
+  match = toLower(match);
+  map<string, Flag> flagMap;  
+  // Loop over the flag map (using iterator).
+  for (map<string,Flag>::iterator flagEntry = flags.begin();
+       flagEntry != flags.end(); ++flagEntry)
+    if (flagEntry->first.find(match) != string::npos) 
+      flagMap[flagEntry->first] = flagEntry->second;
+  return flagMap;
+}
+
+map<string, Mode> Settings::getModeMap(string match) {
+  // Make the match string lower case. Start with an empty map.
+  match = toLower(match);
+  map<string, Mode> modeMap;  
+  // Loop over the mode map (using iterator).
+  for (map<string,Mode>::iterator modeEntry = modes.begin();
+       modeEntry != modes.end(); ++modeEntry)
+    if (modeEntry->first.find(match) != string::npos) 
+      modeMap[modeEntry->first] = modeEntry->second;
+  return modeMap;
+}
+
+map<string, Parm> Settings::getParmMap(string match) {
+  // Make the match string lower case. Start with an empty map.
+  match = toLower(match);
+  map<string, Parm> parmMap;  
+  // Loop over the parm map (using iterator).
+  for (map<string,Parm>::iterator parmEntry = parms.begin();
+       parmEntry != parms.end(); ++parmEntry)
+    if (parmEntry->first.find(match) != string::npos) 
+      parmMap[parmEntry->first] = parmEntry->second;
+  return parmMap;
+}
+
+map<string, Word> Settings::getWordMap(string match) {
+  // Make the match string lower case. Start with an empty map.
+  match = toLower(match);
+  map<string, Word> wordMap;  
+  // Loop over the word map (using iterator).
+  for (map<string,Word>::iterator wordEntry = words.begin();
+       wordEntry != words.end(); ++wordEntry)
+    if (wordEntry->first.find(match) != string::npos) 
+      wordMap[wordEntry->first] = wordEntry->second;
+  return wordMap;
+}
+
+//--------------------------------------------------------------------------
  
 // Change current value, respecting limits.
 
@@ -569,12 +620,16 @@ void Settings::flag(string keyIn, bool nowIn) {
 
 void Settings:: mode(string keyIn, int nowIn) { 
   if (isMode(keyIn)) { 
-    Mode& modeNow = modes[toLower(keyIn)];
+    string keyLower = toLower(keyIn);
+    Mode& modeNow = modes[keyLower];
     if (modeNow.hasMin && nowIn < modeNow.valMin) 
       modeNow.valNow = modeNow.valMin; 
     else if (modeNow.hasMax && nowIn > modeNow.valMax) 
       modeNow.valNow = modeNow.valMax;
     else modeNow.valNow = nowIn; 
+    // Tune:ee and Tune:pp each trigger a whole set of changes.
+    if (keyLower == "tune:ee") initTuneEE( modeNow.valNow);
+    if (keyLower == "tune:pp") initTunePP( modeNow.valNow); 
   } 
 } 
 
@@ -593,7 +648,420 @@ void Settings::word(string keyIn, string nowIn) {
     if (isWord(keyIn)) words[toLower(keyIn)].valNow = nowIn; 
 }
 
-//*********
+//--------------------------------------------------------------------------
+
+// Change current value, disregarding limits.
+  
+void Settings::forceMode(string keyIn, int nowIn) { 
+  if (isMode(keyIn)) {
+    string keyLower = toLower(keyIn);
+    Mode& modeNow   = modes[keyLower];
+    modeNow.valNow  = nowIn; 
+    // Tune:ee and Tune:pp each trigger a whole set of changes.
+    if (keyLower == "tune:ee") initTuneEE( modeNow.valNow);
+    if (keyLower == "tune:pp") initTunePP( modeNow.valNow); 
+  }
+}
+
+void Settings::forceParm(string keyIn, double nowIn) { 
+  if (isParm(keyIn)) parms[toLower(keyIn)].valNow = nowIn; 
+}
+
+//--------------------------------------------------------------------------
+     
+// Restore current value to default.
+ 
+void Settings::resetFlag(string keyIn) {
+  if (isFlag(keyIn)) flags[toLower(keyIn)].valNow 
+    = flags[toLower(keyIn)].valDefault ; 
+}
+  
+void Settings::resetMode(string keyIn) {
+  string keyLower = toLower(keyIn);
+  if (isMode(keyIn)) modes[keyLower].valNow 
+    = modes[toLower(keyIn)].valDefault ; 
+
+  // For Tune:ee must also restore variables involved in tune.
+  if (keyLower == "tune:ee") {
+    resetParm("StringFlav:probStoUD");
+    resetParm("StringFlav:probQQtoQ");
+    resetParm("StringFlav:probSQtoQQ");
+    resetParm("StringFlav:probQQ1toQQ0");
+    resetParm("StringFlav:mesonUDvector");
+    resetParm("StringFlav:mesonSvector");
+    resetParm("StringFlav:mesonCvector");
+    resetParm("StringFlav:mesonBvector");
+    resetParm("StringFlav:etaSup");
+    resetParm("StringFlav:etaPrimeSup");
+    resetParm("StringFlav:popcornSpair");  
+    resetParm("StringFlav:popcornSmeson");  
+    resetParm("StringZ:aLund");
+    resetParm("StringZ:bLund");  
+    resetParm("StringZ:rFactB");  
+    resetParm("StringPT:sigma");  
+    resetParm("TimeShower:alphaSvalue");  
+    resetParm("TimeShower:pTmin");  
+    resetParm("TimeShower:pTminChgQ");
+  }  
+
+  // For Tune:pp must also restore variables involved in tune.
+  if (keyLower == "tune:pp") {
+    resetMode("PDF:pSet");  
+    resetParm("SigmaProcess:alphaSvalue");  
+    resetFlag("SigmaDiffractive:dampen");  
+    resetFlag("TimeShower:dampenBeamRecoil");  
+    resetFlag("TimeShower:phiPolAsym");  
+    resetParm("SpaceShower:alphaSvalue");  
+    resetFlag("SpaceShower:samePTasMI");  
+    resetParm("SpaceShower:pT0Ref");  
+    resetParm("SpaceShower:ecmRef");  
+    resetParm("SpaceShower:ecmPow");  
+    resetFlag("SpaceShower:rapidityOrder");  
+    resetFlag("SpaceShower:phiPolAsym");  
+    resetFlag("SpaceShower:phiIntAsym");  
+    resetParm("MultipleInteractions:alphaSvalue");   
+    resetParm("MultipleInteractions:pT0Ref");  
+    resetParm("MultipleInteractions:ecmRef");  
+    resetParm("MultipleInteractions:ecmPow");  
+    resetMode("MultipleInteractions:bProfile");  
+    resetParm("BeamRemnants:primordialKTsoft");  
+    resetParm("BeamRemnants:primordialKThard");  
+    resetParm("BeamRemnants:halfScaleForKT");  
+    resetParm("BeamRemnants:halfMassForKT");  
+    resetParm("BeamRemnants:reconnectRange"); 
+  }  
+
+}
+
+void Settings::resetParm(string keyIn) {
+  if (isParm(keyIn)) parms[toLower(keyIn)].valNow 
+    = parms[toLower(keyIn)].valDefault ; 
+}
+
+void Settings::resetWord(string keyIn) {
+  if (isWord(keyIn)) words[toLower(keyIn)].valNow 
+    = words[toLower(keyIn)].valDefault ; 
+}
+
+//--------------------------------------------------------------------------
+
+// Set the values related to a tune of e+e- data, 
+// i.e. mainly for final-state radiation and hadronization.
+
+void Settings::initTuneEE( int eeTune) {
+
+  // Restore all e+e- settings to their original values.
+  // Is first step for setting up a specific tune.
+  if (eeTune != 0) { 
+    resetParm("StringFlav:probStoUD");
+    resetParm("StringFlav:probQQtoQ");
+    resetParm("StringFlav:probSQtoQQ");
+    resetParm("StringFlav:probQQ1toQQ0");
+    resetParm("StringFlav:mesonUDvector");
+    resetParm("StringFlav:mesonSvector");
+    resetParm("StringFlav:mesonCvector");
+    resetParm("StringFlav:mesonBvector");
+    resetParm("StringFlav:etaSup");
+    resetParm("StringFlav:etaPrimeSup");
+    resetParm("StringFlav:popcornSpair");  
+    resetParm("StringFlav:popcornSmeson");  
+    resetParm("StringZ:aLund");
+    resetParm("StringZ:bLund");  
+    resetParm("StringZ:rFactB");  
+    resetParm("StringPT:sigma");  
+    resetParm("TimeShower:alphaSvalue");  
+    resetParm("TimeShower:pTmin");  
+    resetParm("TimeShower:pTminChgQ");  
+  }
+
+  // Old flavour and FSR defaults carried over from very old JETSET tune,
+  // only with alphaS roughly tuned for "new" pT-ordered shower.
+  if (eeTune == 1) { 
+    parm("StringFlav:probStoUD",     0.30  );
+    parm("StringFlav:probQQtoQ",     0.10  );
+    parm("StringFlav:probSQtoQQ",    0.40  );
+    parm("StringFlav:probQQ1toQQ0",  0.05  );
+    parm("StringFlav:mesonUDvector", 1.00  );
+    parm("StringFlav:mesonSvector",  1.50  );
+    parm("StringFlav:mesonCvector",  2.50  );
+    parm("StringFlav:mesonBvector",  3.00  );
+    parm("StringFlav:etaSup",        1.00  );
+    parm("StringFlav:etaPrimeSup",   0.40  );
+    parm("StringFlav:popcornSpair",  0.50  );  
+    parm("StringFlav:popcornSmeson", 0.50  );  
+    parm("StringZ:aLund",            0.30  );
+    parm("StringZ:bLund",            0.58  );  
+    parm("StringZ:rFactB",           1.00  );  
+    parm("StringPT:sigma",           0.36  );  
+    parm("TimeShower:alphaSvalue",   0.137 );  
+    parm("TimeShower:pTmin",         0.5   );  
+    parm("TimeShower:pTminChgQ",     0.5   );  
+  }
+
+  // Marc Montull's tune to particle composition at LEP1 (August 2007).
+  else if (eeTune == 2) {  
+    parm("StringFlav:probStoUD",     0.22  );
+    parm("StringFlav:probQQtoQ",     0.08  );
+    parm("StringFlav:probSQtoQQ",    0.75  );
+    parm("StringFlav:probQQ1toQQ0",  0.025 );
+    parm("StringFlav:mesonUDvector", 0.5   );
+    parm("StringFlav:mesonSvector",  0.6   );
+    parm("StringFlav:mesonCvector",  1.5   );
+    parm("StringFlav:mesonBvector",  2.5   );
+    parm("StringFlav:etaSup",        0.60  );
+    parm("StringFlav:etaPrimeSup",   0.15  );
+    parm("StringFlav:popcornSpair",  1.0   );
+    parm("StringFlav:popcornSmeson", 1.0   );
+    parm("StringZ:aLund",            0.76  );
+    parm("StringZ:bLund",            0.58  );   // kept fixed
+    parm("StringZ:rFactB",           1.00  );   // kept fixed
+    parm("StringPT:sigma",           0.36  );   // kept fixed
+    parm("TimeShower:alphaSvalue",   0.137 );   // kept fixed 
+    parm("TimeShower:pTmin",         0.5   );   // kept fixed 
+    parm("TimeShower:pTminChgQ",     0.5   );   // kept fixed
+  }
+
+  // Full e+e- tune of flavours and FSR to LEP1 data within the 
+  // Rivet + Professor framework, by Hendrik Hoeth (June 2009).
+  else if (eeTune == 3) {  
+    parm("StringFlav:probStoUD",     0.19  );
+    parm("StringFlav:probQQtoQ",     0.09  );
+    parm("StringFlav:probSQtoQQ",    1.00  );
+    parm("StringFlav:probQQ1toQQ0",  0.027 );
+    parm("StringFlav:mesonUDvector", 0.62  );
+    parm("StringFlav:mesonSvector",  0.725 );
+    parm("StringFlav:mesonCvector",  1.06  );
+    parm("StringFlav:mesonBvector",  3.0   );
+    parm("StringFlav:etaSup",        0.63  );
+    parm("StringFlav:etaPrimeSup",   0.12  );
+    parm("StringFlav:popcornSpair",  0.5   );   // kept fixed
+    parm("StringFlav:popcornSmeson", 0.5   );   // kept fixed
+    parm("StringZ:aLund",            0.3   );   // kept fixed
+    parm("StringZ:bLund",            0.8   );  
+    parm("StringZ:rFactB",           0.67  );  
+    parm("StringPT:sigma",           0.304 );  
+    parm("TimeShower:alphaSvalue",   0.1383);  
+    parm("TimeShower:pTmin",         0.4   );   // kept fixed (near limit) 
+    parm("TimeShower:pTminChgQ",     0.4   );   // kept same as pTmin
+  }
+  
+}
+
+//--------------------------------------------------------------------------
+
+// Set the values related to a tune of pp/ppbar data, 
+// i.e. mainly for initial-state radiation and multiple interactions.
+
+void Settings::initTunePP( int ppTune) {
+
+  // Restore all pp/ppbar settings to their original values.
+  // Is first step for setting up a specific tune.
+  if (ppTune != 0) { 
+    resetMode("PDF:pSet");  
+    resetParm("SigmaProcess:alphaSvalue");  
+    resetFlag("SigmaDiffractive:dampen");  
+    resetParm("SigmaDiffractive:maxXB");
+    resetParm("SigmaDiffractive:maxAX");
+    resetParm("SigmaDiffractive:maxXX");  
+    resetFlag("TimeShower:dampenBeamRecoil");  
+    resetFlag("TimeShower:phiPolAsym");  
+    resetParm("SpaceShower:alphaSvalue");  
+    resetFlag("SpaceShower:samePTasMI");  
+    resetParm("SpaceShower:pT0Ref");  
+    resetParm("SpaceShower:ecmRef");  
+    resetParm("SpaceShower:ecmPow");  
+    resetFlag("SpaceShower:rapidityOrder");  
+    resetFlag("SpaceShower:phiPolAsym");  
+    resetFlag("SpaceShower:phiIntAsym");  
+    resetParm("MultipleInteractions:alphaSvalue");   
+    resetParm("MultipleInteractions:pT0Ref");  
+    resetParm("MultipleInteractions:ecmRef");  
+    resetParm("MultipleInteractions:ecmPow");  
+    resetMode("MultipleInteractions:bProfile");  
+    resetParm("MultipleInteractions:expPow");  
+    resetParm("MultipleInteractions:a1");
+    resetParm("BeamRemnants:primordialKTsoft");  
+    resetParm("BeamRemnants:primordialKThard");  
+    resetParm("BeamRemnants:halfScaleForKT");  
+    resetParm("BeamRemnants:halfMassForKT");  
+    resetParm("BeamRemnants:reconnectRange");
+  } 
+
+  // Old ISR and MI defaults from early and primitive comparisons with data.
+  if (ppTune == 1) {
+    mode("PDF:pSet",                         2     );  
+    parm("SigmaProcess:alphaSvalue",         0.1265);  
+    flag("SigmaDiffractive:dampen",          false );  
+    flag("TimeShower:dampenBeamRecoil",      false );  
+    flag("TimeShower:phiPolAsym",            false );  
+    parm("SpaceShower:alphaSvalue",          0.127 );  
+    flag("SpaceShower:samePTasMI",           true  );  
+    parm("SpaceShower:pT0Ref",               2.2   );  
+    parm("SpaceShower:ecmRef",               1800.0);  
+    parm("SpaceShower:ecmPow",               0.16  );  
+    flag("SpaceShower:rapidityOrder",        false );  
+    flag("SpaceShower:phiPolAsym",           false );  
+    flag("SpaceShower:phiIntAsym",           false );  
+    parm("MultipleInteractions:alphaSvalue", 0.127 );   
+    parm("MultipleInteractions:pT0Ref",      2.15  );  
+    parm("MultipleInteractions:ecmRef",      1800. );  
+    parm("MultipleInteractions:ecmPow",      0.16  );  
+    mode("MultipleInteractions:bProfile",    2     );  
+    parm("BeamRemnants:primordialKTsoft",    0.4   );  
+    parm("BeamRemnants:primordialKThard",    2.1   );  
+    parm("BeamRemnants:halfScaleForKT",      7.0   );  
+    parm("BeamRemnants:halfMassForKT",       2.0   );  
+    parm("BeamRemnants:reconnectRange",      2.5   ); 
+  }
+  
+  // "Tune 1" simple first tune by Peter Skands to ISR and MI, July 2009.
+  else if (ppTune == 2) {
+    mode("PDF:pSet",                         2     );  
+    parm("SigmaProcess:alphaSvalue",         0.1265);   
+    flag("SigmaDiffractive:dampen",          false );  
+    flag("TimeShower:dampenBeamRecoil",      false );  
+    flag("TimeShower:phiPolAsym",            false );  
+    parm("SpaceShower:alphaSvalue",          0.137 );  
+    flag("SpaceShower:samePTasMI",           false );  
+    parm("SpaceShower:pT0Ref",               2.0   );  
+    parm("SpaceShower:ecmRef",               1800.0);  
+    parm("SpaceShower:ecmPow",               0.0   );  
+    flag("SpaceShower:rapidityOrder",        false );  
+    flag("SpaceShower:phiPolAsym",           false );  
+    flag("SpaceShower:phiIntAsym",           false );  
+    parm("MultipleInteractions:alphaSvalue", 0.127 );   
+    parm("MultipleInteractions:pT0Ref",      2.25  );  
+    parm("MultipleInteractions:ecmRef",      1800. );  
+    parm("MultipleInteractions:ecmPow",      0.24  );  
+    mode("MultipleInteractions:bProfile",    1     );  
+    parm("BeamRemnants:primordialKTsoft",    0.5   );  
+    parm("BeamRemnants:primordialKThard",    2.0   );  
+    parm("BeamRemnants:halfScaleForKT",      1.0   );  
+    parm("BeamRemnants:halfMassForKT",       1.0   );  
+    parm("BeamRemnants:reconnectRange",      10.0  );  
+  }
+  
+  // Tune 2C, July 2010.
+  else if (ppTune == 3) {
+    mode("PDF:pSet",                         8     );  
+    parm("SigmaProcess:alphaSvalue",         0.135 );  
+    flag("SigmaDiffractive:dampen",          false );  
+    flag("TimeShower:dampenBeamRecoil",      true  );  
+    flag("TimeShower:phiPolAsym",            true  );  
+    parm("SpaceShower:alphaSvalue",          0.137 );  
+    flag("SpaceShower:samePTasMI",           false );  
+    parm("SpaceShower:pT0Ref",               2.0   );  
+    parm("SpaceShower:ecmRef",               1800.0);  
+    parm("SpaceShower:ecmPow",               0.0   );  
+    flag("SpaceShower:rapidityOrder",        true  );  
+    flag("SpaceShower:phiPolAsym",           true  );  
+    flag("SpaceShower:phiIntAsym",           true  );  
+    parm("MultipleInteractions:alphaSvalue", 0.135 );   
+    parm("MultipleInteractions:pT0Ref",      2.32  );  
+    parm("MultipleInteractions:ecmRef",      1800. );  
+    parm("MultipleInteractions:ecmPow",      0.21  );  
+    mode("MultipleInteractions:bProfile",    3     );  
+    parm("MultipleInteractions:expPow",      1.6   );  
+    parm("BeamRemnants:primordialKTsoft",    0.5   );  
+    parm("BeamRemnants:primordialKThard",    2.0   );  
+    parm("BeamRemnants:halfScaleForKT",      1.0   );  
+    parm("BeamRemnants:halfMassForKT",       1.0   );  
+    parm("BeamRemnants:reconnectRange",      3.0   );  
+  }
+  
+  // Tune 2M, July 2010.
+  else if (ppTune == 4) {
+    mode("PDF:pSet",                         4     );  
+    parm("SigmaProcess:alphaSvalue",         0.1265);  
+    flag("SigmaDiffractive:dampen",          false );  
+    flag("TimeShower:dampenBeamRecoil",      true  );  
+    flag("TimeShower:phiPolAsym",            true  );  
+    parm("SpaceShower:alphaSvalue",          0.130 );  
+    flag("SpaceShower:samePTasMI",           false );  
+    parm("SpaceShower:pT0Ref",               2.0   );  
+    parm("SpaceShower:ecmRef",               1800.0);  
+    parm("SpaceShower:ecmPow",               0.0   );  
+    flag("SpaceShower:rapidityOrder",        true  );  
+    flag("SpaceShower:phiPolAsym",           true  );  
+    flag("SpaceShower:phiIntAsym",           true  );  
+    parm("MultipleInteractions:alphaSvalue", 0.127 );   
+    parm("MultipleInteractions:pT0Ref",      2.455 );  
+    parm("MultipleInteractions:ecmRef",      1800. );  
+    parm("MultipleInteractions:ecmPow",      0.26  );  
+    mode("MultipleInteractions:bProfile",    3     );  
+    parm("MultipleInteractions:expPow",      1.15  );  
+    parm("BeamRemnants:primordialKTsoft",    0.5   );  
+    parm("BeamRemnants:primordialKThard",    2.0   );  
+    parm("BeamRemnants:halfScaleForKT",      1.0   );  
+    parm("BeamRemnants:halfMassForKT",       1.0   );  
+    parm("BeamRemnants:reconnectRange",      3.0   );  
+  }
+ 
+  // Tune 4C, October 2010.
+  else if (ppTune == 5) {
+    mode("PDF:pSet",                         8     );  
+    parm("SigmaProcess:alphaSvalue",         0.135 );  
+    flag("SigmaDiffractive:dampen",          true  );
+    parm("SigmaDiffractive:maxXB",           65.0  );
+    parm("SigmaDiffractive:maxAX",           65.0  );
+    parm("SigmaDiffractive:maxXX",           65.0  );  
+    flag("TimeShower:dampenBeamRecoil",      true  );  
+    flag("TimeShower:phiPolAsym",            true  );  
+    parm("SpaceShower:alphaSvalue",          0.137 );  
+    flag("SpaceShower:samePTasMI",           false );  
+    parm("SpaceShower:pT0Ref",               2.0   );  
+    parm("SpaceShower:ecmRef",               1800.0);  
+    parm("SpaceShower:ecmPow",               0.0   );  
+    flag("SpaceShower:rapidityOrder",        true  );  
+    flag("SpaceShower:phiPolAsym",           true  );  
+    flag("SpaceShower:phiIntAsym",           true  );  
+    parm("MultipleInteractions:alphaSvalue", 0.135 );   
+    parm("MultipleInteractions:pT0Ref",      2.085 );  
+    parm("MultipleInteractions:ecmRef",      1800. );  
+    parm("MultipleInteractions:ecmPow",      0.19  );  
+    mode("MultipleInteractions:bProfile",    3     );  
+    parm("MultipleInteractions:expPow",      2.0   );  
+    parm("BeamRemnants:primordialKTsoft",    0.5   );  
+    parm("BeamRemnants:primordialKThard",    2.0   );  
+    parm("BeamRemnants:halfScaleForKT",      1.0   );  
+    parm("BeamRemnants:halfMassForKT",       1.0   );  
+    parm("BeamRemnants:reconnectRange",      1.5   );  
+  }
+
+  // Tune 4Cx, January 2011.
+  else if (ppTune == 6) {
+    mode("PDF:pSet",                         8     );  
+    parm("SigmaProcess:alphaSvalue",         0.135 );  
+    flag("SigmaDiffractive:dampen",          true  );
+    parm("SigmaDiffractive:maxXB",           65.0  );
+    parm("SigmaDiffractive:maxAX",           65.0  );
+    parm("SigmaDiffractive:maxXX",           65.0  );  
+    flag("TimeShower:dampenBeamRecoil",      true  );  
+    flag("TimeShower:phiPolAsym",            true  );  
+    parm("SpaceShower:alphaSvalue",          0.137 );  
+    flag("SpaceShower:samePTasMI",           false );  
+    parm("SpaceShower:pT0Ref",               2.0   );  
+    parm("SpaceShower:ecmRef",               1800.0);  
+    parm("SpaceShower:ecmPow",               0.0   );  
+    flag("SpaceShower:rapidityOrder",        true  );  
+    flag("SpaceShower:phiPolAsym",           true  );  
+    flag("SpaceShower:phiIntAsym",           true  );  
+    parm("MultipleInteractions:alphaSvalue", 0.135 );   
+    parm("MultipleInteractions:pT0Ref",      2.15  );  
+    parm("MultipleInteractions:ecmRef",      1800. );  
+    parm("MultipleInteractions:ecmPow",      0.19  );  
+    mode("MultipleInteractions:bProfile",    4     );
+    parm("MultipleInteractions:a1",          0.15  );
+    parm("BeamRemnants:primordialKTsoft",    0.5   );  
+    parm("BeamRemnants:primordialKThard",    2.0   );  
+    parm("BeamRemnants:halfScaleForKT",      1.0   );  
+    parm("BeamRemnants:halfMassForKT",       1.0   );  
+    parm("BeamRemnants:reconnectRange",      1.5   );  
+  }
+
+}
+
+//--------------------------------------------------------------------------
 
 // Convert string to lowercase for case-insensitive comparisons.
 // Also remove initial and trailing blanks, if any.
@@ -601,9 +1069,9 @@ void Settings::word(string keyIn, string nowIn) {
 string Settings::toLower(const string& name) { 
 
   // Copy string without initial and trailing blanks.
-  if (name.find_first_not_of(" ") == string::npos) return "";
-  int firstChar = name.find_first_not_of(" ");
-  int lastChar  = name.find_last_not_of(" ");
+  if (name.find_first_not_of(" \n\t\v\b\r\f\a") == string::npos) return "";
+  int firstChar = name.find_first_not_of(" \n\t\v\b\r\f\a");
+  int lastChar  = name.find_last_not_of(" \n\t\v\b\r\f\a");
   string temp   = name.substr( firstChar, lastChar + 1 - firstChar);
 
   // Convert to lowercase letter by letter.
@@ -613,7 +1081,7 @@ string Settings::toLower(const string& name) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Allow several alternative inputs for true/false.
 
@@ -625,7 +1093,7 @@ bool Settings::boolString(string tag) {
 
 }  
 
-//*********
+//--------------------------------------------------------------------------
 
 // Extract XML value string following XML attribute.
 
@@ -639,7 +1107,7 @@ string Settings::attributeValue(string line, string attribute) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Extract XML bool value following XML attribute.
 
@@ -651,7 +1119,7 @@ bool Settings::boolAttributeValue(string line, string attribute) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Extract XML int value following XML attribute.
 
@@ -665,7 +1133,7 @@ int Settings::intAttributeValue(string line, string attribute) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Extract XML double value following XML attribute.
 
@@ -679,6 +1147,6 @@ double Settings::doubleAttributeValue(string line, string attribute) {
 
 }
 
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8

@@ -1,5 +1,5 @@
 // Event.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -10,12 +10,12 @@
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // Particle class.
 // This class holds info on a particle in general.
 
-//*********
+//--------------------------------------------------------------------------
 
 // Constants: could be changed here if desired, but normally should not.
 // These are of technical nature, as described for each.
@@ -23,7 +23,7 @@ namespace Pythia8 {
 // Small number to avoid division by zero.
 const double Particle::TINY = 1e-20;
 
-//*********
+//--------------------------------------------------------------------------
 
 // Functions for rapidity and pseudorapidity.
 
@@ -37,14 +37,15 @@ double Particle::eta() const {
   return (pSave.pz() > 0) ? temp : -temp;
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Particle name, with status but imposed maximum length -> may truncate.
 
 string Particle::nameWithStatus(int maxLen) const {
 
-  string temp = (statusSave > 0) ? particlePtr->name(idSave)
-    : "(" + particlePtr->name(idSave) + ")"; 
+  if (pdePtr == 0) return " ";
+  string temp = (statusSave > 0) ? pdePtr->name(idSave)
+    : "(" + pdePtr->name(idSave) + ")"; 
   while (int(temp.length()) > maxLen) {
     // Remove from end, excluding closing bracket and charge.
     int iRem = temp.find_last_not_of(")+-0");
@@ -53,7 +54,7 @@ string Particle::nameWithStatus(int maxLen) const {
   return temp;
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Add offsets to mother and daughter pointers (must be non-negative).
 
@@ -68,7 +69,7 @@ void Particle::offsetHistory( int minMother, int addMother, int minDaughter,
  
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Add offsets to colour and anticolour (must be positive).
 
@@ -80,17 +81,7 @@ void Particle::offsetCol( int addCol) {
 
 }
 
-//*********
-
-// Set the ParticleDataEntry pointer, using the stored idSave value.
-
-void Particle::setParticlePtr() { 
-
-  particlePtr = ParticleDataTable::particleDataPtr(idSave);
-
-}
-
-//*********
+//--------------------------------------------------------------------------
 
 // Invariant mass of a pair and its square.
 // (Not part of class proper, but tightly linked.)
@@ -107,37 +98,55 @@ double m2(const Particle& pp1, const Particle& pp2) {
   return m2;
 } 
 
-//**************************************************************************
+//==========================================================================
 
 // Event class.
 // This class holds info on the complete event record.
 
-//*********
- 
-// Definitions of static variables.
-// (Values will be overwritten in initStatic call, so are purely dummy.)
-
-int  Event::startColTag             = 100;
+//--------------------------------------------------------------------------
 
 // Constants: could be changed here if desired, but normally should not.
 // These are of technical nature, as described for each.
 
 // Maxmimum number of mothers or daughter indices per line in listing.
-const int Event::IPERLINE           = 20;
+const int Event::IPERLINE = 20;
 
+//--------------------------------------------------------------------------
 
-//*********
-
-// Initialize parameters of the event record.
-
-void Event::initStatic() { 
+// Copy all information from one event record to another.
   
-  // The starting colour tag for the event.
-  startColTag             = Settings::mode("Event:startColTag");
+Event& Event::operator=( const Event& oldEvent) {
+
+  // Do not copy if same.
+  if (this != &oldEvent) {
+
+    // Reset all current info in the event.
+    clear();
+
+    // Copy all the particles one by one.
+    for (int i = 0; i < oldEvent.size(); ++i) append( oldEvent[i] ); 
+
+    // Copy all the junctions one by one. 
+    for (int i = 0; i < oldEvent.sizeJunction(); ++i) 
+      appendJunction( oldEvent.getJunction(i) );  
+
+    // Copy all other values.
+    startColTag         = oldEvent.startColTag;
+    maxColTag           = oldEvent.maxColTag;
+    savedSize           = oldEvent.savedSize;
+    savedJunctionSize   = oldEvent.savedJunctionSize;
+    scaleSave           = oldEvent.scaleSave;
+    scaleSecondSave     = oldEvent.scaleSecondSave;
+    headerList          = oldEvent.headerList;
+    particleDataPtr     = oldEvent.particleDataPtr;
+
+  // Done.
+  }
+  return *this;
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Add a copy of an existing particle at the end of the event record;
 // return index. Three cases, depending on sign of new status code:
@@ -170,16 +179,34 @@ int Event::copy(int iCopy, int newStatus) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
+
+// Print an event - special cases that rely on the general method.
+// Not inline to make them directly callable in (some) debuggers. 
+
+void Event::list() const {
+  list(false, false, cout);
+}
+
+void Event::list(ostream& os) const {
+  list(false, false, os);
+}
+
+void Event::list(bool showScaleAndVertex, bool showMothersAndDaughters)
+const {
+  list(showScaleAndVertex, showMothersAndDaughters, cout);
+}
+
+//--------------------------------------------------------------------------
 
 // Print an event.
 
 void Event::list(bool showScaleAndVertex, bool showMothersAndDaughters, 
-  ostream& os) {
+  ostream& os) const {
 
   // Header.
   os << "\n --------  PYTHIA Event Listing  " << headerList << "----------"
-     << "------------------------------------------------- \n \n    no    "
+     << "-------------------------------------------------\n \n    no    "
      << "    id   name            status     mothers   daughters     colou"
      << "rs      p_x        p_y        p_z         e          m \n";
   if (showScaleAndVertex) 
@@ -253,7 +280,7 @@ void Event::list(bool showScaleAndVertex, bool showMothersAndDaughters,
      << endl;
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Find complete list of mothers.
 
@@ -262,19 +289,20 @@ vector<int> Event::motherList(int i) const {
   // Vector of all the mothers; created empty.
   vector<int> mothers;
 
-  // Read out the two official mother indices.
-  int mother1 = entry[i].mother1();
-  int mother2 = entry[i].mother2();
+  // Read out the two official mother indices and status code.
+  int mother1   = entry[i].mother1();
+  int mother2   = entry[i].mother2();
+  int statusAbs = entry[i].statusAbs();
 
   // Special cases in the beginning, where the meaning of zero is unclear.
-  if  (entry[i].statusAbs() == 11) ;
+  if  (statusAbs == 11 || statusAbs == 12) ;
   else if (mother1 == 0 && mother2 == 0) mothers.push_back(0);
     
   // One mother or a carbon copy 
   else if (mother2 == 0 || mother2 == mother1) mothers.push_back(mother1); 
 
   // A range of mothers from string fragmentation.
-  else if ( entry[i].statusAbs() > 80 &&  entry[i].statusAbs() < 90) 
+  else if ( statusAbs > 80 &&  statusAbs < 90) 
     for (int iRange = mother1; iRange <= mother2; ++iRange) 
       mothers.push_back(iRange); 
 
@@ -289,7 +317,7 @@ vector<int> Event::motherList(int i) const {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Find complete list of daughters.
 
@@ -334,7 +362,37 @@ vector<int> Event::daughterList(int i) const {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
+
+// Convert internal Pythia status codes to the HepMC status conventions.
+
+int Event::statusHepMC(int i) const {
+  
+  // Positive codes are final particles. Status -12 are beam particles.
+  int statusNow     = entry[i].status();
+  if (statusNow > 0)    return 1;
+  if (statusNow == -12) return 4;  
+
+  // Hadrons, muons, taus that decay normally are status 2.
+  int idNow         = entry[i].id();
+  if (entry[i].isHadron() || abs(idNow) == 13 || abs(idNow) == 15) {
+    int iDau        = entry[i].daughter1();
+    // Particle should not decay into itself  (e.g. Bose-Einstein).
+    if ( entry[iDau].id() != idNow) {
+      int statusDau = entry[ iDau ].statusAbs();
+      if (statusDau > 90 && statusDau < 95) return 2;
+    }
+  }
+
+  // Other acceptable negative codes as their positive counterpart.
+  if (statusNow <= -11 && statusNow >= -200) return -statusNow;
+
+  // Unacceptable codes as 0.
+  return 0;
+
+}
+
+//--------------------------------------------------------------------------
 
 // Trace the first and last copy of one and the same particle.
 
@@ -356,7 +414,7 @@ int Event::iBotCopy( int i) const {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Trace the first and last copy of one and the same particle,
 // also through shower branchings, making use of flavour matches.
@@ -410,7 +468,7 @@ int Event::iBotCopyId( int i) const {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Find complete list of sisters.
 
@@ -433,7 +491,7 @@ vector<int> Event::sisterList(int i) const {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Find complete list of sisters. Traces up with iTopCopy and
 // down with iBotCopy to give sisters at same level of evolution.
@@ -496,7 +554,7 @@ vector<int> Event::sisterListTopBot(int i, bool widenSearch) const {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Check whether a given particle is an arbitrarily-steps-removed
 // mother to another. For the parton -> hadron transition, only 
@@ -547,7 +605,7 @@ bool Event::isAncestor(int i, int iAncestor) const {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Erase junction stored in specified slot and move up the ones under.
 
@@ -559,7 +617,7 @@ void Event::eraseJunction(int i) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Print the junctions in an event.
 
@@ -585,61 +643,64 @@ void Event::listJunctions(ostream& os) const {
      << "------" << endl;
 }
 
-//*********
+//--------------------------------------------------------------------------
 
-// Add parton to system, by shifting everything below to make room.
- 
-void Event::addToSystem(int iSys, int iPos) {
-
-  int newPos = beginSys[iSys] + sizeSys[iSys];
-  memberSys.push_back(0);
-  for (int i = int(memberSys.size()) - 2; i >= newPos; --i)
-    memberSys[i+1] = memberSys[i];
-  memberSys[newPos] = iPos;
-  ++sizeSys[iSys];
-  for (int i = iSys + 1; i < int(beginSys.size()); ++i) ++beginSys[i];
-
-}
-
-//*********
-
-// Replace existing value by new one in given system but unknown member.
- 
-void Event::replaceInSystem(int iSys, int iPosOld, int iPosNew) {
-
-  for (int i = beginSys[iSys]; i < beginSys[iSys] + sizeSys[iSys]; ++i) 
-  if (memberSys[i] == iPosOld) memberSys[i] = iPosNew;
-
-}
-
-//*********
-
-// Print members in systems; for debug mainly.
-
-void Event::listSystems(ostream& os) const {
-
-
-  // Header.
-  os << "\n --------  PYTHIA Systems Listing  " << headerList 
-     << "------------ \n \n    no   members  \n";
+// Operator overloading allows to append one event to an existing one.
   
-  // Loop over system list and over members in each system.
-  for (int iSys = 0; iSys < int(beginSys.size()); ++iSys) {
-    os << " " << setw(5) << iSys << " ";
-    for (int iMem = 0; iMem < sizeSys[iSys]; ++iMem) {
-      if (iMem%16 == 0 && iMem > 0) os << "\n       ";
-      os << " " << setw(4) << memberSys[beginSys[iSys] + iMem];
-    }
-    os << "\n";
+Event& Event::operator+=( const Event& addEvent) {
+
+  // Find offsets. One less since won't copy line 0.
+  int offsetIdx = entry.size() - 1;
+  int offsetCol = maxColTag;
+
+  // Add energy to zeroth line and calculate new invariant mass. 
+  entry[0].p( entry[0].p() + addEvent[0].p() );
+  entry[0].m( entry[0].mCalc() );
+
+  // Read out particles from line 1 (not 0) onwards.
+  Particle temp;
+  for (int i = 1; i < addEvent.size(); ++i) {
+    temp = addEvent[i];
+
+    // Add offset to nonzero mother, daughter and colour indices.
+    if (temp.mother1() > 0) temp.mother1( temp.mother1() + offsetIdx );   
+    if (temp.mother2() > 0) temp.mother2( temp.mother2() + offsetIdx );   
+    if (temp.daughter1() > 0) temp.daughter1( temp.daughter1() + offsetIdx );
+    if (temp.daughter2() > 0) temp.daughter2( temp.daughter2() + offsetIdx );
+    if (temp.col() > 0) temp.col( temp.col() + offsetCol );   
+    if (temp.acol() > 0) temp.acol( temp.acol() + offsetCol );   
+
+    // Append particle to summed event.
+    append( temp );
   }
 
-  // Alternative if no systems. Done.
-  if (beginSys.size() == 0) os << "    no systems defined \n";
-  os << "\n --------  End PYTHIA Systems Listing  ----------------------"
-     << "--------------------------" << endl;
+  // Read out junctions one by one.
+  Junction tempJ;
+  int begCol, endCol;
+  for (int i = 0; i < addEvent.sizeJunction(); ++i) {
+    tempJ = addEvent.getJunction(i);
+    
+    // Add colour offsets to all three legs.
+    for (int  j = 0; j < 3; ++j) {
+      begCol = tempJ.col(j);
+      endCol = tempJ.endCol(j);
+      if (begCol > 0) begCol += offsetCol; 
+      if (endCol > 0) endCol += offsetCol; 
+      tempJ.cols( j, begCol, endCol);
+    }
+
+    // Append junction to summed event.  
+    appendJunction( tempJ );  
+  }
+
+  // Set header that indicates character as sum of events.
+  headerList = "(combination of several events)  -------";
+
+  // Done.
+  return *this;
 
 }
 
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8

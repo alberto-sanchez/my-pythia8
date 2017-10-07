@@ -1,5 +1,5 @@
 // ParticleDecays.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -13,15 +13,16 @@
 #include "Basics.h"
 #include "Event.h"
 #include "FragmentationFlavZpT.h"
-#include "Information.h"
+#include "Info.h"
 #include "ParticleData.h"
 #include "PythiaStdlib.h"
 #include "Settings.h"
 #include "TimeShower.h"
+#include "TauDecays.h"
 
 namespace Pythia8 {
  
-//**************************************************************************
+//==========================================================================
 
 // DecayHandler is base class for the external handling of decays.
 // There is only one pure virtual method, that should do the decay. 
@@ -41,7 +42,7 @@ protected:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // The ParticleDecays class contains the routines to decay a particle.
 
@@ -53,7 +54,10 @@ public:
   ParticleDecays() {}
 
   // Initialize: store pointers and find settings
-  void init(TimeShower* timesDecPtrIn, DecayHandler* decayHandlePtrIn, 
+  void init(Info* infoPtrIn, Settings& settings, 
+    ParticleData* particleDataPtrIn, Rndm* rndmPtrIn, 
+    Couplings* couplingsPtrIn, TimeShower* timesDecPtrIn, 
+    StringFlav* flavSelPtrIn, DecayHandler* decayHandlePtrIn, 
     vector<int> handledParticles); 
  
   // Perform a decay of a single particle.
@@ -65,19 +69,42 @@ public:
 private: 
 
   // Constants: could only be changed in the code itself.
-  static const int    NTRYDECAY, NTRYPICK;
+  static const int    NTRYDECAY, NTRYPICK, NTRYMEWT, NTRYDALITZ;
   static const double MSAFEDALITZ, WTCORRECTION[11];
 
-  // Initialization data, read from Settings..
+  // Pointer to various information on the generation.
+  Info*         infoPtr;
+
+  // Pointer to the particle data table.
+  ParticleData* particleDataPtr;
+
+  // Pointer to the random number generator.
+  Rndm*         rndmPtr;
+
+  // Pointers to Standard Model couplings.
+  Couplings*    couplingsPtr;
+
+  // Pointers to timelike showers, for decays to partons (e.g. Upsilon).
+  TimeShower*   timesDecPtr;
+
+  // Pointer to class for flavour generation; needed when to pick hadrons.
+  StringFlav*   flavSelPtr;
+
+  // Pointer to a handler of external decays.
+  DecayHandler* decayHandlePtr;
+
+  // Initialization data, read from Settings.
   bool   limitTau0, limitTau, limitRadius, limitCylinder, limitDecay, 
          mixB, doFSRinDecays;
+  int    sophisticatedTau;
   double mSafety, tau0Max, tauMax, rMax, xyMax, zMax, xBdMix, xBsMix, 
-         sigmaSoft, multIncrease, multRefMass, multGoffset, colRearrange, 
-         stopMass, sRhoDal, wRhoDal;
+         sigmaSoft, multIncrease, multIncreaseWeak, multRefMass, multGoffset, 
+         colRearrange, stopMass, sRhoDal, wRhoDal;
 
   // Multiplicity. Decay products positions and masses.
   bool   hasPartons, keepPartons;    
   int    idDec, meMode, mult;
+  double scale;
   vector<int>    iProd, idProd, cols, acols, idPartons;
   vector<double> mProd, mInv, rndmOrd;
   vector<Vec4>   pInv, pProd;
@@ -86,14 +113,8 @@ private:
   // Pointer to particle data for currently decaying particle
   ParticleDataEntry* decDataPtr;
 
-  // Pointers to timelike showers, for decays to partons (e.g. Upsilon).
-  TimeShower* timesDecPtr;
-
-  // Pointer to a handler of external decays.
-  DecayHandler* decayHandlePtr;
-
-  // Flavour generator; needed when required to pick hadrons.
-  StringFlav flavSel;
+  // Tau particle decayer.
+  TauDecays tauDecayer;
 
   // Check whether a decay is allowed, given the upcoming decay vertex.
   bool checkVertex(Particle& decayer);
@@ -127,7 +148,7 @@ private:
   
 };
  
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

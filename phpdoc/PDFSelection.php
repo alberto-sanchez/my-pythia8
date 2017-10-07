@@ -1,6 +1,8 @@
 <html>
 <head>
 <title>PDF Selection</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
 </head>
 <body>
 
@@ -27,19 +29,23 @@ echo "<font color='red'>NO FILE SELECTED YET.. PLEASE DO SO </font><a href='Save
 
 <h2>PDF Selection</h2>
 
-This page contains three subsections. The first deals with how to 
+This page contains five subsections. The first deals with how to 
 pick  the parton distribution set for protons, including from LHAPDF, 
 to be used for all proton and antiproton beams. The second is a special
 option that allows a separate PDF set to be used for the hard process
 only, while the first choice would still apply to everything else.
-The third gives the possibility to switch off the lepton 
-"parton density". 
+The third and fourth give access to pion and Pomeron PDF's, respectively,
+the latter being used to describe diffractive systems.
+The fifth gives the possibility to switch off the lepton 
+"parton density". More information on PDF classes is found 
+<?php $filepath = $_GET["filepath"];
+echo "<a href='PartonDistributions.php?filepath=".$filepath."' target='page'>";?>here</a>.
 
 <h3>Parton densities for protons</h3>
 
 The selection of parton densities is made once and then is propagated 
 through the program. It is essential to make an informed choice, 
-for several reasons: 
+for several reasons [<a href="Bibliography.php" target="page">Kas10</a>]: 
 <br/><b>Warning 1:</b> the choice of PDF set affects a number of
 properties of events. A change of PDF therefore requires a complete 
 retuning e.g.  of the multiple-interactions model for minimum-bias and 
@@ -61,35 +67,74 @@ behaviours, e.g. NLO ones have less gluons at small x, which then is
 compensated by positive corrections in the NLO matrix elements.
 Therefore do not blindly assume that an NLO tune has to be better than 
 an LO one when combined with the LO matrix elements in PYTHIA. There are 
-explicit examples where such thinking can lead you down the wrong alley.
+explicit examples where such thinking can lead you down the wrong alley,
+especially if you study low-<i>pT</i> physics. In the list below you 
+should therefore be extra cautious when using set 6 or set 9.
 
 <p/>
 The simplest option is to pick one 
-of the few distributions available internally:
+of the distributions available internally:
 
-<br/><br/><table><tr><td><strong>PDF:pSet  </td><td>  &nbsp;&nbsp;(<code>default = <strong>2</strong></code>; <code>minimum = 1</code>; <code>maximum = 2</code>)</td></tr></table>
-<modepick name="PDF:pSet" default="2" min="1" max="2">
+<br/><br/><table><tr><td><strong>PDF:pSet  </td><td>  &nbsp;&nbsp;(<code>default = <strong>2</strong></code>; <code>minimum = 1</code>; <code>maximum = 12</code>)</td></tr></table>
 Parton densities to be used for proton beams (and, by implication,
 antiproton ones):
 <br/>
-<input type="radio" name="1" value="1"><strong>1 </strong>: GRV 94 L;<br/>
-<input type="radio" name="1" value="2" checked="checked"><strong>2 </strong>: CTEQ 5 L.<br/>
-</modepick> 
+<input type="radio" name="1" value="1"><strong>1 </strong>: GRV 94L, LO <ei>alpha_s(M_Z) = 0.128</ei> (this set is out of date, but retained for historical comparisons).<br/>
+<input type="radio" name="1" value="2" checked="checked"><strong>2 </strong>: CTEQ 5L, LO <ei>alpha_s(M_Z) = 0.127</ei> (this set is also out of date, but not badly so, and many tunes  are based on it).<br/>
+<input type="radio" name="1" value="3"><strong>3 </strong>: MRST LO* (2007),  NLO <ei>alpha_s(M_Z) = 0.12032</ei>.<br/>
+<input type="radio" name="1" value="4"><strong>4 </strong>: MRST LO** (2008),  NLO <ei>alpha_s(M_Z) = 0.11517</ei>.<br/>
+<input type="radio" name="1" value="5"><strong>5 </strong>: MSTW 2008 LO (central member),  LO <ei>alpha_s(M_Z) = 0.13939</ei>.<br/>
+<input type="radio" name="1" value="6"><strong>6 </strong>: MSTW 2008 NLO (central member),  NLO <ei>alpha_s(M_Z) = 0.12018</ei> (NLO, see Warning 3 above).<br/>
+<input type="radio" name="1" value="7"><strong>7 </strong>: CTEQ6L, NLO <ei>alpha_s(M_Z) = 0.1180</ei>.<br/>
+<input type="radio" name="1" value="8"><strong>8 </strong>: CTEQ6L1, LO <ei>alpha_s(M_Z) = 0.1298</ei>.<br/>
+<input type="radio" name="1" value="9"><strong>9 </strong>: CTEQ66.00 (NLO, central member),  NLO <ei>alpha_s(M_Z) = 0.1180</ei> (NLO, see Warning 3 above).<br/>
+<input type="radio" name="1" value="10"><strong>10 </strong>: CT09MC1, LO <ei>alpha_s(M_Z) = 0.1300</ei>.<br/>
+<input type="radio" name="1" value="11"><strong>11 </strong>: CT09MC2, NLO <ei>alpha_s(M_Z) = 0.1180</ei>.<br/>
+<input type="radio" name="1" value="12"><strong>12 </strong>: CT09MCS, NLO <ei>alpha_s(M_Z) = 0.1180</ei>.<br/>
+<br/><b>Note:</b> the <i>alpha_s(M_Z)</i> values and the order of the
+running in the description above is purely informative, and does not 
+affect any other parts of the program. Instead you have the freedom to
+set <i>alpha_s(M_Z)</i> value and running separately for 
+<?php $filepath = $_GET["filepath"];
+echo "<a href='CouplingsAndScales.php?filepath=".$filepath."' target='page'>";?>hard processes</a> 
+(including resonance decays),
+<?php $filepath = $_GET["filepath"];
+echo "<a href='MultipleInteractions.php?filepath=".$filepath."' target='page'>";?>multiple interactions</a>,
+<?php $filepath = $_GET["filepath"];
+echo "<a href='SpacelikeShowers.php?filepath=".$filepath."' target='page'>";?>initial-state radiation</a>, and
+<?php $filepath = $_GET["filepath"];
+echo "<a href='TimelikeShowers.php?filepath=".$filepath."' target='page'>";?>final-state radiation</a>.
 
 <p/>
-Obviously this choice is mainly intended to get going, and if you link to
-the <a href="http://projects.hepforge.org/lhapdf/" target="page">LHAPDF 
+This is a reasonably complete list of recent LO fits, both
+ones within the normal LO context and ones with modifications for better
+matching to event generators. In addition two older sets are 
+included for backwards reference (most studies to date are based on 
+CTEQ 5L). If you link to the 
+<a href="http://projects.hepforge.org/lhapdf/" target="page">LHAPDF 
 library</a> [<a href="Bibliography.php" target="page">Wha05</a>] you get access to a much wider selection.
-<br/><b>Warning:</b> owing to previous problems with the behaviour of PDF's
-beyond the <i>x</i> and <i>Q^2</i> boundaries of a set, you should
-only use LHAPDF <i>version 5.3.0 or later</i>.
+<br/><b>Warning 1:</b> owing to previous problems with the behaviour 
+of PDF's beyond the <i>x</i> and <i>Q^2</i> boundaries of a set, 
+you should only use LHAPDF <b>version 5.3.0 or later</b>.
+<br/><b>Warning 2:</b> the behaviour of the LHAPDF sets need not be
+identical with the implementation found in PYTHIA. Specifically we
+are aware of the following points that may influence a comparison.
+<br/>(a) CTEQ 5L in PYTHIA is the parametrization, in LHAPDF the grid
+interpolation. 
+<br/>(b) MRST LO* and LO** in PYTHIA is based on an updated edition,
+where one makes use of the expanded MSTW grid format, while LHAPDF
+is based on the original smaller grid. 
+<br/>(c) The CTEQ 6 and CT09MC sets in PYTHIA are frozen at the 
+boundaries of the grid, by recommendation of the authors, while 
+LHAPDF also offers an option with a smooth extrapolation outside 
+the grid boundaries. 
 
 <br/><br/><strong>PDF:useLHAPDF</strong>  <input type="radio" name="2" value="on"><strong>On</strong>
 <input type="radio" name="2" value="off" checked="checked"><strong>Off</strong>
  &nbsp;&nbsp;(<code>default = <strong>off</strong></code>)<br/>
-If off then the choice of proton PDF is based on <code>pPDFset</code>
+If off then the choice of proton PDF is based on <code>PDF:pSet</code>
 above. If on then it is instead based on the choice of 
-<code>LHAPDFset</code> and <code>LHAPDFmember</code> below.
+<code>PDF:LHAPDFset</code> and <code>PDF:LHAPDFmember</code> below.
 <br/><b>Note:</b> in order for this option to work you must have 
 compiled PYTHIA appropriately and have set the <code>LHAPATH</code> 
 environment variable to provide the data-files directory of your local 
@@ -101,7 +146,8 @@ directory for further instructions.
 Name of proton PDF set from LHAPDF to be used. You have to choose 
 from the 
 <a href="http://projects.hepforge.org/lhapdf/pdfsets" target="page">
-list of available sets</a>. Examples of some recent ones would be 
+list of available sets</a>. Examples of some fairly recent ones 
+(but still less recent than found above) would be 
 cteq61.LHpdf, cteq61.LHgrid, cteq6l.LHpdf, cteq6ll.LHpdf, 
 MRST2004nlo.LHpdf, MRST2004nlo.LHgrid, MRST2004nnlo.LHgrid and 
 MRST2004FF3lo.LHgrid. If you pick a LHpdf set it will require some 
@@ -123,7 +169,7 @@ runs or, as a simplification, save the
 <?php $filepath = $_GET["filepath"];
 echo "<a href='EventInformation.php?filepath=".$filepath."' target='page'>";?>pdf weights</a> at the hard scattering
 and do an offline reweighting of events.
-</modeopen>   
+     
 
 <br/><br/><strong>PDF:extrapolateLHAPDF</strong>  <input type="radio" name="5" value="on"><strong>On</strong>
 <input type="radio" name="5" value="off" checked="checked"><strong>Off</strong>
@@ -189,14 +235,22 @@ variables below. If off then use the same PDF set for everything,
 as already chosen above.   
   
 
-<br/><br/><table><tr><td><strong>PDF:pHardSet  </td><td>  &nbsp;&nbsp;(<code>default = <strong>2</strong></code>; <code>minimum = 1</code>; <code>maximum = 2</code>)</td></tr></table>
-<modepick name="PDF:pHardSet" default="2" min="1" max="2">
+<br/><br/><table><tr><td><strong>PDF:pHardSet  </td><td>  &nbsp;&nbsp;(<code>default = <strong>2</strong></code>; <code>minimum = 1</code>; <code>maximum = 12</code>)</td></tr></table>
 Parton densities to be used for proton beams (and, by implication,
 antiproton ones):
 <br/>
-<input type="radio" name="7" value="1"><strong>1 </strong>: GRV 94 L;<br/>
-<input type="radio" name="7" value="2" checked="checked"><strong>2 </strong>: CTEQ 5 L.<br/>
-</modepick> 
+<input type="radio" name="7" value="1"><strong>1 </strong>: GRV 94L, LO <ei>alpha_s(M_Z) = 0.128</ei> (out of date).<br/>
+<input type="radio" name="7" value="2" checked="checked"><strong>2 </strong>: CTEQ 5L, LO <ei>alpha_s(M_Z) = 0.127</ei> (slightly out of date; many tunes are based on it).<br/>
+<input type="radio" name="7" value="3"><strong>3 </strong>: MRST LO* (2007),  NLO <ei>alpha_s(M_Z) = 0.12032</ei>.<br/>
+<input type="radio" name="7" value="4"><strong>4 </strong>: MRST LO** (2008),  NLO <ei>alpha_s(M_Z) = 0.11517</ei>.<br/>
+<input type="radio" name="7" value="5"><strong>5 </strong>: MSTW 2008 LO (central member),  LO <ei>alpha_s(M_Z) = 0.13939</ei>.<br/>
+<input type="radio" name="7" value="6"><strong>6 </strong>: MSTW 2008 NLO (central member),  LO <ei>alpha_s(M_Z) = 0.12018</ei>.<br/>
+<input type="radio" name="7" value="7"><strong>7 </strong>: CTEQ6L, NLO <ei>alpha_s(M_Z) = 0.1180</ei>.<br/>
+<input type="radio" name="7" value="8"><strong>8 </strong>: CTEQ6L1, LO <ei>alpha_s(M_Z) = 0.1298</ei>.<br/>
+<input type="radio" name="7" value="9"><strong>9 </strong>: CTEQ66.00 (NLO, central member),  NLO <ei>alpha_s(M_Z) = 0.1180</ei>.<br/>
+<input type="radio" name="7" value="10"><strong>10 </strong>: CT09MC1, LO <ei>alpha_s(M_Z) = 0.1300</ei>.<br/>
+<input type="radio" name="7" value="11"><strong>11 </strong>: CT09MC2, NLO <ei>alpha_s(M_Z) = 0.1180</ei>.<br/>
+<input type="radio" name="7" value="12"><strong>12 </strong>: CT09MCS, NLO <ei>alpha_s(M_Z) = 0.1180</ei>.<br/>
 
 <br/><br/><strong>PDF:useHardLHAPDF</strong>  <input type="radio" name="8" value="on"><strong>On</strong>
 <input type="radio" name="8" value="off" checked="checked"><strong>Off</strong>
@@ -212,7 +266,7 @@ Name of proton PDF set from LHAPDF to be used.
 
 <br/><br/><table><tr><td><strong>PDF:hardLHAPDFmember  </td><td></td><td> <input type="text" name="10" value="0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0</strong></code>; <code>minimum = 0</code>)</td></tr></table>
 Further choice of a specific member from the set picked above. 
-</modeopen>   
+     
 
 <p/>
 Note that there is no separate equivalent of the 
@@ -220,17 +274,118 @@ Note that there is no separate equivalent of the
 PDF. Since LHAPDF only has one global flag for extrapolation or not,
 the choice for the normal PDF's also applies to the hard ones.
 
+<h3>Parton densities for pions</h3>
+
+The parton densities of the pion are considerably less well known than
+those of the proton. There are only rather few sets on the market,
+and none particularly recent. Only one comes built-in, but others can 
+be accessed from LHAPDF. Input parametrizations are for the <i>pi+</i>.
+>From this the <i>pi-</i> is obtained by charge conjugation and the 
+<i>pi0</i> from averaging (half the pions have <i>d dbar</i> 
+valence quark content, half <i>u ubar</i>.
+
+<p/>
+Much of the switches are taken over from the proton case, with obvious
+modifications; therefore the description is briefer. Currently we have 
+not seen the need to allow separate parton densities for hard processes. 
+When using LHAPDF the <code>PDF:extrapolateLHAPDF</code> switch of the 
+proton also applies to pions. 
+ 
+<br/><br/><table><tr><td><strong>PDF:piSet  </td><td>  &nbsp;&nbsp;(<code>default = <strong>1</strong></code>; <code>minimum = 1</code>; <code>maximum = 1</code>)</td></tr></table>
+Internal parton densities that can be used for pion beams, currently with 
+only one choice.
+<br/>
+<input type="radio" name="11" value="1" checked="checked"><strong>1 </strong>: GRV 92 L.<br/>
+
+<br/><br/><strong>PDF:piUseLHAPDF</strong>  <input type="radio" name="12" value="on"><strong>On</strong>
+<input type="radio" name="12" value="off" checked="checked"><strong>Off</strong>
+ &nbsp;&nbsp;(<code>default = <strong>off</strong></code>)<br/>
+If off then the choice of proton PDF is based on <code>PDF:piSet</code>
+above. If on then it is instead based on the choice of 
+<code>PDF:piLHAPDFset</code> and <code>PDF:piLHAPDFmember</code> below.
+  
+
+<br/><br/><table><tr><td><strong>PDF:piLHAPDFset  </td><td></td><td> <input type="text" name="13" value="OWPI.LHgrid" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>OWPI.LHgrid</strong></code>)</td></tr></table>
+Name of pion PDF set from LHAPDF to be used. You have to choose from the 
+<a href="http://projects.hepforge.org/lhapdf/pdfsets" target="page">
+list of available sets</a>. 
+   
+
+<br/><br/><table><tr><td><strong>PDF:piLHAPDFmember  </td><td></td><td> <input type="text" name="14" value="0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0</strong></code>; <code>minimum = 0</code>)</td></tr></table>
+Further choice of a specific member from the set picked above.
+     
+
+<h3>Parton densities for Pomerons</h3>
+
+The Pomeron is introduced in the description of diffractive events, 
+i.e. a diffractive system is viewed as a Pomeron-proton collision at a 
+reduced CM energy. Here the PDF's are even less well known. 
+Most experimental parametrizations are NLO, which makes them less
+well suited for Monte Carlo applications. Furthemore note that 
+the momentum sum is arbitrarily normalized to a non-unity value.
+
+<br/><br/><table><tr><td><strong>PDF:PomSet  </td><td>  &nbsp;&nbsp;(<code>default = <strong>6</strong></code>; <code>minimum = 1</code>; <code>maximum = 6</code>)</td></tr></table>
+Parton densities that can be used for Pomeron beams. 
+<br/>
+<input type="radio" name="15" value="1"><strong>1 </strong>: <ei>Q^2</ei>-independent parametrizations <ei>xf(x) = N_ab x^a (1 - x)^b</ei>, where <ei>N_ab</ei> ensures unit momentum sum. The <ei>a</ei> and <ei>b</ei> parameters can be  set separately for the gluon and the quark distributions. The momentum fraction of gluons and quarks can be freely mixed, and  production of <ei>s</ei> quarks can be suppressed relative to  that of <ei>d</ei> and <ei>u</ei> ones, with antiquarks as likely  as quarks. See further below how to set the six parameters of this  approach. <br/>
+<input type="radio" name="15" value="2"><strong>2 </strong>: <ei>pi0</ei> distributions, as specified in the  section above. <br/>
+<input type="radio" name="15" value="3"><strong>3 </strong>: the H1 2006 Fit A NLO <ei>Q^2</ei>-dependent  parametrization, based on a tune to their data <ref>H1P06</ref>, rescaled by the factor <code>PomRescale</code> below. <br/>
+<input type="radio" name="15" value="4"><strong>4 </strong>: the H1 2006 Fit B NLO <ei>Q^2</ei>-dependent  parametrization, based on a tune to their data <ref>H1P06</ref>, rescaled by the factor <code>PomRescale</code> below. <br/>
+<input type="radio" name="15" value="5"><strong>5 </strong>: the H1 2007 Jets NLO <ei>Q^2</ei>-dependent  parametrization, based on a tune to their data <ref>H1P07</ref>, rescaled by the factor <code>PomRescale</code> below. <br/>
+<input type="radio" name="15" value="6" checked="checked"><strong>6 </strong>: the H1 2006 Fit B LO <ei>Q^2</ei>-dependent  parametrization, based on a tune to their data <ref>H1P06</ref>, rescaled by the factor <code>PomRescale</code> below. <br/>
+
+<br/><br/><table><tr><td><strong>PDF:PomGluonA </td><td></td><td> <input type="text" name="16" value="0." size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.</strong></code>; <code>minimum = -0.5</code>; <code>maximum = 2.</code>)</td></tr></table>
+the parameter <i>a</i> in the ansatz <i>xg(x) = N_ab x^a (1 - x)^b</i>
+for option 1 above.
+  
+
+<br/><br/><table><tr><td><strong>PDF:PomGluonB </td><td></td><td> <input type="text" name="17" value="3." size="20"/>  &nbsp;&nbsp;(<code>default = <strong>3.</strong></code>; <code>minimum = 0.</code>; <code>maximum = 10.</code>)</td></tr></table>
+the parameter <i>b</i> in the ansatz <i>xg(x) = N_ab x^a (1 - x)^b</i>
+for option 1 above.
+  
+
+<br/><br/><table><tr><td><strong>PDF:PomQuarkA </td><td></td><td> <input type="text" name="18" value="0." size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.</strong></code>; <code>minimum = -0.5</code>; <code>maximum = 2.</code>)</td></tr></table>
+the parameter <i>a</i> in the ansatz <i>xq(x) = N_ab x^a (1 - x)^b</i>
+for option 1 above.
+  
+
+<br/><br/><table><tr><td><strong>PDF:PomQuarkB </td><td></td><td> <input type="text" name="19" value="3." size="20"/>  &nbsp;&nbsp;(<code>default = <strong>3.</strong></code>; <code>minimum = 0.</code>; <code>maximum = 10.</code>)</td></tr></table>
+the parameter <i>b</i> in the ansatz <i>xq(x) = N_ab x^a (1 - x)^b</i>
+for option 1 above.
+  
+
+<br/><br/><table><tr><td><strong>PDF:PomQuarkFrac </td><td></td><td> <input type="text" name="20" value="0.2" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.2</strong></code>; <code>minimum = 0.</code>; <code>maximum = 1.</code>)</td></tr></table>
+the fraction of the Pomeron momentum carried by quarks 
+for option 1 above, with the rest carried by gluons.
+  
+
+<br/><br/><table><tr><td><strong>PDF:PomStrangeSupp </td><td></td><td> <input type="text" name="21" value="0.5" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.5</strong></code>; <code>minimum = 0.</code>; <code>maximum = 1.</code>)</td></tr></table>
+the suppression of the <i>s</i> quark density relative to that of the 
+<i>d</i> and <i>u</i> ones for option 1 above.
+  
+
+<br/><br/><table><tr><td><strong>PDF:PomRescale </td><td></td><td> <input type="text" name="22" value="1.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>1.0</strong></code>; <code>minimum = 0.5</code>; <code>maximum = 5.0</code>)</td></tr></table>
+Rescale the four H1 fits above by this uniform factor, e.g. to bring 
+up their momentum sum to around unity. By default all three have
+a momentum sum of order 0.5, suggesting that a factor around 2.0
+should be used. You can use <code>examples/main41.cc</code> to get
+a more precise value. Note that also other parameters in the 
+<?php $filepath = $_GET["filepath"];
+echo "<a href='Diffraction.php?filepath=".$filepath."' target='page'>";?>diffraction</a> framework may need to
+be retuned when this parameter is changed.
+  
+
 <h3>Parton densities for leptons</h3>
 
-For electrons/leptons there is no need to choose between different 
+For electrons/muons/taus there is no need to choose between different 
 parametrizations, since only one implementation is available, and 
 should be rather uncontroversial (apart from some technical details).
 However, insofar as e.g. <i>e^+ e^-</i> data often are corrected 
 back to a world without any initial-state photon radiation, it is 
 useful to have a corresponding option available here.
 
-<br/><br/><strong>PDF:lepton</strong>  <input type="radio" name="11" value="on" checked="checked"><strong>On</strong>
-<input type="radio" name="11" value="off"><strong>Off</strong>
+<br/><br/><strong>PDF:lepton</strong>  <input type="radio" name="23" value="on" checked="checked"><strong>On</strong>
+<input type="radio" name="23" value="off"><strong>Off</strong>
  &nbsp;&nbsp;(<code>default = <strong>on</strong></code>)<br/>
 Use parton densities for lepton beams or not. If off the colliding
 leptons carry the full beam energy, if on part of the energy is 
@@ -242,6 +397,12 @@ by shower emissions. If the initial-state showers are switched off
 these collinear photons will carry the full radiated energy.  
    
 
+<p/>
+Neutrinos are always taken pointlike. Do note that the phase space 
+selection machinery currently does not allow one resolved and one 
+unresolved beam. For lepton-neutrino collisions to work you must 
+therefore set <code>PDF:lepton = off</code>.
+
 <h3>Incoming parton selection</h3>
 
 There is one useful degree of freedom to restrict the set of incoming 
@@ -250,11 +411,11 @@ only which quarks are allowed to contribute to the hard-process cross
 sections. Note that separate but similarly named modes are available 
 for multiple interactions and spacelike showers.
 
-<br/><br/><table><tr><td><strong>PDFinProcess:nQuarkIn  </td><td></td><td> <input type="text" name="12" value="5" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>5</strong></code>; <code>minimum = 0</code>; <code>maximum = 5</code>)</td></tr></table>
+<br/><br/><table><tr><td><strong>PDFinProcess:nQuarkIn  </td><td></td><td> <input type="text" name="24" value="5" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>5</strong></code>; <code>minimum = 0</code>; <code>maximum = 5</code>)</td></tr></table>
 Number of allowed incoming quark flavours in the beams; a change 
 to 4 would thus exclude <i>b</i> and <i>bbar</i> as incoming 
 partons, etc.
-</modeopen>
+  
 
 <input type="hidden" name="saved" value="1"/>
 
@@ -321,14 +482,74 @@ if($_POST["10"] != "0")
 $data = "PDF:hardLHAPDFmember = ".$_POST["10"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["11"] != "on")
+if($_POST["11"] != "1")
 {
-$data = "PDF:lepton = ".$_POST["11"]."\n";
+$data = "PDF:piSet = ".$_POST["11"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["12"] != "5")
+if($_POST["12"] != "off")
 {
-$data = "PDFinProcess:nQuarkIn = ".$_POST["12"]."\n";
+$data = "PDF:piUseLHAPDF = ".$_POST["12"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["13"] != "OWPI.LHgrid")
+{
+$data = "PDF:piLHAPDFset = ".$_POST["13"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["14"] != "0")
+{
+$data = "PDF:piLHAPDFmember = ".$_POST["14"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["15"] != "6")
+{
+$data = "PDF:PomSet = ".$_POST["15"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["16"] != "0.")
+{
+$data = "PDF:PomGluonA = ".$_POST["16"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["17"] != "3.")
+{
+$data = "PDF:PomGluonB = ".$_POST["17"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["18"] != "0.")
+{
+$data = "PDF:PomQuarkA = ".$_POST["18"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["19"] != "3.")
+{
+$data = "PDF:PomQuarkB = ".$_POST["19"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["20"] != "0.2")
+{
+$data = "PDF:PomQuarkFrac = ".$_POST["20"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["21"] != "0.5")
+{
+$data = "PDF:PomStrangeSupp = ".$_POST["21"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["22"] != "1.0")
+{
+$data = "PDF:PomRescale = ".$_POST["22"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["23"] != "on")
+{
+$data = "PDF:lepton = ".$_POST["23"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["24"] != "5")
+{
+$data = "PDFinProcess:nQuarkIn = ".$_POST["24"]."\n";
 fwrite($handle,$data);
 }
 fclose($handle);
@@ -338,4 +559,4 @@ fclose($handle);
 </body>
 </html>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->

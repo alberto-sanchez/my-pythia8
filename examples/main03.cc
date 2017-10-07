@@ -1,5 +1,5 @@
 // main03.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -16,29 +16,26 @@ int main() {
   // Generator.
   Pythia pythia;
 
-  // Shorthand for some public members of pythia (also static ones).
-  Event& event = pythia.event;
-  ParticleDataTable& pdt = pythia.particleData;
-  Info& info = pythia.info;
+  // Shorthand for some public members of pythia.
+  Event& event      = pythia.event;
+  ParticleData& pdt = pythia.particleData;
+  Info& info        = pythia.info;
 
   // Read in commands from external file.
   pythia.readFile("main03.cmnd");    
 
   // Extract settings to be used in the main program.
-  int    idBeamA = pythia.mode("Main:idBeamA");
-  int    idBeamB = pythia.mode("Main:idBeamB");
-  double eCM     = pythia.parm("Main:eCM");
   int    nEvent  = pythia.mode("Main:numberOfEvents");
   int    nList   = pythia.mode("Main:numberToList");
   int    nShow   = pythia.mode("Main:timesToShow");
   bool   showCS  = pythia.flag("Main:showChangedSettings");
   bool   showCPD = pythia.flag("Main:showChangedParticleData");
 
-  // Initialize.
-  pythia.init( idBeamA, idBeamB, eCM);
+  // Initialize. Beam parameters set in .cmnd file.
+  pythia.init();
 
   // List changed data.
-  if (showCS) pythia.settings.listChanged();
+  if (showCS)  pythia.settings.listChanged();
   if (showCPD) pdt.listChanged();
 
   // Book histograms.
@@ -48,9 +45,10 @@ int main() {
   Hist dndpT("dn/dpT for charged particles", 100, 0., 10.);
 
   // Begin event loop.
-  int nPace = max(1,nEvent/nShow); 
+  int nPace = max(1, nEvent / max(1, nShow) ); 
   for (int iEvent = 0; iEvent < nEvent; ++iEvent) {
-    if (iEvent%nPace == 0) cout << " Now begin event " << iEvent << endl;
+    if (nShow > 0 && iEvent%nPace == 0) 
+      cout << " Now begin event " << iEvent << endl;
 
     // Generate events. Quit if failure.
     if (!pythia.next()) {

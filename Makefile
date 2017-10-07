@@ -3,6 +3,9 @@
 #
 #                  M. Kirsanov 07.04.2006
 #                     Modified 18.11.2006
+#                     26.03.2008 CLHEP dependency removed
+#                  N. Lavesson 28.04.2009 clean/distclean separated
+#                  M. Kirsanov 21.07.2009 Mac-OSX flags added
 
 SHELL = /bin/sh
 
@@ -13,20 +16,10 @@ SHELL = /bin/sh
 #FFLAGSSHARED = -fPIC
 CFLAGSSHARED = -fPIC
 CXXFLAGSSHARED = -fPIC
-#
-LDFLAGSSHARED = $(CXXFLAGS) -pthread -fPIC
 
 
 HEPMCERROR=
 ifneq (x$(HEPMCLOCATION),x)
- HEPMCVFLAG=
- ifneq (x$(HEPMCVERSION),x)
-  ifeq ($(findstring x2,x$(HEPMCVERSION)),x2)
-   HEPMCVFLAG+= -DHEPMC2
-  endif
- else
-  HEPMCERROR= HepMC interface: ERROR, HEPMCVERSION should be defined with HEPMCLOCATION
- endif
  ifeq ($(wildcard $(HEPMCLOCATION)/include/HepMC/*.h),)
   HEPMCERROR= HepMC interface: ERROR, no HepMC headers found in ${HEPMCLOCATION}/include/HepMC
  endif
@@ -44,9 +37,9 @@ BINDIR=bin
 # Location of libraries to be built.
 ifeq ($(SHAREDLIBS),yes)
   targets=$(LIBDIRARCH)/libpythia8.a
-  targets+=$(LIBDIR)/libpythia8.so
+  targets+=$(LIBDIR)/libpythia8.$(SHAREDSUFFIX)
   targets+=$(LIBDIRARCH)/liblhapdfdummy.a
-  targets+=$(LIBDIR)/liblhapdfdummy.so
+  targets+=$(LIBDIR)/liblhapdfdummy.$(SHAREDSUFFIX)
 else
   targets=$(LIBDIRARCH)/libpythia8.a
   targets+=$(LIBDIRARCH)/liblhapdfdummy.a
@@ -55,7 +48,7 @@ endif
 ifneq (x$(HEPMCLOCATION),x)
  targets+=$(LIBDIRARCH)/libhepmcinterface.a
  ifeq ($(SHAREDLIBS),yes)
-  targets+=$(LIBDIR)/libhepmcinterface.so
+  targets+=$(LIBDIR)/libhepmcinterface.$(SHAREDSUFFIX)
  endif
 endif
 
@@ -96,7 +89,7 @@ ifeq ($(SHAREDLIBS),yes)
 	mkdir -p $(TMPDIR); \
 	$(CC) -M -I$(INCDIR) $< | \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' | \
-	sed 's/$*.o/$(TMPDIR)\/$*.o/' > $@; \
+	sed 's/$*\.o/$(TMPDIR)\/$*.o/' > $@; \
 	[ -s $@ ] || rm -f $@
 endif
 
@@ -105,15 +98,15 @@ $(TMPDIR)/archive/%.d : $(SRCDIR)/%.cc
 	mkdir -p $(TMPDIR)/archive; \
 	$(CC) -M -I$(INCDIR) $< | \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' | \
-	sed 's/$*.o/$(TMPDIR)\/archive\/$*.o/' > $@; \
+	sed 's/$*\.o/$(TMPDIR)\/archive\/$*.o/' > $@; \
 	[ -s $@ ] || rm -f $@
 
 objects := $(patsubst $(SRCDIR)/%.cc,$(TMPDIR)/%.o,$(wildcard $(SRCDIR)/*.cc))
 objectsarch := $(patsubst $(SRCDIR)/%.cc,$(TMPDIR)/archive/%.o,$(wildcard $(SRCDIR)/*.cc))
 
-$(LIBDIR)/libpythia8.so: $(objects)
+$(LIBDIR)/libpythia8.$(SHAREDSUFFIX): $(objects)
 	@mkdir -p $(LIBDIR)
-	$(CXX) $(LDFLAGSSHARED) $(objects) -o $@ -shared -Wl,-soname,$(notdir $@)
+	$(CXX) $(LDFLAGSSHARED) -o $@ $(objects) $(LDFLAGLIBNAME),$(notdir $@)
 
 $(LIBDIRARCH)/libpythia8.a: $(objectsarch)
 	@mkdir -p $(LIBDIRARCH)
@@ -122,9 +115,9 @@ $(LIBDIRARCH)/libpythia8.a: $(objectsarch)
 objdum := $(patsubst lhapdfdummy/%.cc,$(TMPDIR)/%.o,$(wildcard lhapdfdummy/*.cc))
 objdumarch := $(patsubst lhapdfdummy/%.cc,$(TMPDIR)/archive/%.o,$(wildcard lhapdfdummy/*.cc))
 
-$(LIBDIR)/liblhapdfdummy.so: $(objdum)
+$(LIBDIR)/liblhapdfdummy.$(SHAREDSUFFIX): $(objdum)
 	@mkdir -p $(LIBDIR)
-	$(CXX) $(LDFLAGSSHARED) $(objdum) -o $@ -shared -Wl,-soname,$(notdir $@)
+	$(CXX) $(LDFLAGSSHARED) -o $@ $(objdum) $(LDFLAGLIBNAME),$(notdir $@)
 
 $(LIBDIRARCH)/liblhapdfdummy.a: $(objdumarch)
 	@mkdir -p $(LIBDIRARCH)
@@ -137,25 +130,15 @@ depsarch := $(patsubst $(SRCDIR)/%.cc,$(TMPDIR)/archive/%.d,$(wildcard $(SRCDIR)
 # The "if" below is needed in order to avoid producing the dependency files
 # when you want to just clean
 
-ifneq ($(MAKECMDGOALS),clean)
+ifeq (,$(findstring clean, $(MAKECMDGOALS)))
 -include $(deps)
 -include $(depsarch)
 endif
 
-# Build HepMC interface part if HepMC and CLHEP locations are set.
+# Build HepMC interface part if HepMC location is set.
 
 ifneq (x$(HEPMCLOCATION),x)
  HEPMCINCLUDE=-I$(HEPMCLOCATION)/include
- ifneq ($(findstring x2,x$(HEPMCVERSION)),x2)
-  ifneq (x$(CLHEPLOCATION),x)
-   HEPMCINCLUDE+= -I$(CLHEPLOCATION)/include
-  else
-   HEPMCERROR= HepMC interface: ERROR, CLHEPLOCATION should be defined with HEPMCLOCATION
-  endif
-  ifeq ($(wildcard $(CLHEPLOCATION)/include/CLHEP/Vector/*.h),)
-   HEPMCERROR= HepMC interface: ERROR, no CLHEP vector headers found in ${CLHEPLOCATION}/include/CLHEP/Vector
-  endif
- endif
 
  ifeq (x$(HEPMCERROR),x)
 
@@ -186,9 +169,9 @@ ifneq (x$(HEPMCLOCATION),x)
    objectsI := $(patsubst hepmcinterface/%.cc,$(TMPDIR)/%.o,$(wildcard hepmcinterface/*.cc))
    objectsIarch := $(patsubst hepmcinterface/%.cc,$(TMPDIR)/archive/%.o,$(wildcard hepmcinterface/*.cc))
 
-   $(LIBDIR)/libhepmcinterface.so : $(objectsI)
+   $(LIBDIR)/libhepmcinterface.$(SHAREDSUFFIX) : $(objectsI)
 	@mkdir -p $(LIBDIR)
-	$(CXX) $(LDFLAGSSHARED) $(objectsI) -o $@ -shared -Wl,-soname,$(notdir $@)
+	$(CXX) $(LDFLAGSSHARED) $(objectsI) -o $@ $(LDFLAGLIBNAME),$(notdir $@)
 
    $(LIBDIRARCH)/libhepmcinterface.a : $(objectsIarch)
 	@mkdir -p $(LIBDIRARCH)
@@ -197,15 +180,17 @@ ifneq (x$(HEPMCLOCATION),x)
    depsI := $(patsubst hepmcinterface/%.cc,$(TMPDIR)/%.d,$(wildcard hepmcinterface/*.cc))
    depsIarch := $(patsubst hepmcinterface/%.cc,$(TMPDIR)/archive/%.d,$(wildcard hepmcinterface/*.cc))
 
-   ifneq ($(MAKECMDGOALS),clean)
+   ifeq (,$(findstring clean, $(MAKECMDGOALS)))
    -include $(depsI)
    -include $(depsIarch)
    endif
 
  else
 
-   $(LIBDIR)/libhepmcinterface.so : hepmcinterface/I_Pythia8.cc
+   $(LIBDIRARCH)/libhepmcinterface.a $(LIBDIR)/libhepmcinterface.$(SHAREDSUFFIX) :
 	@echo $(HEPMCERROR)
+
+
 
  endif
 
@@ -213,13 +198,18 @@ endif
 
 # Clean up: remove (almost?) everything that cannot be recreated.
 
-.PHONY: clean
+.PHONY: clean distclean
+
 clean:
-	rm -f *~; rm -f \#*;
 	rm -rf $(TMPDIR)
 	rm -rf $(LIBDIR)
 	rm -rf $(BINDIR)
+	cd examples; rm -f *.exe; cd -
+	cd rootexamples; rm -f *.exe; cd -
+
+distclean: clean
 	rm -f config.mk
+	rm -f *~; rm -f \#*;
 	cd $(SRCDIR); rm -f *~; rm -f \#*; cd -
 	cd $(INCDIR); rm -f *~; rm -f \#*; cd -
 	cd xmldoc; rm -f *~; rm -f \#*; cd -
@@ -227,5 +217,6 @@ clean:
 	cd phpdoc; rm -f *~; rm -f \#*; cd -
 	cd hepmcinterface; rm -f *~; rm -f \#*; cd -
 	cd lhapdfdummy; rm -f *~; rm -f \#*; cd -
-	cd examples; rm -rf *.exe; rm -f *~; rm -f \#*; rm -f core*; rm -f config.*; cd -
+	cd examples; rm -f *~; rm -f \#*; rm -f core*; rm -f config.*; cd -
+	cd rootexamples; rm -f *~; rm -f \#*; rm -f core*; rm -f config.*; cd -
 

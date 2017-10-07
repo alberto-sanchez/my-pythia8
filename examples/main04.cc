@@ -1,5 +1,5 @@
 // main04.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -22,18 +22,18 @@ int main() {
   pythia.readFile("main04.cmnd");    
 
   // Extract settings to be used in the main program.
-  int    idBeamA = settings.mode("Main:idBeamA");
-  int    idBeamB = settings.mode("Main:idBeamB");
-  double eCM     = settings.parm("Main:eCM");
-  int    nEvent  = settings.mode("Main:numberOfEvents");
-  int    nList   = settings.mode("Main:numberToList");
-  int    nShow   = settings.mode("Main:timesToShow");
-  int    nAbort  = settings.mode("Main:timesAllowErrors");
-  bool   showCS  = settings.flag("Main:showChangedSettings");
-  bool   showAS  = settings.flag("Main:showAllSettings");
+  int    nEvent  = pythia.mode("Main:numberOfEvents");
+  int    nList   = pythia.mode("Main:numberToList");
+  int    nShow   = pythia.mode("Main:timesToShow");
+  int    nAbort  = pythia.mode("Main:timesAllowErrors");
+  bool   showCS  = pythia.flag("Main:showChangedSettings");
+  bool   showAS  = pythia.flag("Main:showAllSettings");
 
-  // Initialization for Pythia6 event input.
-  pythia.init( idBeamA, idBeamB, eCM);
+  // Also need the CM energy.
+  double eCM     = pythia.parm("Beams:eCM");
+
+  // Initialization using beam parameters in the .cmnd file.
+  pythia.init();
 
   // List changed or all data.
   if (showCS) settings.listChanged();
@@ -46,10 +46,11 @@ int main() {
   Hist dNdEta("dn/deta for particles",100,-10.,10.);
 
   // Begin event loop.
-  int nPace = max(1,nEvent/nShow); 
+  int nPace = max(1, nEvent / max(1, nShow) ); 
   int iAbort = 0;
   for (int iEvent = 0; iEvent < nEvent; ++iEvent) {
-    if (iEvent%nPace == 0) cout << " Now begin event " << iEvent << endl;
+    if (nShow > 0 && iEvent%nPace == 0) 
+      cout << " Now begin event " << iEvent << endl;
 
     // Generate events. Quit if failure.
     if (!pythia.next()) {

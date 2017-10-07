@@ -1,6 +1,8 @@
 <html>
 <head>
 <title>A Second Hard Process</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
 </head>
 <body>
 
@@ -19,11 +21,15 @@ precisely. The options on this page allow you to do precisely that.
 <p/><code>flag&nbsp; </code><strong> SecondHard:generate &nbsp;</strong> 
  (<code>default = <strong>off</strong></code>)<br/>
 Generate two hard scatterings in a collision between hadron beams.
-You must further specify which set of processes to allow for
-the second, see below.
+The hardest process can be any combination of internal processes,
+available in the normal <a href="ProcessSelection.html" target="page">process 
+selection</a> machinery, or external input. Here you must further 
+specify which set of processes to allow for the second hard one, see 
+the following.
   
 
-<p/>
+<h3>Process Selection</h3>
+
 In principle the whole <a href="ProcessSelection.html" target="page">process 
 selection</a> allowed for the first process could be repeated 
 for the second one. However, this would probably be overkill. 
@@ -51,6 +57,13 @@ A prompt photon recoiling against a quark or gluon jet.
  (<code>default = <strong>off</strong></code>)<br/>
 Two prompt photons recoiling against each other.
 
+<p/><code>flag&nbsp; </code><strong> SecondHard:Charmonium &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Production of charmonium via colour singlet and colour octet channels.
+
+<p/><code>flag&nbsp; </code><strong> SecondHard:Bottomonium &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Production of bottomonium via colour singlet and colour octet channels.
 
 <p/><code>flag&nbsp; </code><strong> SecondHard:SingleGmZ &nbsp;</strong> 
  (<code>default = <strong>off</strong></code>)<br/>
@@ -61,6 +74,30 @@ between the <i>gamma^*</i> and <i>Z^0</i>.
 <p/><code>flag&nbsp; </code><strong> SecondHard:SingleW &nbsp;</strong> 
  (<code>default = <strong>off</strong></code>)<br/>
 Scattering <i>q qbar' -> W^+-</i>.
+  
+
+<p/><code>flag&nbsp; </code><strong> SecondHard:GmZAndJet &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Scattering <i>q qbar -> gamma^*/Z^0 g</i> and
+<i>q g -> gamma^*/Z^0 q</i>.
+  
+
+<p/><code>flag&nbsp; </code><strong> SecondHard:WAndJet &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Scattering <i>q qbar' -> W^+- g</i> and
+<i>q g -> W^+- q'</i>.
+  
+
+<p/><code>flag&nbsp; </code><strong> SecondHard:TopPair &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Production of a top pair, either via QCD processes or via an
+intermediate <i>gamma^*/Z^0</i> resonance.
+  
+
+<p/><code>flag&nbsp; </code><strong> SecondHard:SingleTop &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Production of a single top, either via a <i>t-</i> or 
+an <i>s-</i>channel <i>W^+-</i> resonance.
   
 
 <p/>
@@ -77,7 +114,8 @@ contributions to the <i>b</i> rate, however, so, depending
 on the topology if interest, it may or may not be a good approximation.   
   
 
-<p/>
+<h3>Cuts and scales</h3>
+
 The second hard process obeys exactly the same selection rules for
 <a href="PhaseSpaceCuts.html" target="page">phase space cuts</a> and
 <a href="CouplingsAndScales.html" target="page">couplings and scales</a> 
@@ -88,6 +126,15 @@ generated with a larger <i>pT</i> than the first. (Exact numbers
 depending on the relative shape of the two cross sections.) That is, 
 first and second is only used as an administrative distinction between 
 the two, not as a physics ordering one.
+
+<p/>
+Optionally it is possible to pick the mass and <i>pT</i> 
+<a href="PhaseSpaceCuts.html" target="page">phase space cuts</a> separately for 
+the second hard interaction. The main application presumably would
+be to allow a second process that is softer than the first, but still 
+hard. But one is also free to make the second process harder than the 
+first, if desired. So long as the two <i>pT</i> (or mass) ranges 
+overlap the ordering will not be the same in all events, however.
 
 <h3>Cross-section calculation</h3>
 
@@ -240,6 +287,26 @@ doublecounted). This gives the correct
 The second interaction can be handled in exact analogy.
 
 <p/>
+For the considerations above it is assumed that the phase space cuts 
+are the same for the two processes. It is possible to set the mass and 
+transverse momentum cuts differently, however. This changes nothing 
+for processes that already are different. For two collisions of the 
+same type it is partly a matter of interpretation what is intended.
+If we consider the case of the same process in two non-overlapping 
+phase space regions, most likely we want to consider them as
+separate processes, in the sense that we expect a factor 2 relative 
+to Poissonian statistics from either of the two hardest processes
+populating either of the two phase space regions. In total we are
+therefore lead to adopt the same strategy as in case (3) above:
+only in the overlapping part of the two allowed phase space regions
+could two processes be identical and thus appear with a 1/2 factor,
+elsewhere the two processes are never identical and do not 
+include the 1/2 factor. We reiterate, however, that the case of 
+partly but not completely overlapping phase space regions for one and
+the same process is tricky, and not to be used without prior
+deliberation.  
+
+<p/>
 The listing obtained with the <code>pythia.statistics()</code>
 already contain these corrections factors, i.e. cross sections
 are for the occurence of two interactions of the specified kinds. 
@@ -271,6 +338,21 @@ be thrown for identical processes. Taken together, it is these
 effects that reduced the event number from "selected" to "accepted".
 (A further reduction may occur if a 
 <a href="UserHooks.html" target="page">user hook</a> rejects some events.) 
+
+<p/>
+It is allowed to use external Les Houches Accord input for the 
+hardest process, and then pick an internal one for the second hardest.
+In this case PYTHIA does not have access to your thinking concerning
+the external process, and cannot know whether it overlaps with the 
+internal or not. (External events <i>q qbar' -> e+ nu_e</i> could 
+agree with the internal <i>W</i> ones, or be a <i>W'</i> resonance 
+in a BSM scenario, to give one example.) Therefore the combined cross 
+section is always based on the scenario (1) above. Corrections for 
+correlated parton densities are included also in this case, however. 
+That is, an external event that takes a large fraction of the incoming 
+beam momenta stands a fair chance of being rejected when it has to be 
+combined with another hard process. For this reason the "selected" and  
+"accepted" event numbers are likely to disagree.
 
 <p/>
 In the cross section calculation above, the <i>sigma'_1</i>
@@ -313,7 +395,7 @@ full <code>event</code> event record.
 
 <p/>
 Most of the properties accessible by the  
-<a href="EventInformation.html" target="page"><code>pythia.info</code></a>
+<code><a href="EventInformation.html" target="page">pythia.info</a></code>
 methods refer to the first process, whether that happens to be the
 hardest or not. The code and <i>pT</i> scale of the second process
 are accessible by the <code>info.codeMI(1)</code> and 
@@ -333,4 +415,4 @@ anyway less relevant, since systematical errors are likely to dominate.
 </body>
 </html>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->

@@ -1,5 +1,5 @@
 // FragmentationFlavZpT.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -10,69 +10,41 @@
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // The StringFlav class.
 
-//*********
- 
-// Definitions of static variables.
-// (Values will be overwritten in initStatic call, so are purely dummy.)
-double StringFlav::probQQtoQ        = 0.1;
-double StringFlav::probStoUD        = 0.3;
-double StringFlav::probSQtoQQ       = 0.4;
-double StringFlav::probQQ1toQQ0     = 0.05;
-double StringFlav::probQandQQ       = 1.1;
-double StringFlav::probQandS        = 2.3;
-double StringFlav::probQandSinQQ    = 2.12;
-double StringFlav::probQQ1corr      = 0.15;
-double StringFlav::probQQ1corrInv   = 6.667;
-double StringFlav::probQQ1norm      = 0.13;
-double StringFlav::mesonRate[4][6]  = {{0.}};
-double StringFlav::mesonRateSum[4]  = {0.};
-double StringFlav::mesonMix1[2][6]  = {{0.}}; 
-double StringFlav::mesonMix2[2][6]  = {{0.}};
-double StringFlav::etaSup           = 1.0;
-double StringFlav::etaPrimeSup      = 0.4;
-double StringFlav::decupletSup      = 1.0;
-double StringFlav::popcornRate      = 0.5;
-double StringFlav::popcornSpair     = 0.5;
-double StringFlav::popcornSmeson    = 0.5;
-bool   StringFlav::suppressLeadingB = false;
-double StringFlav::lightLeadingBSup = 0.5;
-double StringFlav::heavyLeadingBSup = 0.8;
-double StringFlav::scbBM[3]         = {0.};
-double StringFlav::popFrac          = 0.;
-double StringFlav::popS[3]          = {0.};
-double StringFlav::dWT[3][7]        = {{0.}};
+//--------------------------------------------------------------------------
+
+// Constants: could be changed here if desired, but normally should not.
+// These are of technical nature, as described for each.
+
+// Offset for different meson multiplet id values.
+const int StringFlav::mesonMultipletCode[6] 
+  = { 1, 3, 10003, 10001, 20003, 5};
 
 // Clebsch-Gordan coefficients for baryon octet and decuplet are
 // fixed once and for all, so only weighted sum needs to be edited.
 // Order: ud0 + u, ud0 + s, uu1 + u, uu1 + d, ud1 + u, ud1 + s.
-double StringFlav::baryonCGOct[6] 
+const double StringFlav::baryonCGOct[6] 
   = { 0.75, 0.5, 0., 0.1667, 0.0833, 0.1667};
-double StringFlav::baryonCGDec[6] 
+const double StringFlav::baryonCGDec[6] 
   = { 0.,  0.,  1., 0.3333, 0.6667, 0.3333};
-double StringFlav::baryonCGSum[6] 
-  = { 0.75, 0.5, 1., 0.5, 0.75, 0.5};
-double StringFlav::baryonCGMax[6]
-  = {0.75, 0.75, 1., 1., 0.75, 0.75};
 
-// Offset for different meson multiplet id values.
-int StringFlav::mesonMultipletCode[6] 
-  = { 1, 3, 10003, 10001, 20003, 5};
+//--------------------------------------------------------------------------
 
-//*********
+// Initialize data members of the flavour generation.
 
-// Initialize static data members of the flavour generation.
+void StringFlav::init(Settings& settings, Rndm* rndmPtrIn) {
 
-void StringFlav::initStatic() {
+  // Save pointer.
+  rndmPtr         = rndmPtrIn;
 
   // Basic parameters for generation of new flavour.
-  probQQtoQ       = Settings::parm("StringFlav:probQQtoQ");
-  probStoUD       = Settings::parm("StringFlav:probStoUD");
-  probSQtoQQ      = Settings::parm("StringFlav:probSQtoQQ");
-  probQQ1toQQ0    = Settings::parm("StringFlav:probQQ1toQQ0");
+  probQQtoQ       = settings.parm("StringFlav:probQQtoQ");
+  probStoUD       = settings.parm("StringFlav:probStoUD");
+  probSQtoQQ      = settings.parm("StringFlav:probSQtoQQ");
+  probQQ1toQQ0    = settings.parm("StringFlav:probQQ1toQQ0");
 
   // Parameters derived from above.
   probQandQQ      = 1. + probQQtoQ;
@@ -84,28 +56,28 @@ void StringFlav::initStatic() {
 
   // Parameters for normal meson production.
   for (int i = 0; i < 4; ++i) mesonRate[i][0] = 1.;
-  mesonRate[0][1] = Settings::parm("StringFlav:mesonUDvector");
-  mesonRate[1][1] = Settings::parm("StringFlav:mesonSvector");
-  mesonRate[2][1] = Settings::parm("StringFlav:mesonCvector");
-  mesonRate[3][1] = Settings::parm("StringFlav:mesonBvector");
+  mesonRate[0][1] = settings.parm("StringFlav:mesonUDvector");
+  mesonRate[1][1] = settings.parm("StringFlav:mesonSvector");
+  mesonRate[2][1] = settings.parm("StringFlav:mesonCvector");
+  mesonRate[3][1] = settings.parm("StringFlav:mesonBvector");
 
   // Parameters for L=1 excited-meson production.
-  mesonRate[0][2] = Settings::parm("StringFlav:mesonUDL1S0J1");
-  mesonRate[1][2] = Settings::parm("StringFlav:mesonSL1S0J1");
-  mesonRate[2][2] = Settings::parm("StringFlav:mesonCL1S0J1");
-  mesonRate[3][2] = Settings::parm("StringFlav:mesonBL1S0J1");
-  mesonRate[0][3] = Settings::parm("StringFlav:mesonUDL1S1J0");
-  mesonRate[1][3] = Settings::parm("StringFlav:mesonSL1S1J0");
-  mesonRate[2][3] = Settings::parm("StringFlav:mesonCL1S1J0");
-  mesonRate[3][3] = Settings::parm("StringFlav:mesonBL1S1J0");
-  mesonRate[0][4] = Settings::parm("StringFlav:mesonUDL1S1J1");
-  mesonRate[1][4] = Settings::parm("StringFlav:mesonSL1S1J1");
-  mesonRate[2][4] = Settings::parm("StringFlav:mesonCL1S1J1");
-  mesonRate[3][4] = Settings::parm("StringFlav:mesonBL1S1J1");
-  mesonRate[0][5] = Settings::parm("StringFlav:mesonUDL1S1J2");
-  mesonRate[1][5] = Settings::parm("StringFlav:mesonSL1S1J2");
-  mesonRate[2][5] = Settings::parm("StringFlav:mesonCL1S1J2");
-  mesonRate[3][5] = Settings::parm("StringFlav:mesonBL1S1J2");
+  mesonRate[0][2] = settings.parm("StringFlav:mesonUDL1S0J1");
+  mesonRate[1][2] = settings.parm("StringFlav:mesonSL1S0J1");
+  mesonRate[2][2] = settings.parm("StringFlav:mesonCL1S0J1");
+  mesonRate[3][2] = settings.parm("StringFlav:mesonBL1S0J1");
+  mesonRate[0][3] = settings.parm("StringFlav:mesonUDL1S1J0");
+  mesonRate[1][3] = settings.parm("StringFlav:mesonSL1S1J0");
+  mesonRate[2][3] = settings.parm("StringFlav:mesonCL1S1J0");
+  mesonRate[3][3] = settings.parm("StringFlav:mesonBL1S1J0");
+  mesonRate[0][4] = settings.parm("StringFlav:mesonUDL1S1J1");
+  mesonRate[1][4] = settings.parm("StringFlav:mesonSL1S1J1");
+  mesonRate[2][4] = settings.parm("StringFlav:mesonCL1S1J1");
+  mesonRate[3][4] = settings.parm("StringFlav:mesonBL1S1J1");
+  mesonRate[0][5] = settings.parm("StringFlav:mesonUDL1S1J2");
+  mesonRate[1][5] = settings.parm("StringFlav:mesonSL1S1J2");
+  mesonRate[2][5] = settings.parm("StringFlav:mesonCL1S1J2");
+  mesonRate[3][5] = settings.parm("StringFlav:mesonBL1S1J2");
 
   // Store sum over multiplets for Monte Carlo generation.
   for (int i = 0; i < 4; ++i) mesonRateSum[i] 
@@ -115,12 +87,12 @@ void StringFlav::initStatic() {
   // Parameters for uubar - ddbar - ssbar meson mixing.
   for (int spin = 0; spin < 6; ++spin) { 
     double theta;
-    if      (spin == 0) theta = Settings::parm("StringFlav:thetaPS");
-    else if (spin == 1) theta = Settings::parm("StringFlav:thetaV");
-    else if (spin == 2) theta = Settings::parm("StringFlav:thetaL1S0J1");
-    else if (spin == 3) theta = Settings::parm("StringFlav:thetaL1S1J0");
-    else if (spin == 4) theta = Settings::parm("StringFlav:thetaL1S1J1");
-    else                theta = Settings::parm("StringFlav:thetaL1S1J2");
+    if      (spin == 0) theta = settings.parm("StringFlav:thetaPS");
+    else if (spin == 1) theta = settings.parm("StringFlav:thetaV");
+    else if (spin == 2) theta = settings.parm("StringFlav:thetaL1S0J1");
+    else if (spin == 3) theta = settings.parm("StringFlav:thetaL1S1J0");
+    else if (spin == 4) theta = settings.parm("StringFlav:thetaL1S1J1");
+    else                theta = settings.parm("StringFlav:thetaL1S1J2");
     double alpha = (spin == 0) ? 90. - (theta + 54.7) : theta + 54.7;
     alpha *= M_PI / 180.;
     // Fill in (flavour, spin)-dependent probability of producing
@@ -132,11 +104,11 @@ void StringFlav::initStatic() {
   }
 
   // Additional suppression of eta and etaPrime.
-  etaSup      = Settings::parm("StringFlav:etaSup");
-  etaPrimeSup = Settings::parm("StringFlav:etaPrimeSup");
+  etaSup      = settings.parm("StringFlav:etaSup");
+  etaPrimeSup = settings.parm("StringFlav:etaPrimeSup");
 
   // Sum of baryon octet and decuplet weights.
-  double decupletSup = Settings::parm("StringFlav:decupletSup");
+  decupletSup = settings.parm("StringFlav:decupletSup");
   for (int i = 0; i < 6; ++i) baryonCGSum[i]
     = baryonCGOct[i] + decupletSup * baryonCGDec[i];
 
@@ -149,14 +121,14 @@ void StringFlav::initStatic() {
   baryonCGMax[5] = baryonCGMax[4]; 
 
   // Popcorn baryon parameters.
-  popcornRate    = Settings::parm("StringFlav:popcornRate");
-  popcornSpair   = Settings::parm("StringFlav:popcornSpair"); 
-  popcornSmeson  = Settings::parm("StringFlav:popcornSmeson");
+  popcornRate    = settings.parm("StringFlav:popcornRate");
+  popcornSpair   = settings.parm("StringFlav:popcornSpair"); 
+  popcornSmeson  = settings.parm("StringFlav:popcornSmeson");
   
   // Suppression of leading (= first-rank) baryons.
-  suppressLeadingB = Settings::flag("StringFlav:suppressLeadingB");
-  lightLeadingBSup = Settings::parm("StringFlav:lightLeadingBSup");
-  heavyLeadingBSup = Settings::parm("StringFlav:heavyLeadingBSup");
+  suppressLeadingB = settings.flag("StringFlav:suppressLeadingB");
+  lightLeadingBSup = settings.parm("StringFlav:lightLeadingBSup");
+  heavyLeadingBSup = settings.parm("StringFlav:heavyLeadingBSup");
 
   // Begin calculation of derived parameters for baryon production.
 
@@ -281,7 +253,7 @@ void StringFlav::initStatic() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Pick a new flavour (including diquarks) given an incoming one.
 
@@ -303,15 +275,15 @@ FlavContainer StringFlav::pick(FlavContainer& flavOld) {
   bool doNewBaryon    = false;
 
   // Choose whether to generate a new meson or a new baryon.
-  if (!doOldBaryon && !doPopcornMeson && probQandQQ * Rndm::flat() > 1.) {
+  if (!doOldBaryon && !doPopcornMeson && probQandQQ * rndmPtr->flat() > 1.) {
     doNewBaryon = true;
-    if ((1. + popFrac) * Rndm::flat() > 1.) flavNew.nPop = 1;
+    if ((1. + popFrac) * rndmPtr->flat() > 1.) flavNew.nPop = 1;
   }
 
   // Optional suppression of first-rank baryon.
   if (flavOld.rank == 0 && doNewBaryon && suppressLeadingB) {
     double leadingBSup = (idOld < 4) ? lightLeadingBSup : heavyLeadingBSup; 
-    if (Rndm::flat() > leadingBSup) {
+    if (rndmPtr->flat() > leadingBSup) {
       doNewBaryon = false;
       flavNew.nPop = 0;
     }
@@ -335,7 +307,7 @@ FlavContainer StringFlav::pick(FlavContainer& flavOld) {
   if (doNewBaryon) { 
     double sPopWT = dWT[iCase][0];
     if (iCase == 1) sPopWT *= scbBM[0] * popcornSpair;
-    double rndmFlav = (2. + sPopWT) * Rndm::flat();
+    double rndmFlav = (2. + sPopWT) * rndmPtr->flat();
     flavNew.idPop = 1;
     if (rndmFlav > 1.) flavNew.idPop = 2;
     if (rndmFlav > 2.) flavNew.idPop = 3;
@@ -345,7 +317,7 @@ FlavContainer StringFlav::pick(FlavContainer& flavOld) {
   double sVtxWT = dWT[iCase][1];
   if (flavNew.idPop >= 3) sVtxWT = dWT[iCase][2]; 
   if (flavNew.idPop > 3) sVtxWT *= 0.5 * (1. + 1./dWT[iCase][4]);
-  double rndmFlav = (2. + sVtxWT) * Rndm::flat();
+  double rndmFlav = (2. + sVtxWT) * rndmPtr->flat();
   flavNew.idVtx = 1;
   if (rndmFlav > 1.) flavNew.idVtx = 2;
   if (rndmFlav > 2.) flavNew.idVtx = 3;
@@ -353,7 +325,7 @@ FlavContainer StringFlav::pick(FlavContainer& flavOld) {
   // Special case for light flavours, possibly identical. 
   if (flavNew.idPop < 3 && flavNew.idVtx < 3) {  
     flavNew.idVtx = flavNew.idPop;
-    if (Rndm::flat() > dWT[iCase][3]) flavNew.idVtx = 3 - flavNew.idPop;
+    if (rndmPtr->flat() > dWT[iCase][3]) flavNew.idVtx = 3 - flavNew.idPop;
   }
 
   // Pick 2 * spin + 1.
@@ -362,7 +334,7 @@ FlavContainer StringFlav::pick(FlavContainer& flavOld) {
     double spinWT = dWT[iCase][6];
     if (flavNew.idVtx == 3) spinWT = dWT[iCase][5];
     if (flavNew.idPop >= 3) spinWT = dWT[iCase][4];
-    if ((1. + spinWT) * Rndm::flat() < 1.) spin = 1;
+    if ((1. + spinWT) * rndmPtr->flat() < 1.) spin = 1;
   }
 
   // Form outgoing diquark. Done. 
@@ -374,7 +346,7 @@ FlavContainer StringFlav::pick(FlavContainer& flavOld) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Combine two flavours (including diquarks) to produce a hadron.
 // The weighting of the combination may fail, giving output 0.
@@ -390,17 +362,18 @@ int StringFlav::combine(FlavContainer& flav1, FlavContainer& flav2) {
   // Construct a meson.
   if (idMax < 9 || idMin > 1000) {
 
-    // Popcorn meson: use only vertex quarks.
+    // Popcorn meson: use only vertex quarks. Fail if none.
     if (idMin > 1000) {
       id1Abs = flav1.idVtx;
       id2Abs = flav2.idVtx;
       idMax = max(id1Abs, id2Abs);
       idMin = min(id1Abs, id2Abs);
+      if (idMin == 0) return 0;
     }
 
     // Pick spin state and preliminary code.
     int flav = (idMax < 3) ? 0 : idMax - 2;
-    double rndmSpin = mesonRateSum[flav] * Rndm::flat();
+    double rndmSpin = mesonRateSum[flav] * rndmPtr->flat();
     int spin = -1;
     do rndmSpin -= mesonRate[flav][++spin];
     while (rndmSpin > 0.);
@@ -415,15 +388,15 @@ int StringFlav::combine(FlavContainer& flav1, FlavContainer& flav2) {
 
     // For light diagonal mesons include uubar - ddbar - ssbar mixing.
     } else if (flav < 2) {
-      double rMix = Rndm::flat();
+      double rMix = rndmPtr->flat();
       if      (rMix < mesonMix1[flav][spin]) idMeson = 110;
       else if (rMix < mesonMix2[flav][spin]) idMeson = 220;
       else                                   idMeson = 330;
       idMeson += mesonMultipletCode[spin];
 
       // Additional suppression of eta and eta' may give failure.
-      if (idMeson == 221 && etaSup < Rndm::flat()) return 0;
-      if (idMeson == 331 && etaPrimeSup < Rndm::flat()) return 0;
+      if (idMeson == 221 && etaSup < rndmPtr->flat()) return 0;
+      if (idMeson == 331 && etaPrimeSup < rndmPtr->flat()) return 0;
     }
 
     // Finished for mesons.
@@ -437,22 +410,22 @@ int StringFlav::combine(FlavContainer& flav1, FlavContainer& flav2) {
   int spinFlav = spinQQ - 1;
   if (spinFlav == 2 && idQQ1 != idQQ2) spinFlav = 4;
   if (idMin != idQQ1 && idMin != idQQ2) spinFlav++;   
-  if (baryonCGSum[spinFlav] < Rndm::flat() * baryonCGMax[spinFlav]) 
+  if (baryonCGSum[spinFlav] < rndmPtr->flat() * baryonCGMax[spinFlav]) 
     return 0;
 
   // Order quarks to form baryon. Pick spin.
   int idOrd1 = max( idMin, max( idQQ1, idQQ2) ); 
   int idOrd3 = min( idMin, min( idQQ1, idQQ2) ); 
   int idOrd2 = idMin + idQQ1 + idQQ2 - idOrd1 - idOrd3;
-  int spinBar = (baryonCGSum[spinFlav] * Rndm::flat() 
+  int spinBar = (baryonCGSum[spinFlav] * rndmPtr->flat() 
     < baryonCGOct[spinFlav]) ? 2 : 4;
   
   // Distinguish Lambda- and Sigma-like. 
   bool LambdaLike = false;
   if (spinBar == 2 && idOrd1 > idOrd2 && idOrd2 > idOrd3) {
     LambdaLike = (spinQQ == 1);
-    if (idOrd1 != idMin && spinQQ == 1) LambdaLike = (Rndm::flat() < 0.25); 
-    else if (idOrd1 != idMin)           LambdaLike = (Rndm::flat() < 0.75);
+    if (idOrd1 != idMin && spinQQ == 1) LambdaLike = (rndmPtr->flat() < 0.25); 
+    else if (idOrd1 != idMin)           LambdaLike = (rndmPtr->flat() < 0.75);
   }
 
   // Form baryon code and return with sign.  
@@ -463,7 +436,7 @@ int StringFlav::combine(FlavContainer& flav1, FlavContainer& flav2) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Assign popcorn quark inside an original (= rank 0) diquark.
 
@@ -482,7 +455,7 @@ void StringFlav::assignPopQ(FlavContainer& flav) {
        if (id2 == 3) pop2WT /= scbBM[1];
   else if (id2 >  3) pop2WT /= scbBM[2];
   // Agrees with Patrik code, but opposite to intention??
-  flav.idPop = ((1. + pop2WT) * Rndm::flat() > 1.) ? id2 : id1; 
+  flav.idPop = ((1. + pop2WT) * rndmPtr->flat() > 1.) ? id2 : id1; 
   flav.idVtx = id1 + id2 - flav.idPop;
 
   // Also determine if to produce popcorn meson.
@@ -491,11 +464,11 @@ void StringFlav::assignPopQ(FlavContainer& flav) {
   if (id1 == 3) popWT = popS[1];
   if (id2 == 3) popWT = popS[2];
   if (idAbs%10 == 1) popWT *= sqrt(probQQ1toQQ0);
-  if ((1. + popWT) * Rndm::flat() > 1.) flav.nPop = 1;
+  if ((1. + popWT) * rndmPtr->flat() > 1.) flav.nPop = 1;
   
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Combine two quarks to produce a diquark. 
 // Normally according to production composition, but nonvanishing idHad
@@ -511,11 +484,11 @@ int StringFlav::makeDiquark(int id1, int id2, int idHad) {
   // Select spin of diquark formed from two valence quarks in proton.
   // (More hadron cases??)
   if (abs(idHad) == 2212) {
-    if (idMin == 1 && idMax == 2 && Rndm::flat() < 0.75) spin = 0;  
+    if (idMin == 1 && idMax == 2 && rndmPtr->flat() < 0.75) spin = 0;  
 
   // Else select spin of diquark according to production composition.
   } else {
-    if (idMin != idMax && Rndm::flat() > probQQ1norm) spin = 0; 
+    if (idMin != idMax && rndmPtr->flat() > probQQ1norm) spin = 0; 
   }   
 
   // Combined diquark code.
@@ -524,29 +497,11 @@ int StringFlav::makeDiquark(int id1, int id2, int idHad) {
 
 }
  
-//**************************************************************************
+//==========================================================================
 
 // The StringZ class.
 
-//*********
- 
-// Definitions of static variables.
-// (Values will be overwritten in initStatic call, so are purely dummy.)
- 
-bool   StringZ::usePetersonC  = false;
-bool   StringZ::usePetersonB  = false;
-bool   StringZ::usePetersonH  = false;
-double StringZ::mc2           = 2.25;
-double StringZ::mb2           = 25.0;
-double StringZ::aLund         = 0.3;
-double StringZ::bLund         = 0.58;
-double StringZ::aExtraDiquark = 0.5;
-double StringZ::rFactC        = 1.0;
-double StringZ::rFactB        = 1.0;
-double StringZ::rFactH        = 1.0;
-double StringZ::epsilonC      = 0.05;
-double StringZ::epsilonB      = 0.005;
-double StringZ::epsilonH      = 0.005;
+//--------------------------------------------------------------------------
 
 // Constants: could be changed here if desired, but normally should not.
 // These are of technical nature, as described for each.
@@ -559,35 +514,44 @@ const double StringZ::AFROMC     = 0.01;
 // Do not take exponent of too large or small number.
 const double StringZ::EXPMAX     = 50.; 
 
-//*********
+//--------------------------------------------------------------------------
 
-// Initialize static data members of the string z selection.
+// Initialize data members of the string z selection.
 
-void StringZ::initStatic() {
+void StringZ::init(Settings& settings, ParticleData& particleData, 
+  Rndm* rndmPtrIn) {
+
+  // Save pointer.
+  rndmPtr       = rndmPtrIn;
 
   // c and b quark masses.
-  mc2 = pow2( ParticleDataTable::m0(4)); 
-  mb2 = pow2( ParticleDataTable::m0(5)); 
+  mc2           = pow2( particleData.m0(4)); 
+  mb2           = pow2( particleData.m0(5)); 
 
   // Paramaters of Lund/Bowler symmetric fragmentation function.
-  aLund = Settings::parm("StringZ:aLund");
-  bLund = Settings::parm("StringZ:bLund");
-  aExtraDiquark = Settings::parm("StringZ:aExtraDiquark");
-  rFactC = Settings::parm("StringZ:rFactC");
-  rFactB = Settings::parm("StringZ:rFactB");
-  rFactH = Settings::parm("StringZ:rFactH");
+  aLund         = settings.parm("StringZ:aLund");
+  bLund         = settings.parm("StringZ:bLund");
+  aExtraDiquark = settings.parm("StringZ:aExtraDiquark");
+  rFactC        = settings.parm("StringZ:rFactC");
+  rFactB        = settings.parm("StringZ:rFactB");
+  rFactH        = settings.parm("StringZ:rFactH");
 
   // Flags and parameters of Peterson/SLAC fragmentation function.
-  usePetersonC = Settings::flag("StringZ:usePetersonC");
-  usePetersonB = Settings::flag("StringZ:usePetersonB");
-  usePetersonH = Settings::flag("StringZ:usePetersonH");
-  epsilonC = Settings::parm("StringZ:epsilonC");
-  epsilonB = Settings::parm("StringZ:epsilonB");
-  epsilonH = Settings::parm("StringZ:epsilonH");
+  usePetersonC  = settings.flag("StringZ:usePetersonC");
+  usePetersonB  = settings.flag("StringZ:usePetersonB");
+  usePetersonH  = settings.flag("StringZ:usePetersonH");
+  epsilonC      = settings.parm("StringZ:epsilonC");
+  epsilonB      = settings.parm("StringZ:epsilonB");
+  epsilonH      = settings.parm("StringZ:epsilonH");
+
+  // Parameters for joining procedure.
+  stopM         = settings.parm("StringFragmentation:stopMass");
+  stopNF        = settings.parm("StringFragmentation:stopNewFlav");
+  stopS         = settings.parm("StringFragmentation:stopSmear");
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Generate the fraction z that the next hadron will take, 
 // using either Lund/Bowler or, for heavy, Peterson/SLAC functions.
@@ -627,7 +591,7 @@ double StringZ::zFrag( int idOld, int idNew, double mT2) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Generate a random z according to the Lund/Bowler symmetric
 // fragmentation function f(z) = (1 -z)^a * exp(-b/z) / z^c.
@@ -691,17 +655,17 @@ double StringZ::zLund( double a, double b, double c) {
   do { 
     // Choice of z flat good enough for distribution peaked in the middle;
     // if not this z can be reused as a random number in general.
-    z = Rndm::flat();
+    z = rndmPtr->flat();
     fPrel = 1.;
     // When z_max small use flat below z_div and 1/z^c above z_div.
     if (peakedNearZero) {
-      if (fInt * Rndm::flat() < fIntLow) z = zDiv * z;
+      if (fInt * rndmPtr->flat() < fIntLow) z = zDiv * z;
       else if (cIsUnity) {z = pow( zDiv, z); fPrel = zDiv / z;}
       else { z = pow( zDivC + (1. - zDivC) * z, 1. / (1. - c) );
              fPrel = pow( zDiv / z, c); }
     // When z_max large use exp( b * (z -z_div) ) below z_div and flat above it.
     } else if (peakedNearUnity) {
-      if (fInt * Rndm::flat() < fIntLow) { 
+      if (fInt * rndmPtr->flat() < fIntLow) { 
         z = zDiv + log(z) / b;
         fPrel = exp( b * (z - zDiv) ); 
       } else z = zDiv + (1. - zDiv) * z; 
@@ -713,14 +677,14 @@ double StringZ::zLund( double a, double b, double c) {
       if (!aIsZero) fExp += a * log( (1. - z) / (1. - zMax) );
       fVal = exp( max( -EXPMAX, min( EXPMAX, fExp) ) ) ;
     } else fVal = 0.;
-  } while (fVal < Rndm::flat() * fPrel);
+  } while (fVal < rndmPtr->flat() * fPrel);
 
   // Done.
   return z;
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Generate a random z according to the Peterson/SLAC formula
 // f(z) = 1 / ( z * (1 - 1/z - epsilon/(1-z))^2 )
@@ -734,10 +698,10 @@ double StringZ::zPeterson( double epsilon) {
   // knowing that 4 * epsilon * f(z) < 1 everywhere.
   if (epsilon > 0.01) { 
     do { 
-      z = Rndm::flat();
+      z = rndmPtr->flat();
       fVal = 4. * epsilon * z * pow2(1. - z) 
         / pow2( pow2(1. - z) + epsilon * z);
-    } while (fVal < Rndm::flat());
+    } while (fVal < rndmPtr->flat());
     return z; 
   } 
   
@@ -749,58 +713,65 @@ double StringZ::zPeterson( double epsilon) {
   double fIntLow = 4. * epsilon * epsComb;
   double fInt = fIntLow + 2. * epsRoot;
   do { 
-    if (Rndm::flat() * fInt < fIntLow) {
-      z = 1. - 1. / (1. + Rndm::flat() * epsComb);
+    if (rndmPtr->flat() * fInt < fIntLow) {
+      z = 1. - 1. / (1. + rndmPtr->flat() * epsComb);
       fVal = z * pow2( pow2(1. - z) / (pow2(1. - z) + epsilon * z) );
     } else {
-      z = 1. - 2. * epsRoot * Rndm::flat();
+      z = 1. - 2. * epsRoot * rndmPtr->flat();
       fVal = 4. * epsilon * z * pow2(1. - z) 
         / pow2( pow2(1. - z) + epsilon * z);
     }
-  } while (fVal < Rndm::flat());
+  } while (fVal < rndmPtr->flat());
   return z; 
 
 } 
  
-//**************************************************************************
+//==========================================================================
 
 // The StringPT class.
 
-//*********
- 
-// Definitions of static variables.
-// (Values will be overwritten in init call, so are purely dummy.)
+//--------------------------------------------------------------------------
 
-double StringPT::sigmaQ           = 0.25;
-double StringPT::enhancedFraction = 0.01;
-double StringPT::enhancedWidth    = 2.;
+// Constants: could be changed here if desired, but normally should not.
+// These are of technical nature, as described for each.
 
-//*********
+// To avoid division by zero one must have sigma > 0.
+const double StringPT::SIGMAMIN     = 0.2;
 
-// Initialize static data members of the string pT selection.
+//--------------------------------------------------------------------------
 
-void StringPT::initStatic() {
+// Initialize data members of the string pT selection.
+
+void StringPT::init(Settings& settings,  ParticleData& , Rndm* rndmPtrIn) {
+
+  // Save pointer.
+  rndmPtr        = rndmPtrIn;
 
   // Parameters of the pT width and enhancement.
-  sigmaQ           = Settings::parm("StringPT:sigma") / sqrt(2.);
-  enhancedFraction = Settings::parm("StringPT:enhancedFraction");
-  enhancedWidth    = Settings::parm("StringPT:enhancedWidth");
+  double sigma     = settings.parm("StringPT:sigma");
+  sigmaQ           = sigma / sqrt(2.);
+  enhancedFraction = settings.parm("StringPT:enhancedFraction");
+  enhancedWidth    = settings.parm("StringPT:enhancedWidth");
 
+  // Parameter for pT suppression in MiniStringFragmentation.
+  sigma2Had        = 2. * pow2( max( SIGMAMIN, sigma) );
+  
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Generate Gaussian pT such that <p_x^2> = <p_x^2> = sigma^2 = width^2/2,
 // but with small fraction multiplied up to a broader spectrum.
 
-double StringPT::pxy() {
+pair<double, double> StringPT::pxy() {
 
-  double pxy = sigmaQ * Rndm::gauss();
-  if (Rndm::flat() < enhancedFraction) pxy *= enhancedWidth;
-  return pxy;
+  double sigma = sigmaQ;
+  if (rndmPtr->flat() < enhancedFraction) sigma *= enhancedWidth;
+  pair<double, double> gauss2 = rndmPtr->gauss2();
+  return pair<double, double>(sigma * gauss2.first, sigma * gauss2.second);
 
 }
   
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8

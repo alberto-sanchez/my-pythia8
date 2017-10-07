@@ -1,4 +1,3 @@
-----------------------------------------------------------------------
 
    BASIC INSTALLATION
 
@@ -19,11 +18,13 @@
    subdirectory contain further instructions how executables can 
    be built and run.
     
-4) At any time, typing "gmake clean" will remove all temporary files
-   (including the compiled PYTHIA 8 library) except any output files 
-   you may have created during your test runs. (If you do it in the 
-   main directory it will apply to all subdirectories, if in examples 
-   then only for that subdirectory.) 
+4) At any time, typing "gmake clean" will remove all files related to
+   the library compilation, including the library itself, but it will
+   not reset the configure selections. With "gmake distclean" additionally
+   the configure selection is reset, and many other temporary files are
+   removed. Output files you may have created during your test runs are
+   not affected. (A "gmake clean" is also available in the examples 
+   subdirectory, see the README there.) 
 
 ----------------------------------------------------------------------
 
@@ -34,10 +35,8 @@
    will have to do more work. There are two different ways to 
    accomplish this.
 
-1.1) If you have access to the CERN afs filesystem, so that libraries 
-     can be picked up  from the /afs/cern.ch/sw/lcg/external area, you 
-     can run "./configure"  with a suitable combination of the following 
-     command-line arguments: 
+1.1)  You can use command-line arguments to set up the desired library 
+     links. The possible options are:
      --help : prints a brief summary of the options described here.
      --enable-debug : turns on debugging flags and turns off optimization.
          (This makes program execution much slower. If you later want to 
@@ -45,33 +44,47 @@
          this option, since default is to allow optimization.)
      --enable-shared : turns on shared-library creation,
          in addition to the archive libraries always built.
-     --lcgplatform=xxx : allows you to specify the platform assumed for
+     --enable-64bits : turns on 64 bits compilation flag
+         (is automatic on many 64-bit installations, but just in case).
+     --lcgplatform=name : allows you to specify the platform assumed for
          compilation, which also affects the assumed location of the 
          libraries below; default is slc4_ia32_gcc34 while other supported
-         values for xxx include slc4_amd64_gcc34 and slc3_ia32_gcc323
+         values for name include slc4_amd64_gcc34 and slc3_ia32_gcc323
          (deprecated). 
-     --with-hepmcversion=xxx : allows you later on to link to the HepMC
-         library. A recent "old" version would be 1.27.02, while a 
-         more modern one would be 2.00.02.
-     --with-clhepversion=xxx : if you use HepMC version 1 you also need
-         to link to CLHEP, e.g. HepMC 1.27.02 requires CLHEP 1.9.2.3-aa.
-         HepMC version 2 does not require CLHEP.
+     --with-hepmc=path : the path to your local copy of the HepMC library.
+         Please note that HepMC version 1 is no more supported. If the path
+         does not contain the version number you will be warned about it.    
+     --with-hepmcversion=v : a simpler alternative to the above, valid 
+         if you are using the CERN AFS LCG external area. See the HepMC
+         WEB site for the information about the versions currently
+         "in production"
+     There also are a few environment variables that you can set to 
+     force the configuration process or add flags:
+     USRCXXFLAGS : to add flags. Use this variable to add -fPIC to the 
+         compilation flags for the static libraries
+     USRLDFLAGSSHARED : to add flags to the shared library build command
+     USRSHAREDSUFFIX : to force shared libraries suffix to be like this 
+         (default on MacOSX is dylib).
 
-1.2) If you want to use external libraries from some different location, 
+1.2) If you want to use the external HepMC from some different location, 
+     or it is more convenient to put the paths directly into the script,
      then you have to edit the "configure" file by hand before you run 
-     it, to provide the paths where you have the respective libraries 
-     installed on your local platform. Search in the "configure" file for
+     it. Search in the "configure" file for
        HEPMCLOCATION
-       CLHEPLOCATION
+     and provide the paths where you have the respective libraries
+     installed on your local platform.
 
-   Information on the selected paths is stored in the files 
+   Information on the selected paths is stored in the files config.mk,
    examples/config.sh and examples/config.csh when you run "./configure".
 
-2) If you want to change the versions of HepMC and/or CLHEP, you have to
+2) If you want to change the version of HepMC, you have to
    rerun the script "configure" with relevant options, then type "make" 
    to recompile the library hepmcinterface. If you tried already to run 
    examples with previous versions, pay attention to the environment 
    variable LD_LIBRARY_PATH (see README in examples).
+
+   Hints on how to install HepMC from scratch can be found in the
+   separate README.HepMC file.
 
 3) If you have two CPUs or cores on your computer then using the -j2 
    option on make/gmake may speed up compilation.
@@ -86,9 +99,10 @@
 4.1) You can set the environment variable PYTHIA8DATA to contain the 
      location of the xmldoc directory. In the csh and tcsh shells this 
      could e.g. be
-       setenv PYTHIA8DATA /home/myname/pythia8100/xmldoc
+       setenv PYTHIA8DATA /home/myname/pythia81xx/xmldoc
      while in other shells it could be
-       export PYTHIA8DATA=/home/myname/pythia8100/xmldoc
+       export PYTHIA8DATA=/home/myname/pythia81xx/xmldoc
+     where xx is the subversion number.
      Recall that environment variables set locally are only defined in 
      the current instance of the shell. The above lines should go into 
      your .cshrc and .bashrc files, respectively, if you want a more 
@@ -96,7 +110,8 @@
 
 4.2) You can provide the path as argument to the Pythia constructor in 
      your main program, e.g.
-       Pythia pythia("/home/myname/pythia8100/xmldoc");
+       Pythia pythia("/home/myname/pythia81xx/xmldoc");
+     where again xx is the subversion number.
 
    When PYTHIA8DATA is set it takes precedence, else the path in the 
    constructor is used, else one defaults to the ../xmldoc directory.
@@ -109,7 +124,8 @@ The Makefile.msc file is intended for use on Win32/NMAKE systems with
 the  Microsoft Visual C/C++ compiler. This alternative installation
 is not the development platform, however, and therefore not as well 
 tested. Not all parts of the above installation procedure are the same,
-so some experimentation may be required.    
+so some experimentation may be required. A few suggestions are found 
+in the the separate README.Win32 file.    
 
 ----------------------------------------------------------------------
 

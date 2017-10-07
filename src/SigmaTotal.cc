@@ -1,5 +1,5 @@
 // SigmaTotal.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -9,7 +9,7 @@
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // The SigmaTotal class.
 
@@ -24,25 +24,12 @@ namespace Pythia8 {
 // =  2 : pi+ + p;   =  3 : pi- + p;     =  4 : pi0/rho0 + p; 
 // =  5 : phi + p;   =  6 : J/psi + p;
 // =  7 : rho + rho; =  8 : rho + phi;   =  9 : rho + J/psi;
-// = 10 : phi + phi; = 11 : phi + J/psi; = 12 : J/psi + J/psi.   
+// = 10 : phi + phi; = 11 : phi + J/psi; = 12 : J/psi + J/psi.  
+// = 13 : Pom + p (preliminary). 
 
-//*********
+//--------------------------------------------------------------------------
  
 // Definitions of static variables.
-// (Values will be overwritten in initStatic call, so are purely dummy.)
-bool   SigmaTotal::setTotal   = false;
-double SigmaTotal::sigTotOwn  = 80.;
-double SigmaTotal::sigElOwn   = 20.;
-double SigmaTotal::sigXBOwn   = 8.;
-double SigmaTotal::sigAXOwn   = 8.;
-double SigmaTotal::sigXXOwn   = 4.;
-bool   SigmaTotal::setElastic = false;
-double SigmaTotal::bSlope     = 18.;
-double SigmaTotal::rho        = 0.13;
-double SigmaTotal::lambda     = 0.71;
-double SigmaTotal::tAbsMin    = 5e-5;
-double SigmaTotal::alphaEM0   = 0.00729735;
-
 // Note that a lot of parameters are hardcoded as const here, rather 
 // than being interfaced for public change, since any changes would
 // have to be done in a globally consistent manner. Which basically 
@@ -117,40 +104,56 @@ const double SigmaTotal::CDD[10][9] = {
   { 4.18, -29.2,  56.2, 0.074, -1.36, 6.67, -1.14, 116.2, 6532.  } };
 const double SigmaTotal::SPROTON = 0.880;
 
-//*********
+//--------------------------------------------------------------------------
 
-// Initialize static data members.
+// Store pointer to Info and initialize data members.
 
-void SigmaTotal::initStatic() {
+void SigmaTotal::init(Info* infoPtrIn, Settings& settings,
+  ParticleData* particleDataPtrIn) {
+
+  // Store pointers.
+  infoPtr         = infoPtrIn;
+  particleDataPtr = particleDataPtrIn;
 
   // User-set values for cross sections.  
-  setTotal   = Settings::flag("SigmaTotal:setOwn");
-  sigTotOwn  = Settings::parm("SigmaTotal:sigmaTot");
-  sigElOwn   = Settings::parm("SigmaTotal:sigmaEl");
-  sigXBOwn   = Settings::parm("SigmaTotal:sigmaXB");
-  sigAXOwn   = Settings::parm("SigmaTotal:sigmaAX");
-  sigXXOwn   = Settings::parm("SigmaTotal:sigmaXX");
+  setTotal   = settings.flag("SigmaTotal:setOwn");
+  sigTotOwn  = settings.parm("SigmaTotal:sigmaTot");
+  sigElOwn   = settings.parm("SigmaTotal:sigmaEl");
+  sigXBOwn   = settings.parm("SigmaTotal:sigmaXB");
+  sigAXOwn   = settings.parm("SigmaTotal:sigmaAX");
+  sigXXOwn   = settings.parm("SigmaTotal:sigmaXX");
+
+  // User-set values to dampen diffractive cross sections.
+  doDampen   = settings.flag("SigmaDiffractive:dampen");
+  maxXBOwn   = settings.parm("SigmaDiffractive:maxXB");
+  maxAXOwn   = settings.parm("SigmaDiffractive:maxAX");
+  maxXXOwn   = settings.parm("SigmaDiffractive:maxXX");
 
   // User-set values for handling of elastic sacattering. 
-  setElastic = Settings::flag("SigmaElastic:setOwn");
-  bSlope     = Settings::parm("SigmaElastic:bSlope");  
-  rho        = Settings::parm("SigmaElastic:rho");  
-  lambda     = Settings::parm("SigmaElastic:lambda");  
-  tAbsMin    = Settings::parm("SigmaElastic:tAbsMin");  
-  alphaEM0   = Settings::parm("StandardModel:alphaEM0");
+  setElastic = settings.flag("SigmaElastic:setOwn");
+  bSlope     = settings.parm("SigmaElastic:bSlope");  
+  rho        = settings.parm("SigmaElastic:rho");  
+  lambda     = settings.parm("SigmaElastic:lambda");  
+  tAbsMin    = settings.parm("SigmaElastic:tAbsMin");  
+  alphaEM0   = settings.parm("StandardModel:alphaEM0");
+
+  // Parameter for diffractive systems.
+  sigmaPomP  = settings.parm("Diffraction:sigmaPomP");
+
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Function that calculates the relevant properties.
 
-bool SigmaTotal::init( int idA, int idB, double eCM) {
+bool SigmaTotal::calc( int idA, int idB, double eCM) {
 
   // Derived quantities.
   alP2 = 2. * ALPHAPRIME;
   s0   = 1. / ALPHAPRIME;
 
   // Reset everything to zero to begin with.
+  isCalc = false;
   sigTot = sigEl = sigXB = sigAX = sigXX = sigND = bEl = s = bA = bB = 0.;
 
   // Order flavour of incoming hadrons: idAbsA < idAbsB (restore later).
@@ -172,6 +175,7 @@ bool SigmaTotal::init( int idA, int idB, double eCM) {
     if (idAbsA/10 == 11 || idAbsA/10 == 22) iProc = 4;
     if (idAbsA > 300) iProc                       = 5;
     if (idAbsA > 400) iProc                       = 6;
+    if (idAbsA > 900) iProc                       = 13;
   } else if (idAbsA > 100) {    
     iProc                                         = 7;
     if (idAbsB > 300) iProc                       = 8;
@@ -182,13 +186,25 @@ bool SigmaTotal::init( int idA, int idB, double eCM) {
   }
   if (iProc == -1) return false;
 
+  // Primitive implementation of Pomeron + p.
+  if (iProc == 13) {
+    s      = eCM*eCM;
+    sigTot = sigmaPomP;
+    sigND  = sigTot;
+    isCalc = true;
+    return true;
+  }
+
   // Find hadron masses and check that energy is enough.
   // For mesons use the corresponding vector meson masses.
   int idModA = (idAbsA > 1000) ? idAbsA : 10 * (idAbsA/10) + 3; 
   int idModB = (idAbsB > 1000) ? idAbsB : 10 * (idAbsB/10) + 3; 
-  double mA  = ParticleDataTable::m0(idModA);
-  double mB  = ParticleDataTable::m0(idModB);
-  if (eCM < mA + mB + MMIN) return false; 
+  double mA  = particleDataPtr->m0(idModA);
+  double mB  = particleDataPtr->m0(idModB);
+  if (eCM < mA + mB + MMIN) {
+    infoPtr->errorMsg("Error in SigmaTotal::calc: too low energy");
+    return false;
+  }
   
   // Evaluate the total cross section.
   s           = eCM*eCM;
@@ -266,6 +282,13 @@ bool SigmaTotal::init( int idA, int idB, double eCM) {
   sum4   = pow2(CRES) * sRMlogAX * sRMlogXB 
     / max( 0.1, alP2 * log( s * s0 / (sRMavgAX * sRMavgXB) ) + BcorrXX);
   sigXX  = CONVERTDD * X[iProc] * max( 0., sum1 + sum2 + sum3 + sum4);
+
+  // Option with user-requested damping of diffractive cross sections.
+  if (doDampen) {
+    sigXB = sigXB * maxXBOwn / (sigXB + maxXBOwn);
+    sigAX = sigAX * maxAXOwn / (sigAX + maxAXOwn);
+    sigXX = sigXX * maxXXOwn / (sigXX + maxXXOwn);
+  }
  
   // Option with user-set values for total and partial cross sections.
   // (Is not done earlier since want diffractive slopes anyway.)
@@ -290,19 +313,20 @@ bool SigmaTotal::init( int idA, int idB, double eCM) {
 
   // Inelastic nondiffractive by unitarity.
   sigND = sigTot - sigEl - sigXB - sigAX - sigXX; 
-  if (sigND < 0.) ErrorMsg::message("Error in SigmaTotal::init: "
+  if (sigND < 0.) infoPtr->errorMsg("Error in SigmaTotal::init: "
     "sigND < 0"); 
-  else if (sigND < 0.4 * sigTot) ErrorMsg::message("Warning in "
+  else if (sigND < 0.4 * sigTot) infoPtr->errorMsg("Warning in "
     "SigmaTotal::init: sigND suspiciously low"); 
 
   // Upper estimate of elastic, including Coulomb term, where appropriate.
   sigEl = sigElMax;
 
   // Done.
+  isCalc = true;
   return true;
 
 }
 
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8

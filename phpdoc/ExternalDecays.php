@@ -1,6 +1,8 @@
 <html>
 <head>
 <title>External Decays</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
 </head>
 <body>
 
@@ -32,19 +34,20 @@ decays. It is intended for normal particle decays, primarily
 <i>B</i> mesons and <i>tau</i>, and cannot be used to redirect
 decays of heavy resonances like <i>t</i> or <i>Z^0</i>.  
 The user-written derived class is called if a pointer to it has
-been given with the <?php $filepath = $_GET["filepath"];
-echo "<a href='ProgramFlow.php?filepath=".$filepath."' target='page'>";?>
-<code>pythia.decayPtr()</code></a> 
+been given with the 
+<code><?php $filepath = $_GET["filepath"];
+echo "<a href='ProgramFlow.php?filepath=".$filepath."' target='page'>";?>pythia.decayPtr()</a></code> 
 method, where it also is specified which particles it will be called for. 
 This particle information is accessible with the
-<?php $filepath = $_GET["filepath"];
-echo "<a href='ParticleDataScheme.php?filepath=".$filepath."' target='page'>";?><code>doExternalDecay()</code></a>
+<code><?php $filepath = $_GET["filepath"];
+echo "<a href='ParticleDataScheme.php?filepath=".$filepath."' target='page'>";?>doExternalDecay()</a></code>
 method. 
 
 <p/>
 There is only one pure virtual method in <code>DecayHandler</code>, 
 to do the decay: 
-<p/><code>method&nbsp; </code><strong> virtual bool decay(vector&lt;int&gt;&amp; idProd, vector&lt;double&gt;&amp; mProd, vector&lt;Vec4&gt;&amp; pProd, int iDec, const Event&amp; event) &nbsp;</strong> <br/>
+<a name="method1"></a>
+<p/><strong>virtual bool DecayHandler::decay(vector&lt;int&gt;&amp; idProd, vector&lt;double&gt;&amp; mProd, vector&lt;Vec4&gt;&amp; pProd, int iDec, const Event&amp; event) &nbsp;</strong> <br/>
 where 
 <br/><code>argument</code><strong> idProd </strong>  :  is a list of particle PDG identity codes,
   
@@ -73,7 +76,13 @@ is stored.
 <p/>
 The routine should return <code>true</code> if it managed the decay and 
 <code>false</code> otherwise, in which case <code>Pythia</code> will try 
-to do the decay itself.  
+to do the decay itself. This e.g. means you can choose to do some decay 
+channels yourself, and leave others to <code>Pythia</code>. To avoid
+doublecounting, the channels you want to handle should be switched off
+in the <code>Pythia</code> particle database. In the beginning of the  
+external <code>decay</code> method you should then return 
+<code>false</code> with a probability given by the sum of the branching
+ratios for those channels you do not want to handle yourself.   
 
 <p/>
 Note that the decay vertex is always set by <code>Pythia</code>, and that 
@@ -89,4 +98,4 @@ a simple example of how to use this facility.
 </body>
 </html>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->

@@ -1,0 +1,19 @@
+This directory contains files contributed by Rene Brun and 
+Axel Naumann, which illustrate how ROOT commands can be used 
+inside PYTHIA code. You should read the "ROOT usage" page 
+in the manual to understand the function of the files, and 
+how to set up the environment in which they can be used.
+
+-------------------------------------------------------------
+
+For FastJet use, add the following lines to the Makefile:
+
+CXXFLAGS += -I/Path_to_FastJet/include
+-L$(PYTHIA8)/lib -lpythia8 -llhapdfdummy -L/Path_to_FastJet/lib -lfastjet
+
+where "Path_to_FastJet" is the directory where FastJet was installed.
+Finally, add to your ".bashrc" file the following line:
+
+export LD_LIBRARY_PATH=//Path_to_FastJet/lib:LD_LIBRARY_PATH
+
+and type "source .bashrc" after the changes.

@@ -1,5 +1,5 @@
 // main17.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -15,7 +15,7 @@
 
 using namespace Pythia8; 
 
-//**************************************************************************
+//==========================================================================
 
 // Put most of your Pythia interaction in the PythiaWrapper class.
 // Note: this way you restrict yourself to a subset of the full Pythia
@@ -55,7 +55,7 @@ private:
 
 };
 
-//*********
+//--------------------------------------------------------------------------
 
 // The initialization code. 
 
@@ -83,12 +83,12 @@ bool PythiaWrapper::beg(int argc, char* argv[]) {
   // Read in the cards file with Pythia commands.
   pythia.readFile(argv[1]);
  
-  // Initialization, using the Main settings. Give up if failure.
+  // Initialization, using the Beams settings. Give up if failure.
   if ( !pythia.init() ) return false;
 
   // Shorthand for pythia.settings and pythia.particleData.
-  Settings&          pSet = pythia.settings;
-  ParticleDataTable& pDat = pythia.particleData;
+  Settings&     pSet = pythia.settings;
+  ParticleData& pDat = pythia.particleData;
 
   // List settings: changed or all.
   if ( pSet.flag("Main:showChangedSettings") )  pSet.listChanged();
@@ -108,7 +108,7 @@ bool PythiaWrapper::beg(int argc, char* argv[]) {
   nAbort = pSet.mode("Main:timesAllowErrors");
 
   // Initialize counters to use in event generation loop.
-  nPace  = max( 1, nEvent / nShow); 
+  nPace  = max(1, nEvent / max(1, nShow) ); 
   iEvent = 0;
   iList  = 0;
   iAbort = 0; 
@@ -118,7 +118,7 @@ bool PythiaWrapper::beg(int argc, char* argv[]) {
 
 } 
 
-//*********
+//--------------------------------------------------------------------------
 
 // The event generation code. 
 
@@ -128,7 +128,8 @@ bool PythiaWrapper::gen() {
   for( ;  ;  ) { 
 
     // At times print line with progress report. Count up event number.
-    if (iEvent%nPace == 0) cout << " Now begin event " << iEvent << endl;
+    if (nShow > 0 && iEvent%nPace == 0) 
+      cout << " Now begin event " << iEvent << endl;
     ++iEvent; 
 
     // Generate events, and check whether generation failed.
@@ -158,7 +159,7 @@ bool PythiaWrapper::gen() {
 
 } 
 
-//*********
+//--------------------------------------------------------------------------
 
 // The finishing code. 
 
@@ -172,7 +173,7 @@ bool PythiaWrapper::fin() {
 
 } 
 
-//**************************************************************************
+//==========================================================================
 
 // You should not need to touch the main program: its actions are 
 // determined by the .cmnd file and the rest belongs in MyAnalysis.

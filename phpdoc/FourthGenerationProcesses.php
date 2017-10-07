@@ -1,6 +1,8 @@
 <html>
 <head>
 <title>Fourth-Generation Processes</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
 </head>
 <body>
 
@@ -27,13 +29,12 @@ echo "<font color='red'>NO FILE SELECTED YET.. PLEASE DO SO </font><a href='Save
 
 <h2>Fourth-Generation Processes</h2>
 
-A fourth generation could have been accommodated within the 
-Standard Model, without the introduction of any new concepts.
-Given the experimental constraints, however, its existence by now
-is very unlikely. Nevertheless we offer a simple implementation, 
-along the lines of the top, since it could be useful also as a 
-template for studies of other new particles with similar 
-characteristics. 
+A fourth generation can be accommodated within the Standard Model, 
+without the introduction of any new concepts. Many experimental 
+constraints exist, but it has not been fully excluded. Therefore 
+we offer a simple implementation, along the lines of the top. 
+It could also be useful as a template for studies of other 
+new particles with similar characteristics. 
 
 <p/>
 The fourth generation are given names as in the third, but with a prime,
@@ -223,7 +224,7 @@ The <i>V_t'b</i> matrix element in the 4 * 4 CKM matrix.
 
 <br/><br/><table><tr><td><strong>FourthGeneration:VtPrimebPrime </td><td></td><td> <input type="text" name="22" value="0.99" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.99</strong></code>; <code>minimum = 0.0</code>; <code>maximum = 1.0</code>)</td></tr></table>
 The <i>V_t'b'</i> matrix element in the 4 * 4 CKM matrix.
-  
+   
 
 <input type="hidden" name="saved" value="1"/>
 
@@ -357,5 +358,5 @@ fclose($handle);
 </body>
 </html>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
 

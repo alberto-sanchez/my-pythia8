@@ -1,5 +1,5 @@
 // PhaseSpace.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -13,7 +13,7 @@
 
 #include "Basics.h"
 #include "BeamParticle.h"
-#include "Information.h"
+#include "Info.h"
 #include "LesHouches.h"
 #include "MultipleInteractions.h"
 #include "ParticleData.h"
@@ -22,16 +22,17 @@
 #include "SigmaProcess.h"
 #include "SigmaTotal.h"
 #include "Settings.h"
+#include "StandardModel.h"
 #include "UserHooks.h"
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // Forward reference to the UserHooks class.
 class UserHooks;
  
-//**************************************************************************
+//==========================================================================
 
 // PhaseSpace is a base class for  phase space generators 
 // used in the selection of hard-process kinematics.
@@ -43,31 +44,29 @@ public:
   // Destructor.
   virtual ~PhaseSpace() {}
 
-  // Initialize static data members.
-  static void initStatic();
+  // Perform simple initialization and store pointers.
+  void init(bool isFirst, SigmaProcess* sigmaProcessPtrIn, 
+    Info* infoPtrIn, Settings* settingsPtrIn, ParticleData* particleDataPtrIn,  
+    Rndm* rndmPtrIn, BeamParticle* beamAPtrIn, BeamParticle* beamBPtrIn, 
+    Couplings* couplingsPtrIn, SigmaTotal* sigmaTotPtrIn, 
+    UserHooks* userHooksPtrIn);
 
-  // Store static pointers to beams, SigmaTotal and user hooks.
-  static void setStaticPtrs( BeamParticle* beamAPtrIn, 
-    BeamParticle* beamBPtrIn, SigmaTotal* sigmaTotPtrIn,
-    UserHooks* userHooksPtrIn = 0);
+  // Update the CM energy of the event.
+  void newECM(double eCMin) {eCM = eCMin; s = eCM * eCM;}
 
-  // Store or replace Les Houches pointers.
-  static void setLHAPtrs( LHAinit* lhaInitPtrIn, LHAevnt* lhaEvntPtrIn) 
-    { lhaInitPtr = lhaInitPtrIn; lhaEvntPtr = lhaEvntPtrIn;}  
-
-  // Give in pointer to cross section and cm energy.
-  void initInfo(SigmaProcess* sigmaProcessPtrIn, double eCMIn);
+  // Store or replace Les Houches pointer.
+  void setLHAPtr(LHAup* lhaUpPtrIn) {lhaUpPtr = lhaUpPtrIn;}  
 
   // A pure virtual method, wherein an optimization procedure
   // is used to determine how phase space should be sampled.
   virtual bool setupSampling() = 0; 
 
   // A pure virtual method, wherein a trial event kinematics 
-  // is to be selected in the derived class
+  // is to be selected in the derived class.
   virtual bool trialKin(bool inEvent = true, bool repeatSame = false) = 0; 
 
   // A pure virtual method, wherein the accepted event kinematics 
-  // is to be constructed in the derived class
+  // is to be constructed in the derived class.
   virtual bool finalKin() = 0; 
 
   // Allow for nonisotropic decays when ME's available.
@@ -76,6 +75,7 @@ public:
   // Give back current or maximum cross section, or set latter.
   double sigmaNow() const {return sigmaNw;}
   double sigmaMax() const {return sigmaMx;}
+  double biasSelectionWeight()  const {return biasWt;}
   bool   newSigmaMax() const {return newSigmaMx;}
   void   setSigmaMax(double sigmaMaxIn) {sigmaMx = sigmaMaxIn;}
 
@@ -108,12 +108,6 @@ protected:
   // Constructor.
   PhaseSpace() {}
 
-  // Static initialization data, normally only set once.
-  static bool   useBreitWigners, showSearch, showViolation;
-  static int    gmZmodeGlobal;
-  static double mHatGlobalMin, mHatGlobalMax, pTHatGlobalMin, pTHatGlobalMax, 
-                pTHatMinDiverge, minWidthBreitWigners;
-
   // Constants: could only be changed in the code itself.
   static const int    NMAXTRY, NTRY3BODY;
   static const double SAFETYMARGIN, TINY, EVENFRAC, SAMESIGMA, WIDTHMARGIN, 
@@ -122,34 +116,53 @@ protected:
                       LEPTONXLOGMIN, LEPTONXLOGMAX, LEPTONTAUMIN,
                       SHATMINZ, PT2RATMINZ, WTCORRECTION[11];
 
-  // Static information on incoming beams.
-  static BeamParticle* beamAPtr;
-  static BeamParticle* beamBPtr;
-  static int    idA, idB;
-  static double mA, mB; 
-  static bool   hasLeptonBeams, hasPointLeptons;
-  
-  // Static pointer to the total/elastic/diffractive cross section object.
-  static SigmaTotal* sigmaTotPtr;
-
-  // Static pointer to userHooks object for user interaction with program.
-  static UserHooks* userHooksPtr;
-  static bool canModifySigma;
-
-  // Pointers to LHAinit and LHAevnt for generating external events.
-  static LHAinit* lhaInitPtr;
-  static LHAevnt* lhaEvntPtr;
-
-  // Center-of-mass energy.
-  double eCM, s; 
-
-  // Cross section information.
-  bool   newSigmaMx;
-  int    gmZmode;
-  double wtBW, sigmaNw, sigmaMx, sigmaNeg;
-
   // Pointer to cross section. 
   SigmaProcess* sigmaProcessPtr; 
+
+  // Pointer to various information on the generation.
+  Info*         infoPtr;
+
+  // Pointer to the settings database.
+  Settings*     settingsPtr;
+
+  // Pointer to the particle data table.
+  ParticleData* particleDataPtr;
+
+  // Pointer to the random number generator.
+  Rndm*         rndmPtr;
+
+  // Pointers to incoming beams.
+  BeamParticle* beamAPtr;
+  BeamParticle* beamBPtr;
+
+  // Pointer to Standard Model couplings.
+  Couplings*         couplingsPtr;
+  
+  // Pointer to the total/elastic/diffractive cross section object.
+  SigmaTotal*   sigmaTotPtr;
+
+  // Pointer to userHooks object for user interaction with program.
+  UserHooks*    userHooksPtr;
+
+  // Pointer to LHAup for generating external events.
+  LHAup*        lhaUpPtr;
+
+  // Initialization data, normally only set once.
+  bool   useBreitWigners, doEnergySpread, showSearch, showViolation,
+         increaseMaximum;
+  int    gmZmodeGlobal;
+  double mHatGlobalMin, mHatGlobalMax, pTHatGlobalMin, pTHatGlobalMax, 
+         pTHatMinDiverge, minWidthBreitWigners;
+ 
+  // Information on incoming beams.
+  int    idA, idB;
+  double mA, mB, eCM, s; 
+  bool   hasLeptonBeams, hasPointLeptons;
+
+ // Cross section information.
+  bool   newSigmaMx, canModifySigma, canBiasSelection;
+  int    gmZmode;
+  double wtBW, sigmaNw, sigmaMx, sigmaPos, sigmaNeg, biasWt;
 
   // Process-specific kinematics properties, almost always available.
   double mHatMin, mHatMax, sHatMin, sHatMax, pTHatMin, pTHatMax, 
@@ -184,7 +197,7 @@ protected:
   double tau, y, z, tauMin, tauMax, yMax, zMin, zMax, ratio34, unity34, 
          zNeg, zPos, wtTau, wtY, wtZ, wt3Body, runBW3H, runBW4H, runBW5H, 
          intTau0, intTau1, intTau2, intTau3, intTau4, intTau5, intTau6, 
-         intY01, intY2, intY34, mTchan1, sTchan1, mTchan2, sTchan2, 
+         intY0, intY12, intY34, intY56, mTchan1, sTchan1, mTchan2, sTchan2, 
          frac3Flat, frac3Pow1, frac3Pow2; 
   Vec4   p3cm, p4cm, p5cm;
 
@@ -226,7 +239,7 @@ protected:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class with 2 -> 1 kinematics set up in tau, y.
 
@@ -255,7 +268,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class with 2 -> 2 kinematics set up in tau, y, z = cos(theta).
 
@@ -293,7 +306,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class with 2 -> 2 kinematics set up for elastic scattering.
 
@@ -317,17 +330,17 @@ private:
   // Constants: could only be changed in the code itself.
   static const double EXPMAX, CONVERTEL;
 
- // Static alphaElectromagnetic calculation.
-  static AlphaEM alphaEM;
-
   // Kinematics properties specific to 2 -> 2 elastic.
   bool   useCoulomb;
   double s1, s2, bSlope, lambda12S, tLow, tUpp, tAux, sigmaTot, rho,
          lambda, tAbsMin, phaseCst, alphaEM0, sigmaNuc, sigmaCou, signCou;
 
+ // Calculation of alphaElectromagnetic.
+ AlphaEM alphaEM;
+
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class with 2 -> 2 kinematics set up for diffractive scattering.
 
@@ -353,14 +366,19 @@ private:
   static const int    NTRY;
   static const double EXPMAX, DIFFMASSMAX;
 
-  // Kinematics properties specific to 2 -> 2 diffractive.
+  // Initialization data, in constructor or read from Settings.
   bool   isDiffA, isDiffB;
-  double m3ElDiff, m4ElDiff, cRes, sResXB, sResAX, sProton,
-         s1, s2, bMin, lambda12, lambda34, tLow, tUpp, tAux;
+  int    PomFlux;
+  double epsilonPF, alphaPrimePF;
+
+  // Initialization: kinematics properties specific to 2 -> 2 diffractive.
+  double m3ElDiff, m4ElDiff, s1, s2, lambda12, lambda34, tLow, tUpp,
+         cRes, sResXB, sResAX, sProton, bMin, bSlope, bSlope1, bSlope2, 
+         probSlope1, xIntPF, xtCorPF, mp24DL, coefDL, tAux, tAux1, tAux2;
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for minumum bias events. Hardly does anything, since
 // the real action is taken care of by the MultipleInteractions class.
@@ -382,7 +400,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class with 2 -> 3 kinematics 1 + 2 -> 3 + 4 + 5 set up in 
 // tau, y, pT2_4, pT2_5, phi_4, phi_5 and y_3 (partial cylindrical symmetry).
@@ -419,7 +437,42 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
+
+// A derived class with 2 -> 3 kinematics 1 + 2 -> 3 + 4 + 5 set up in 
+// y3, y4, y5, pT2_3, pT2_5, phi_3 and phi_5, and with R separation cut.
+// Intended specifically for (essentially massless) 2 -> 3 QCD processes.
+
+class PhaseSpace2to3yyycyl : public PhaseSpace {
+
+public:
+
+  // Constructor.
+  PhaseSpace2to3yyycyl() {}
+
+  // Optimize subsequent kinematics selection.
+  virtual bool setupSampling(); 
+
+  // Construct the trial kinematics.
+  virtual bool trialKin(bool inEvent = true, bool = false); 
+
+  // Construct the final event kinematics.
+  virtual bool finalKin();
+
+private:
+
+  // Phase space cuts specifically for 2 -> 3 QCD processes.
+  double pTHat3Min, pTHat3Max, pTHat5Min, pTHat5Max, RsepMin, R2sepMin;
+  bool   hasBaryonBeams;
+
+  // Event kinematics choices.
+  double pT3Min, pT3Max, pT5Min, pT5Max, y3Max, y4Max, y5Max,
+         pT3, pT4, pT5, phi3, phi4, phi5, y3, y4, y5, dphi;
+  Vec4   pInSum;
+
+};
+
+//==========================================================================
 
 // A derived class for Les Houches events. 
 
@@ -436,8 +489,8 @@ public:
   // Construct the next process, by interface to Les Houches class.
   virtual bool trialKin( bool , bool repeatSame = false); 
 
-  // Dummy, since kinematics available in Les Houches object. 
-  virtual bool finalKin() {return true;}
+  // Set scale, alpha_s and alpha_em if not done.
+  virtual bool finalKin() {sigmaProcessPtr->setScale(); return true;}
 
   // For Les Houches with negative event weight needs 
   virtual double sigmaSumSigned() const {return sigmaSgn;}
@@ -455,7 +508,7 @@ private:
 
 };
 
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

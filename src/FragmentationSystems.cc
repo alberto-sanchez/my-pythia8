@@ -1,5 +1,5 @@
 // FragmentationSystems.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -10,40 +10,47 @@
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // The ColConfig class.
 
-//*********
- 
-// Definitions of static variables.
-// (Values will be overwritten in initStatic call, so are purely dummy.)
+//--------------------------------------------------------------------------
 
-double ColConfig::mJoin         = 0.1;
-double ColConfig::mJoinJunction = 1.0;
-double ColConfig::mStringMin    = 1.0;
+// Constants: could be changed here if desired, but normally should not.
+// These are of technical nature, as described for each.
 
-//*********
+// A typical u/d constituent mass.
+const double ColConfig::CONSTITUENTMASS = 0.325;
 
-// Initialize static data members.
+//--------------------------------------------------------------------------
 
-void ColConfig::initStatic() {
+// Initialize and save pointers.
+
+void ColConfig::init(Info* infoPtrIn, Settings& settings, 
+  StringFlav* flavSelPtrIn) {
+
+  // Save pointers.
+  infoPtr       = infoPtrIn;
+  flavSelPtr    = flavSelPtrIn;
 
   // Joining of nearby partons along the string.
-  mJoin         = Settings::parm("FragmentationSystems:mJoin");
+  mJoin         = settings.parm("FragmentationSystems:mJoin");
+
+  // For consistency ensure that mJoin is bigger than in StringRegion.
+  mJoin         = max( mJoin, 2. * StringRegion::MJOIN);
 
   // Simplification of q q q junction topology to quark - diquark one.
-  mJoinJunction = Settings::parm("FragmentationSystems:mJoinJunction");
-  mStringMin    = Settings::parm("HadronLevel:mStringMin");
+  mJoinJunction = settings.parm("FragmentationSystems:mJoinJunction");
+  mStringMin    = settings.parm("HadronLevel:mStringMin");
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Insert a new colour singlet system in ascending mass order. 
 // Calculate its properties. Join nearby partons.
 
-void ColConfig::insert( vector<int>& iPartonIn, Event& event) {
+bool ColConfig::insert( vector<int>& iPartonIn, Event& event) {
 
   // Find momentum and invariant mass of system, minus endpoint masses.
   Vec4 pSumIn;
@@ -61,9 +68,18 @@ void ColConfig::insert( vector<int>& iPartonIn, Event& event) {
   double massIn = pSumIn.mCalc(); 
   double massExcessIn = massIn - mSumIn;
 
+  // Check that momenta do not contain not-a-number.
+  if (abs(massExcessIn) >= 0.);
+  else {
+    infoPtr->errorMsg("Error in ColConfig::insert: "
+      "not-a-number system mass");
+    return false; 
+  }   
+
   // Identify closed gluon loop. Assign "endpoint" masses as light quarks.
-  bool isClosedIn = (iPartonIn[0] >= 0 && event[ iPartonIn[0] ].isGluon());
-  if (isClosedIn) massExcessIn -= 2. * ParticleDataTable::constituentMass(1);  
+  bool isClosedIn = (iPartonIn[0] >= 0 && event[ iPartonIn[0] ].col() != 0 
+    && event[ iPartonIn[0] ].acol() != 0 );
+  if (isClosedIn) massExcessIn -= 2. * CONSTITUENTMASS;  
 
   // For junction topology: join two nearby legs into a diquark.
   if (hasJunctionIn && joinJunction( iPartonIn, event, massExcessIn)) 
@@ -84,6 +100,8 @@ void ColConfig::insert( vector<int>& iPartonIn, Event& event) {
       if (iPartonIn[i] < 0 || iPartonIn[(i + 1)%nSize] < 0) continue; 
       Particle& parton1 = event[ iPartonIn[i] ];
       Particle& parton2 = event[ iPartonIn[(i + 1)%nSize] ];
+      // Avoid joining non-partons, e.g. gluino/squark for R-hadron.
+      if (!parton1.isParton() || !parton2.isParton()) continue; 
       Vec4 pSumNow;
       pSumNow += (parton1.isGluon()) ? 0.5 * parton1.p() : parton1.p();  
       pSumNow += (parton2.isGluon()) ? 0.5 * parton2.p() : parton2.p();  
@@ -94,19 +112,22 @@ void ColConfig::insert( vector<int>& iPartonIn, Event& event) {
     }
 
     // If sufficiently nearby then join into one new parton.
+    // Note: error sensitivity to mJoin indicates unstable precedure??
     hasJoined = false;
     if (mJoinMin < mJoin) { 
-      int iJoin1 = iPartonIn[iJoinMin];
-      int iJoin2 = iPartonIn[(iJoinMin + 1)%nSize];
-      int idNew = (event[iJoin1].isGluon()) ? event[iJoin2].id() 
-        : event[iJoin1].id();
-      int colNew = event[iJoin1].col();
+      int iJoin1  = iPartonIn[iJoinMin];
+      int iJoin2  = iPartonIn[(iJoinMin + 1)%nSize];
+      int idNew   = (event[iJoin1].isGluon()) ? event[iJoin2].id() 
+                                              : event[iJoin1].id();
+      int colNew  = event[iJoin1].col();
       int acolNew = event[iJoin2].acol();
       if (colNew == acolNew) {
-        colNew = event[iJoin2].col();
-        acolNew = event[iJoin1].acol();
+        colNew    = event[iJoin2].col();
+        acolNew   = event[iJoin1].acol();
       }  
-      Vec4 pNew = event[iJoin1].p() + event[iJoin2].p();
+      Vec4 pNew   = event[iJoin1].p() + event[iJoin2].p();
+
+      // Append joined parton to event record.
       int iNew = event.append( idNew, 73, min(iJoin1, iJoin2), 
         max(iJoin1, iJoin2), 0, 0, colNew, acolNew, pNew, pNew.mCalc() );
 
@@ -143,9 +164,11 @@ void ColConfig::insert( vector<int>& iPartonIn, Event& event) {
     ColSinglet(iPartonIn, pSumIn, massIn, massExcessIn, 
     hasJunctionIn, isClosedIn);
 
+  // Done.
+  return true;
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Join two legs of junction to a diquark for small invariant masses.
 // Note: for junction system, iPartonIn points to structure
@@ -237,7 +260,7 @@ bool ColConfig::joinJunction( vector<int>& iPartonIn, Event& event,
   int iQB     = iLegB.back();
   int idQA    = event[iQA].id();
   int idQB    = event[iQB].id();
-  int idNew   = StringFlav::makeDiquark( idQA, idQB ); 
+  int idNew   = flavSelPtr->makeDiquark( idQA, idQB ); 
   // Diquark colour is opposite to parton closest to junction on third leg.
   int colNew  = (idNew > 0) ? 0 : event[ iLegC[0] ].acol();
   int acolNew = (idNew > 0) ? event[ iLegC[0] ].col() : 0;
@@ -267,11 +290,11 @@ bool ColConfig::joinJunction( vector<int>& iPartonIn, Event& event,
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Collect all partons of singlet to be consecutively ordered.
 
-void ColConfig::collect(int iSub, Event& event) {
+void ColConfig::collect(int iSub, Event& event, bool skipTrivial) {
 
   // Partons may already have been collected, e.g. at ministring collapse.
   if (singlets[iSub].isCollected) return;
@@ -286,7 +309,9 @@ void ColConfig::collect(int iSub, Event& event) {
     if (iSecond < 0) iSecond = singlets[iSub].iParton[i + 2];
     if (iSecond != iFirst + 1) { inOrder = false; break;}
   }
-  if (inOrder) return;
+
+  // Normally done if in order, but sometimes may need to copy anyway.
+  if (inOrder && skipTrivial) return;
  
   // Copy down system. Update current partons.
   for (int i = 0; i < singlets[iSub].size(); ++i) {
@@ -299,11 +324,26 @@ void ColConfig::collect(int iSub, Event& event) {
   // Done.
 }
 
-//*********
+//--------------------------------------------------------------------------
+
+// Find to which singlet system a particle belongs.
+
+int ColConfig::findSinglet(int i) {
+
+  // Loop through all systems and all members in them.  
+  for (int iSub = 0; iSub < int(singlets.size()); ++iSub) 
+  for (int iMem = 0; iMem < singlets[iSub].size(); ++iMem) 
+    if (singlets[iSub].iParton[iMem] == i) return iSub; 
+
+  // Done without having found particle; return -1 = error code.
+  return -1;
+}
+
+//--------------------------------------------------------------------------
 
 // List all currently identified singlets.
 
-void ColConfig::list(ostream& os) {
+void ColConfig::list(ostream& os) const {
 
   // Header. Loop over all individual singlets.
   os << "\n --------  Colour Singlet Systems Listing -------------------\n"; 
@@ -319,7 +359,7 @@ void ColConfig::list(ostream& os) {
   }
 }
  
-//**************************************************************************
+//==========================================================================
 
 // The StringRegion class.
 
@@ -327,33 +367,18 @@ void ColConfig::list(ostream& os) {
 // 1) No popcorn baryon production.
 // 2) Simplified treatment of pT in stepping and joining.
 
-//*********
- 
-// Definitions of static variables.
-// (Values will be overwritten in initStatic call, so are purely dummy.)
-
-double StringRegion::mJoin      = 0.1;
-double StringRegion::m2Join     = 0.01;
+//--------------------------------------------------------------------------
 
 // Constants: could be changed here if desired, but normally should not.
 // These are of technical nature, as described for each.
 
+// If a string region is smaller thsan this it is assumed empty.
+const double StringRegion::MJOIN = 0.1;
+
 // Avoid division by zero.
-const double StringRegion::TINY = 1e-20;
+const double StringRegion::TINY  = 1e-20;
 
-//*********
-
-// Initialize static data members.
-
-void StringRegion::initStatic() {
-
-  // Joining of nearby partons along the string.
-  mJoin  = Settings::parm("FragmentationSystems:mJoin");
-  m2Join = mJoin*mJoin;
-
-}
-
-//*********
+//--------------------------------------------------------------------------
 
 // Set up four-vectors for longitudinal and transverse directions.
 
@@ -364,7 +389,7 @@ void StringRegion::setUp(Vec4 p1, Vec4 p2, bool isMassless) {
  
     // Calculate w2, minimum value. Lightcone directions = input.
     w2 = 2. * (p1 * p2);
-    if (w2 < m2Join) {isSetUp = true; isEmpty = true; return;}
+    if (w2 < MJOIN*MJOIN) {isSetUp = true; isEmpty = true; return;}
     pPos = p1;
     pNeg = p2;
 
@@ -390,7 +415,7 @@ void StringRegion::setUp(Vec4 p1, Vec4 p2, bool isMassless) {
     }
 
     // If still small invariant mass then empty region (e.g. in gg system).
-    if (w2 < m2Join) {isSetUp = true; isEmpty = true; return;}
+    if (w2 < MJOIN*MJOIN) {isSetUp = true; isEmpty = true; return;}
 
     // Find two lightconelike longitudinal four-vector directions.
     double root = sqrt( max(TINY, rootSq) );
@@ -435,7 +460,7 @@ void StringRegion::setUp(Vec4 p1, Vec4 p2, bool isMassless) {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Project a four-momentum onto (x+, x-, px, py).
 
@@ -449,11 +474,11 @@ void StringRegion::project(Vec4 pIn) {
 
 }
  
-//**************************************************************************
+//==========================================================================
 
 // The StringSystem class.
 
-//*********
+//--------------------------------------------------------------------------
 
 // Set up system from parton list. 
 
@@ -481,6 +506,6 @@ void StringSystem::setUp(vector<int>& iSys, Event& event) {
 
 }
 
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8

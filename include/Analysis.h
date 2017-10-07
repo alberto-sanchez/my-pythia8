@@ -1,5 +1,5 @@
 // Analysis.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -10,17 +10,15 @@
 // CellJet: calorimetric cone jet finder. 
 
 #ifndef Pythia8_Analysis_H
-#define Pythia8_Analysis
+#define Pythia8_Analysis_H
 
 #include "Basics.h"
 #include "Event.h"
-#include "Information.h"
 #include "PythiaStdlib.h"
-#include "Settings.h"
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // Sphericity class.
 // This class performs (optionally modified) sphericity analysis on an event.
@@ -30,14 +28,14 @@ class Sphericity {
 public: 
 
   // Constructor.
-  Sphericity(double powerIn = 2., int selectIn = 2) 
-    : power(powerIn), select(selectIn) {powerInt = 0;
+  Sphericity(double powerIn = 2., int selectIn = 2) : power(powerIn), 
+    select(selectIn), nFew(0), nBack(0) {powerInt = 0; 
     if (abs(power - 1.) < 0.01) powerInt = 1;
-    if (abs(power - 2.) < 0.01) powerInt = 2;
+    if (abs(power - 2.) < 0.01) powerInt = 2; 
     powerMod = 0.5 * power - 1.;}
   
   // Analyze event.
-  bool analyze(const Event& event);
+  bool analyze(const Event& event, ostream& os = cout);
 
   // Return info on results of analysis.
   double sphericity()      const {return 1.5 * (eVal2 + eVal3);}
@@ -48,12 +46,15 @@ public:
     ( (i < 3) ? eVec2 : eVec3 ) ;}
 
   // Provide a listing of the info.
-  void list(ostream& os = cout);
+  void list(ostream& os = cout) const;
+
+  // Tell how many events could not be analyzed.
+  int nError() const {return nFew + nBack;}
 
 private: 
 
   // Constants: could only be changed in the code itself.
-  static const int    NSTUDYMIN;
+  static const int    NSTUDYMIN, TIMESTOPRINT;
   static const double P2MIN, EIGENVALUEMIN;
 
   // Properties of analysis.
@@ -65,9 +66,12 @@ private:
   double eVal1, eVal2, eVal3; 
   Vec4   eVec1, eVec2, eVec3; 
 
+  // Error statistics;
+  int    nFew, nBack;
+
 };  
 
-//**************************************************************************
+//==========================================================================
 
 // Thrust class.
 // This class performs thrust analysis on an event.
@@ -77,10 +81,10 @@ class Thrust {
 public: 
 
   // Constructor.
-  Thrust(int selectIn = 2) : select(selectIn) {}
+  Thrust(int selectIn = 2) : select(selectIn), nFew(0) {}
   
   // Analyze event.
-  bool analyze(const Event& event);
+  bool analyze(const Event& event, ostream& os = cout);
 
   // Return info on results of analysis.
   double thrust()       const {return eVal1;}
@@ -91,12 +95,15 @@ public:
     ( (i < 3) ? eVec2 : eVec3 ) ;}
 
   // Provide a listing of the info.
-  void list(ostream& os = cout);
+  void list(ostream& os = cout) const;
+
+  // Tell how many events could not be analyzed.
+  int nError() const {return nFew;}
 
 private: 
 
   // Constants: could only be changed in the code itself.
-  static const int    NSTUDYMIN;
+  static const int    NSTUDYMIN, TIMESTOPRINT;
   static const double MAJORMIN;
 
   // Properties of analysis.
@@ -106,9 +113,12 @@ private:
   double eVal1, eVal2, eVal3; 
   Vec4   eVec1, eVec2, eVec3; 
 
+  // Error statistics;
+  int    nFew;
+
 };  
 
-//**************************************************************************
+//==========================================================================
 
 // SingleClusterJet class.
 // Simple helper class to ClusterJet for a jet and its contents. 
@@ -120,7 +130,7 @@ public:
   // Constructors.
   SingleClusterJet(Vec4 pJetIn = 0., int motherIn = 0) : 
     pJet(pJetIn), mother(motherIn), daughter(0), multiplicity(1),    
-    isAssigned(false) {pAbs = pJet.pAbs();}
+    isAssigned(false) {pAbs = max( PABSMIN, pJet.pAbs());}
   SingleClusterJet& operator=(const SingleClusterJet& j) { if (this != &j)
     { pJet = j.pJet;  mother = j.mother; daughter = j.daughter; 
     multiplicity = j.multiplicity; pAbs = j.pAbs;
@@ -139,9 +149,22 @@ public:
   friend double dist2Fun(int measure, const SingleClusterJet& j1, 
     const SingleClusterJet& j2);  
 
+private: 
+
+  // Constants: could only be changed in the code itself.
+  static const double PABSMIN;
+
 } ;
 
-//**************************************************************************
+//--------------------------------------------------------------------------
+
+// Namespace function declarations; friend of SingleClusterJet.
+
+// Distance measures (Lund, JADE, Durham) with friend.
+double dist2Fun(int measure, const SingleClusterJet& j1, 
+  const SingleClusterJet& j2);  
+
+//==========================================================================
 
 // ClusterJet class.
 // This class performs a jet clustering according to different
@@ -155,20 +178,20 @@ public:
   ClusterJet(string measureIn = "Lund", int selectIn = 2, int massSetIn = 2, 
     bool preclusterIn = false, bool reassignIn = false) : measure(1), 
     select(selectIn), massSet(massSetIn), doPrecluster(preclusterIn), 
-    doReassign(reassignIn) {
+    doReassign(reassignIn), nFew(0) {
     char firstChar = toupper(measureIn[0]);
     if (firstChar == 'J') measure = 2;
     if (firstChar == 'D') measure = 3; 
-    piMass = ParticleDataTable::m0(211);
   }
       
   // Analyze event.
   bool analyze(const Event& event, double yScaleIn, double pTscaleIn, 
-    int nJetMinIn = 1, int nJetMaxIn = 0);
+    int nJetMinIn = 1, int nJetMaxIn = 0, ostream& os = cout);
 
   // Return info on jets produced.
-  int    size() const {return jets.size();}
-  Vec4 p(int j) const {return jets[j].pJet;}
+  int  size()      const {return jets.size();}
+  Vec4 p(int i)    const {return jets[i].pJet;}
+  int  mult(int i) const {return jets[i].multiplicity;}
 
   // Return belonging of particle to one of the jets (-1 if none).
   int jetAssignment(int i) const {
@@ -177,12 +200,21 @@ public:
     return -1;} 
 
   // Provide a listing of the info.
-  void list(ostream& os = cout);
+  void list(ostream& os = cout) const;
+
+  // Return info on clustering values.
+  int    distanceSize() const {return distances.size();}
+  double distance(int i) const {
+    return (i < distanceSize()) ? distances[i] : 0.; }
+
+  // Tell how many events could not be analyzed.
+  int nError() const {return nFew;}
 
 private: 
 
   // Constants: could only be changed in the code itself.
-  static const double PRECLUSTERFRAC, PRECLUSTERSTEP;
+  static const int    TIMESTOPRINT;
+  static const double PIMASS, PABSMIN, PRECLUSTERFRAC, PRECLUSTERSTEP;
 
   // Properties of analysis.
   int    measure, select, massSet; 
@@ -195,6 +227,9 @@ private:
   vector<SingleClusterJet> particles;
   int    nParticles;
 
+  // Error statistics;
+  int    nFew;
+
   // Member functions for some operations (for clarity).
   void precluster();
   void reassign();
@@ -202,9 +237,12 @@ private:
   // Outcome of analysis: ET-ordered list of jets. 
   vector<SingleClusterJet> jets;
 
+  // Outcome of analysis: the distance values where the jets were merged.
+  deque<double> distances;
+
 };  
 
-//**************************************************************************
+//==========================================================================
 
 // SingleCell class.
 // Simple helper class to CellJet for a cell and its contents. 
@@ -228,7 +266,7 @@ public:
 
 } ;
 
-//**************************************************************************
+//==========================================================================
 
 // SingleCellJet class.
 // Simple helper class to CellJet for a jet and its contents. 
@@ -253,7 +291,7 @@ public:
 
 } ;
 
-//**************************************************************************
+//==========================================================================
 
 // CellJet class.
 // This class performs a cone jet search in (eta, phi, E_T) space.
@@ -265,14 +303,14 @@ public:
   // Constructor.
   CellJet(double etaMaxIn = 5., int nEtaIn = 50, int nPhiIn = 32, 
     int selectIn = 2, int smearIn = 0, double resolutionIn = 0.5, 
-    double upperCutIn = 2., double thresholdIn = 0.) : etaMax(etaMaxIn), 
-    nEta(nEtaIn), nPhi(nPhiIn), select(selectIn), smear(smearIn),
-    resolution(resolutionIn), upperCut(upperCutIn), 
-    threshold(thresholdIn) { }
+    double upperCutIn = 2., double thresholdIn = 0., Rndm* rndmPtrIn = 0) 
+    : etaMax(etaMaxIn), nEta(nEtaIn), nPhi(nPhiIn), select(selectIn), 
+    smear(smearIn), resolution(resolutionIn), upperCut(upperCutIn), 
+    threshold(thresholdIn), nFew(0), rndmPtr(rndmPtrIn) { }
   
   // Analyze event.
   bool analyze(const Event& event, double eTjetMinIn = 20., 
-    double coneRadiusIn = 0.7, double eTseedIn = 1.5);
+    double coneRadiusIn = 0.7, double eTseedIn = 1.5, ostream& os = cout);
 
   // Return info on results of analysis.
   int    size()              const {return jets.size();}
@@ -281,17 +319,23 @@ public:
   double phiCenter(int i)    const {return jets[i].phiCenter;}
   double etaWeighted(int i)  const {return jets[i].etaWeighted;}
   double phiWeighted(int i)  const {return jets[i].phiWeighted;}
-  double multiplicity(int i) const {return jets[i].multiplicity;}
-  Vec4 pMassless(int i)      const {return jets[i].eTjet * Vec4(
+  int    multiplicity(int i) const {return jets[i].multiplicity;}
+  Vec4   pMassless(int i)    const {return jets[i].eTjet * Vec4(
            cos(jets[i].phiWeighted),  sin(jets[i].phiWeighted),
           sinh(jets[i].etaWeighted), cosh(jets[i].etaWeighted) );}
-  Vec4 pMassive(int i)       const {return jets[i].pMassive;}
+  Vec4   pMassive(int i)     const {return jets[i].pMassive;}
   double m(int i)            const {return jets[i].pMassive.mCalc();}
 
   // Provide a listing of the info.
-  void list(ostream& os = cout);
+  void list(ostream& os = cout) const;
+
+  // Tell how many events could not be analyzed: so far never.
+  int nError() const {return nFew;}
 
 private: 
+
+  // Constants: could only be changed in the code itself.
+  static const int    TIMESTOPRINT;
 
   // Properties of analysis.
   double etaMax; 
@@ -299,12 +343,18 @@ private:
   double resolution, upperCut, threshold;
   double eTjetMin, coneRadius, eTseed; 
 
+  // Error statistics;
+  int    nFew;
+
   // Outcome of analysis: ET-ordered list of jets. 
   vector<SingleCellJet> jets;
 
+  // Pointer to the random number generator (needed for energy smearing).
+  Rndm* rndmPtr;
+
 };  
 
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

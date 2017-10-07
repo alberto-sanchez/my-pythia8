@@ -1,5 +1,5 @@
 // main31.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Mikhail Kirsanov, Torbjorn Sjostrand.
+// Copyright (C) 2011 Mikhail Kirsanov, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -9,35 +9,50 @@
 // HepMC events are output to the hepmcout31.dat file.
 // Written by Mikhail Kirsanov based on main01.cc.
 
-#include "Pythia.h"
+// WARNING: typically one needs 25 MB/100 events at the LHC.
+// Therefore large event samples may be impractical.
 
+#include "Pythia.h"
 #include "HepMCInterface.h"
 
 #include "HepMC/GenEvent.h"
-#include "HepMC/IO_Ascii.h"
+
+#include "HepMC/IO_GenEvent.h"
+// Following line is a deprecated alternative, removed in recent versions
+//#include "HepMC/IO_Ascii.h"
+
 //#include "HepMC/IO_AsciiParticles.h"
 
+// Following line to be used with HepMC 2.04 onwards.
+//#include "HepMC/Units.h" 
+
 using namespace Pythia8; 
+
 int main() {
 
+  // Interface for conversion from Pythia8::Event to HepMC one. 
   HepMC::I_Pythia8 ToHepMC;
   //  ToHepMC.set_crash_on_problem();
 
   // Specify file where HepMC events will be stored.
-  HepMC::IO_Ascii ascii_io("hepmcout31.dat",std::ios::out);
-  // HepMC::IO_AsciiParticles ascii_io("hepmcout31.dat",std::ios::out);
+  HepMC::IO_GenEvent ascii_io("hepmcout31.dat", std::ios::out);
+  // Following line is a deprecated alternative, removed in recent versions
+  // HepMC::IO_Ascii ascii_io("hepmcout31.dat", std::ios::out);
+  // Line below is an eye-readable one-way output, uncomment the include above
+  // HepMC::IO_AsciiParticles ascii_io("hepmcout31.dat", std::ios::out);
 
   // Generator. Process selection. LHC initialization. Histogram.
   Pythia pythia;
-  Event& event = pythia.event;
   pythia.readString("HardQCD:all = on");    
   pythia.readString("PhaseSpace:pTHatMin = 20.");    
   pythia.init( 2212, 2212, 14000.);
   Hist mult("charged multiplicity", 100, -0.5, 799.5);
+
   // Begin event loop. Generate event. Skip if error. List first one.
   for (int iEvent = 0; iEvent < 100; ++iEvent) {
     if (!pythia.next()) continue;
     if (iEvent < 1) {pythia.info.list(); pythia.event.list();} 
+
     // Find number of all final charged particles and fill histogram.
     int nCharged = 0;
     for (int i = 0; i < pythia.event.size(); ++i) 
@@ -45,15 +60,27 @@ int main() {
         ++nCharged; 
     mult.fill( nCharged );
 
-    // Convert event record to HepMC format and output to file.
+    // Construct new empty HepMC event. Form with arguments is only
+    // meaningful for HepMC 2.04 onwards, and even then unnecessary  
+    // if HepMC was built with GeV and mm as units from the onset. 
     HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
-    ToHepMC.fill_next_event( event, hepmcevt );
+    //HepMC::GenEvent* hepmcevt = new HepMC::GenEvent(
+    //  HepMC::Units::GEV, HepMC::Units::MM); 
+
+    // Fill HepMC event, including PDF info.
+    ToHepMC.fill_next_event( pythia, hepmcevt );
+    // This alternative older method fills event, without PDF info.
+    // ToHepMC.fill_next_event( pythia.event, hepmcevt );
+
+    // Write the HepMC event to file. Done with it.
     ascii_io << hepmcevt;
     delete hepmcevt;
 
-  // End of event loop. Statistics. Histogram. Done.
+  // End of event loop. Statistics. Histogram. 
   }
   pythia.statistics();
   cout << mult; 
+
+  // Done.
   return 0;
 }

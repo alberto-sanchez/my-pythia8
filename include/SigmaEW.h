@@ -1,5 +1,5 @@
 // SigmaEW.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -15,7 +15,7 @@
 namespace Pythia8 {
 
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for q g -> q gamma (q = u, d, s, c, b).
 // Use massless approximation also for Q since no alternative.
@@ -48,7 +48,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for q qbar -> g gamma.
 
@@ -80,7 +80,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for g g -> g gamma.
 
@@ -115,7 +115,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f fbar -> gamma gamma.
 
@@ -147,7 +147,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for g g -> gamma gamma.
 
@@ -181,7 +181,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f f' -> f f' via t-channel gamma*/Z0 exchange.
 
@@ -217,7 +217,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f_1 f_2 -> f_3 f_4 via t-channel W+- exchange.
 
@@ -252,7 +252,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for q q' -> Q q" via t-channel W+- exchange.
 // Related to Sigma2ff2fftW class, but with massive matrix elements.
@@ -294,7 +294,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f fbar -> gamma*/Z0.
 
@@ -338,7 +338,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f fbar' -> W+-.
 
@@ -380,7 +380,7 @@ private:
 
 };
 
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f fbar -> gamma* -> f' fbar', summed over light f'.
 // Allows pT-ordered evolution for multiple interactions.
@@ -416,7 +416,7 @@ private:
 
 };
 
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f fbar -> gamma*/Z0 -> F Fbar, for one heavy F.
 // Allows pT cuts as for other 2 -> 2 processes.
@@ -464,7 +464,7 @@ private:
 
 };
 
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f fbar' -> W+- -> F fbar", for one or two heavy F.
 // Allows pT cuts as for other 2 -> 2 processes.
@@ -512,7 +512,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // An intermediate class for f fbar -> gamma*/Z0/W+- gamma*/Z0/W-+.
 
@@ -547,7 +547,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f fbar -> gamma*/Z0 gamma*/Z0.
 
@@ -597,7 +597,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f fbar' -> Z0 W+-. (Here pure Z0, unfortunately.)
 
@@ -634,12 +634,12 @@ public:
 private:
 
   // Store W+- mass and width, and couplings.
-  double mW, widW, mWS, mwWS, sin2thetaW, cos2thetaW, thetaWRat, 
+  double mW, widW, mWS, mwWS, sin2thetaW, cos2thetaW, thetaWRat, cotT,
          thetaWpt, thetaWmm, lun, lde, sigma0, openFracPos, openFracNeg;
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f fbar -> W+ W-.
 
@@ -668,8 +668,8 @@ public:
   // Info on the subprocess.
   virtual string name()       const {return "f fbar -> W+ W-";}
   virtual int    code()       const {return 233;}
-  virtual int    id3Mass()    const {return 24;}
   virtual string inFlux()     const {return "ffbarSame";}
+  virtual int    id3Mass()    const {return 24;}
   virtual int    id4Mass()    const {return -24;}
   virtual int    resonanceA() const {return 23;}
 
@@ -681,7 +681,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // An intermediate class for f fbar -> gamma*/Z0 g/gamma and permutations.
 
@@ -718,7 +718,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for q qbar -> gamma*/Z0 g.
 
@@ -751,7 +751,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for q g -> gamma*/Z0 q.
 
@@ -784,7 +784,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f fbar' -> gamma*/Z0 gamma.
 
@@ -817,7 +817,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f gamma -> gamma*/Z0 f.
 
@@ -850,7 +850,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // An intermediate class for f fbar -> W+- g/gamma and permutations.
 
@@ -868,7 +868,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for q qbar' -> W+- g.
 
@@ -904,7 +904,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for q g -> W+- q'.
 
@@ -940,7 +940,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f fbar' -> W+- gamma.
 
@@ -976,7 +976,7 @@ private:
 
 };
  
-//**************************************************************************
+//==========================================================================
 
 // A derived class for f gamma -> W+- f'.
 
@@ -1011,8 +1011,46 @@ private:
   double sigma0, openFracPos, openFracNeg;
 
 };
+//==========================================================================
+
+// A derived class for gamma gamma -> f fbar.
+
+class Sigma2gmgm2ffbar : public Sigma2Process {
+
+public:
+
+  // Constructor.
+  Sigma2gmgm2ffbar(int idIn, int codeIn) : idNew(idIn), codeSave(codeIn) {}
+
+  // Initialize process. 
+  virtual void initProc();
+
+  // Calculate flavour-independent parts of cross section.
+  virtual void sigmaKin();
+
+  // Evaluate d(sigmaHat)/d(tHat). 
+  virtual double sigmaHat() {return sigma;}
+
+  // Select flavour, colour and anticolour.
+  virtual void setIdColAcol();
+
+  // Info on the subprocess.
+  virtual string name()    const {return nameSave;}
+  virtual int    code()    const {return codeSave;}
+  virtual string inFlux()  const {return "gmgm";}
+  virtual int    id3Mass() const {return idMass;}
+  virtual int    id4Mass() const {return idMass;}
+
+private:
+
+  // Member variables.
+  int    idNew, codeSave, idMass, idNow;
+  string nameSave;
+  double ef4, s34Avg, sigTU, sigma, openFracPair;
+
+};
  
-//**************************************************************************
+//==========================================================================
 
 } // end namespace Pythia8
 

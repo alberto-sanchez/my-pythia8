@@ -1,5 +1,5 @@
 // SigmaCompositeness.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -10,13 +10,12 @@
 
 namespace Pythia8 {
 
-//**************************************************************************
+//==========================================================================
 
 // Sigma1qg2qStar class.
 // Cross section for q g -> q^* (excited quark state). 
-// Note: for simplicity decay is assumed isotropic.
 
-//*********
+//--------------------------------------------------------------------------
 
 // Initialize process. 
   
@@ -32,21 +31,21 @@ void Sigma1qg2qStar::initProc() {
   else               nameSave = "b g -> b^*";
 
   // Store q* mass and width for propagator. 
-  mRes          = ParticleDataTable::m0(idRes);
-  GammaRes      = ParticleDataTable::mWidth(idRes);
+  mRes          = particleDataPtr->m0(idRes);
+  GammaRes      = particleDataPtr->mWidth(idRes);
   m2Res         = mRes*mRes;
   GamMRat       = GammaRes / mRes;
 
   // Locally stored properties and couplings.
-  Lambda        = Settings::parm("ExcitedFermion:Lambda");
-  coupFcol      = Settings::parm("ExcitedFermion:coupFcol");
+  Lambda        = settingsPtr->parm("ExcitedFermion:Lambda");
+  coupFcol      = settingsPtr->parm("ExcitedFermion:coupFcol");
 
   // Set pointer to particle properties and decay table.
-  qStarPtr      = ParticleDataTable::particleDataPtr(idRes);
+  qStarPtr      = particleDataPtr->particleDataEntryPtr(idRes);
 
 } 
 
-//*********
+//--------------------------------------------------------------------------
 
 // Evaluate sigmaHat(sHat), part independent of incoming flavour. 
 
@@ -60,7 +59,7 @@ void Sigma1qg2qStar::sigmaKin() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Evaluate sigmaHat(sHat) for specific incoming flavours.
 
@@ -75,7 +74,7 @@ double Sigma1qg2qStar::sigmaHat() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Select identity, colour and anticolour.
 
@@ -93,7 +92,7 @@ void Sigma1qg2qStar::setIdColAcol() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Evaluate weight for q* decay angle. 
   
@@ -136,13 +135,12 @@ double Sigma1qg2qStar::weightDecay( Event& process, int iResBeg,
 
 }
 
-//**************************************************************************
+//==========================================================================
 
 // Sigma1lgm2lStar class.
 // Cross section for l gamma -> l^* (excited lepton state). 
-// Note: for simplicity decay is assumed isotropic.
 
-//*********
+//--------------------------------------------------------------------------
 
 // Initialize process. 
   
@@ -156,23 +154,23 @@ void Sigma1lgm2lStar::initProc() {
   else                nameSave = "tau gamma -> tau^*";
 
   // Store l* mass and width for propagator. 
-  mRes          = ParticleDataTable::m0(idRes);
-  GammaRes      = ParticleDataTable::mWidth(idRes);
+  mRes          = particleDataPtr->m0(idRes);
+  GammaRes      = particleDataPtr->mWidth(idRes);
   m2Res         = mRes*mRes;
   GamMRat       = GammaRes / mRes;
 
   // Locally stored properties and couplings.
-  Lambda        = Settings::parm("ExcitedFermion:Lambda");
-  double coupF  = Settings::parm("ExcitedFermion:coupF");
-  double coupFp = Settings::parm("ExcitedFermion:coupFprime");
+  Lambda        = settingsPtr->parm("ExcitedFermion:Lambda");
+  double coupF  = settingsPtr->parm("ExcitedFermion:coupF");
+  double coupFp = settingsPtr->parm("ExcitedFermion:coupFprime");
   coupChg       = -0.5 * coupF - 0.5 * coupFp;
 
   // Set pointer to particle properties and decay table.
-  qStarPtr      = ParticleDataTable::particleDataPtr(idRes);
+  qStarPtr      = particleDataPtr->particleDataEntryPtr(idRes);
 
 } 
 
-//*********
+//--------------------------------------------------------------------------
 
 // Evaluate sigmaHat(sHat), part independent of incoming flavour. 
 
@@ -186,7 +184,7 @@ void Sigma1lgm2lStar::sigmaKin() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Evaluate sigmaHat(sHat) for specific incoming flavours.
 
@@ -201,7 +199,7 @@ double Sigma1lgm2lStar::sigmaHat() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Select identity, colour and anticolour.
 
@@ -217,7 +215,7 @@ void Sigma1lgm2lStar::setIdColAcol() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Evaluate weight for l* decay angle. 
   
@@ -260,13 +258,12 @@ double Sigma1lgm2lStar::weightDecay( Event& process, int iResBeg,
 
 }
 
-//**************************************************************************
+//==========================================================================
 
 // Sigma2qq2qStarq class.
 // Cross section for q q' -> q^* q' (excited quark state). 
-// Note: for simplicity decay is assumed isotropic.
 
-//*********
+//--------------------------------------------------------------------------
 
 // Initialize process. 
   
@@ -282,16 +279,16 @@ void Sigma2qq2qStarq::initProc() {
   else               nameSave = "q q -> b^* q";
 
   // Locally stored properties and couplings.
-  Lambda        = Settings::parm("ExcitedFermion:Lambda");
+  Lambda        = settingsPtr->parm("ExcitedFermion:Lambda");
   preFac        = M_PI / pow4(Lambda);
 
   // Secondary open width fractions.
-  openFracPos = ParticleDataTable::resOpenFrac( idRes);
-  openFracNeg = ParticleDataTable::resOpenFrac(-idRes);
+  openFracPos = particleDataPtr->resOpenFrac( idRes);
+  openFracNeg = particleDataPtr->resOpenFrac(-idRes);
 
 } 
 
-//*********
+//--------------------------------------------------------------------------
 
 // Evaluate sigmaHat(sHat), part independent of incoming flavour. 
 
@@ -303,7 +300,7 @@ void Sigma2qq2qStarq::sigmaKin() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Evaluate sigmaHat(sHat) for specific incoming flavours.
 
@@ -329,35 +326,45 @@ double Sigma2qq2qStarq::sigmaHat() {
  
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Select identity, colour and anticolour.
 
 void Sigma2qq2qStarq::setIdColAcol() {
 
   // Flavours: either side may have been excited.
+  int idAbs1 = abs(id1);
+  int idAbs2 = abs(id2);
   double open1 = 0.;
   double open2 = 0.; 
-  if (abs(id1) == idq) open1 = (id1 > 0) ? openFracPos : openFracNeg;
-  if (abs(id2) == idq) open2 = (id2 > 0) ? openFracPos : openFracNeg;
+  if (idAbs1 == idq) open1 = (id1 > 0) ? openFracPos : openFracNeg;
+  if (idAbs2 == idq) open2 = (id2 > 0) ? openFracPos : openFracNeg;
   if (open1 == 0. && open2 == 0.) {
     open1  = (id1 > 0) ? openFracPos : openFracNeg;
     open2  = (id2 > 0) ? openFracPos : openFracNeg;
   }
   bool excite1 = (open1 > 0.);
   if (open1 > 0. && open2 > 0.) excite1 
-    = (Rndm::flat() * (open1 + open2) < open1);
+    = (rndmPtr->flat() * (open1 + open2) < open1);
 
   // Always excited quark in slot 3 so colour flow flipped or not.
   if (excite1) {  
-    id3    = (id1 > 0) ? idq : -idq;
+    id3    = (id1 > 0) ? idRes : -idRes;
     id4    = id2;
+    // Special case for s-channel like production.
+    if ((idAbs1 == idAbs2) && (id1 * id2 < 0)) {
+      id4 = (id3 > 0) ? -idq : idq;
+    }
     if (id1 * id2 > 0) setColAcol( 1, 0, 2, 0, 1, 0, 2, 0);
     else               setColAcol( 1, 0, 0, 2, 1, 0, 0, 2);
     if (id1 < 0) swapColAcol();
   } else {     
-    id3    = (id2 > 0) ? idq : -idq;
+    id3    = (id2 > 0) ? idRes : -idRes;
     id4    = id1;
+    // Special case for s-channel like production.
+    if ((idAbs1 == idAbs2) && (id1 * id2 < 0)) {
+      id4 = (id3 > 0) ? -idq : idq;
+    }
     swapTU = true;
     if (id1 * id2 > 0) setColAcol( 1, 0, 2, 0, 2, 0, 1, 0);
     else               setColAcol( 1, 0, 0, 2, 0, 2, 1, 0);
@@ -367,13 +374,52 @@ void Sigma2qq2qStarq::setIdColAcol() {
 
 }
 
-//**************************************************************************
+//--------------------------------------------------------------------------
+
+// Evaluate weight for q* decay angle. 
+// SA: Angles dist. for decay q* -> q V, based on Eq. 1.7 
+// in CERN Yellow Reports 90-10 vol.2, p. 1014 to 1021.
+  
+double Sigma2qq2qStarq::weightDecay( Event& process, int iResBeg, 
+  int iResEnd) {
+
+  // q* should sit in entry 5. Sequential Z/W decay assumed isotropic.
+  if (iResBeg != 5 && iResEnd != 5) return 1.; 
+
+  // Phase space factors.
+  double mr1    = pow2(process[7].m() / process[5].m());
+  double mr2    = pow2(process[8].m() / process[5].m()); 
+  double betaf  = sqrtpos( pow2(1. - mr1 - mr2) - 4. * mr1 * mr2);
+
+  // Reconstruct decay angle in q* CoM frame. 
+  Vec4 p1StarCom = process[7].p();
+  Vec4 p2StarCom = process[8].p();
+  p1StarCom.bstback(process[5].p());
+  p2StarCom.bstback(process[5].p());
+  double cosThe = (process[3].p() - process[4].p()) 
+    * (p2StarCom - p1StarCom) / (sH * betaf);
+  double wt     = 1.; 
+
+  // Decay q* -> q (g/gamma) or q (Z^0/W^+-).
+  int idBoson   = (process[8].idAbs() < 20) ? process[7].idAbs() : process[8].idAbs();
+  if (idBoson == 21 || idBoson == 22) {
+    wt          = 0.5 * (1. + cosThe);
+  } else if (idBoson == 23 || idBoson == 24) {
+    double mrB  = (process[8].idAbs() < 20) ? mr1 : mr2;
+    double kTrm = 0.5 * (mrB * (1. - cosThe));
+    wt          = (1. + cosThe + kTrm) / (2 + mrB);
+  } 
+
+  // Done.
+  return wt;
+}
+
+//==========================================================================
 
 // Sigma2qqbar2lStarlbar class.
 // Cross section for q qbar -> l^* lbar (excited lepton state). 
-// Note: for simplicity decay is assumed isotropic.
 
-//*********
+//--------------------------------------------------------------------------
 
 // Initialize process. 
   
@@ -390,16 +436,16 @@ void Sigma2qqbar2lStarlbar::initProc() {
   else                nameSave = "q qbar -> nu_tau^* nu_taubar";
 
   // Secondary open width fractions.
-  openFracPos = ParticleDataTable::resOpenFrac( idRes);
-  openFracNeg = ParticleDataTable::resOpenFrac(-idRes);
+  openFracPos = particleDataPtr->resOpenFrac( idRes);
+  openFracNeg = particleDataPtr->resOpenFrac(-idRes);
 
   // Locally stored properties and couplings.
-  Lambda        = Settings::parm("ExcitedFermion:Lambda");
+  Lambda        = settingsPtr->parm("ExcitedFermion:Lambda");
   preFac        = (M_PI / pow4(Lambda)) * (openFracPos + openFracNeg) / 3.;
 
 } 
 
-//*********
+//--------------------------------------------------------------------------
 
 // Evaluate sigmaHat(sHat), part independent of incoming flavour. 
 
@@ -410,14 +456,14 @@ void Sigma2qqbar2lStarlbar::sigmaKin() {
 
 }
 
-//*********
+//--------------------------------------------------------------------------
 
 // Select identity, colour and anticolour.
 
 void Sigma2qqbar2lStarlbar::setIdColAcol() {
 
   // Flavours: either lepton or antilepton may be excited.
-  if (Rndm::flat() * (openFracPos + openFracNeg) < openFracPos) {
+  if (rndmPtr->flat() * (openFracPos + openFracNeg) < openFracPos) {
     setId( id1, id2, idRes, -idl);
     if (id1 < 0) swapTU = true; 
   } else {
@@ -431,6 +477,229 @@ void Sigma2qqbar2lStarlbar::setIdColAcol() {
 
 }
 
-//**************************************************************************
+//--------------------------------------------------------------------------
+
+// Evaluate weight for l* decay angle. 
+// SA: Angles dist. for decay l* -> l V, based on Eq. 1.7 
+// in CERN Yellow Reports 90-10 vol.2, p. 1014 to 1021.
+  
+double Sigma2qqbar2lStarlbar::weightDecay( Event& process, int iResBeg, 
+  int iResEnd) {
+
+  // l* should sit in entry 5. Sequential Z/W decay assumed isotropic.
+  if (iResBeg != 5 && iResEnd != 5) return 1.; 
+
+  // Phase space factors.
+  double mr1    = pow2(process[7].m() / process[5].m());
+  double mr2    = pow2(process[8].m() / process[5].m()); 
+  double betaf  = sqrtpos( pow2(1. - mr1 - mr2) - 4. * mr1 * mr2);
+
+  // Reconstruct decay angle in l* CoM frame.
+  Vec4 p1StarCom = process[7].p();
+  Vec4 p2StarCom = process[8].p();
+  p1StarCom.bstback(process[5].p());
+  p2StarCom.bstback(process[5].p());
+  double cosThe = (process[3].p() - process[4].p()) 
+    * (p2StarCom - p1StarCom) / (sH * betaf);
+  double wt     = 1.; 
+
+  // Decay, l* -> l + gamma/Z^0/W^+-).
+  int idBoson   = (process[8].idAbs() < 20) ? process[7].idAbs() : process[8].idAbs();
+  if (idBoson == 22) {
+    wt          = 0.5 * (1. + cosThe);
+  } else if (idBoson == 23 || idBoson == 24) {
+    double mrB  = (process[8].idAbs() < 20) ? mr1 : mr2;
+    double kTrm = 0.5 * (mrB * (1. - cosThe));
+    wt          = (1. + cosThe + kTrm) / (2 + mrB);
+  } 
+
+  // Done.
+  return wt;
+}
+
+//==========================================================================
+
+// Sigma2QCqq2qq class.
+// Cross section for q q -> q q (quark contact interactions).
+
+//--------------------------------------------------------------------------
+
+// Initialize process. 
+  
+void Sigma2QCqq2qq::initProc() {
+
+  qCLambda2  = settingsPtr->parm("ContactInteractions:Lambda");
+  qCetaLL    = settingsPtr->mode("ContactInteractions:etaLL");
+  qCetaRR    = settingsPtr->mode("ContactInteractions:etaRR");
+  qCetaLR    = settingsPtr->mode("ContactInteractions:etaLR");
+  qCLambda2 *= qCLambda2; 
+
+}
+
+//--------------------------------------------------------------------------
+
+// Evaluate d(sigmaHat)/d(tHat), part independent of incoming flavour. 
+
+void Sigma2QCqq2qq::sigmaKin() { 
+
+  // Calculate kinematics dependence for different terms.
+  sigT   = (4./9.) * (sH2 + uH2) / tH2;
+  sigU   = (4./9.) * (sH2 + tH2) / uH2;
+  sigTU  = - (8./27.) * sH2 / (tH * uH);
+  sigST  = - (8./27.) * uH2 / (sH * tH);
+  
+  sigQCSTU = sH2 * (1 / tH + 1 / uH);
+  sigQCUTS = uH2 * (1 / tH + 1 / sH);
+
+}
+
+//--------------------------------------------------------------------------
+
+// Evaluate d(sigmaHat)/d(tHat), including incoming flavour dependence. 
+
+double Sigma2QCqq2qq::sigmaHat() {  
+
+  // Terms from QC contact interactions.
+  double sigQCLL = 0;
+  double sigQCRR = 0;
+  double sigQCLR = 0;
+
+  // Combine cross section terms; factor 1/2 when identical quarks.
+  // q q -> q q
+  if (id2 ==  id1) {         
+
+    // SM terms.
+    sigSum = 0.5 * (sigT + sigU + sigTU); 
+    
+    // Contact terms.
+    sigQCLL = (8./9.) * alpS * (qCetaLL/qCLambda2) * sigQCSTU 
+            + (8./3.) * pow2(qCetaLL/qCLambda2) * sH2;
+    sigQCRR = (8./9.) * alpS * (qCetaRR/qCLambda2) * sigQCSTU 
+            + (8./3.) * pow2(qCetaRR/qCLambda2) * sH2;
+    sigQCLR = 2. * (uH2 + tH2) * pow2(qCetaLR/qCLambda2);
+
+    sigQCLL /= 2;
+    sigQCRR /= 2;
+    sigQCLR /= 2;
+
+  // q qbar -> q qbar, without pure s-channel term.
+  } else if (id2 == -id1) {  
+
+    // SM terms.
+    sigSum = sigT + sigST; 
+
+    // Contact terms, minus the terms included in qqbar2qqbar.
+    sigQCLL = (8./9.) * alpS * (qCetaLL/qCLambda2) * sigQCUTS 
+            + (5./3.) * pow2(qCetaLL/qCLambda2) * uH2;
+    sigQCRR = (8./9.) * alpS * (qCetaRR/qCLambda2) * sigQCUTS 
+            + (5./3.) * pow2(qCetaRR/qCLambda2) * uH2;
+    sigQCLR = 2. * sH2 * pow2(qCetaLR/qCLambda2);
+
+  // q q' -> q q' or q qbar' -> q qbar'
+  } else {                   
+
+    // SM terms.
+    sigSum = sigT; 
+
+    // Contact terms.
+    if (id1 * id2 > 0) {
+      sigQCLL = pow2(qCetaLL/qCLambda2) * sH2;
+      sigQCRR = pow2(qCetaRR/qCLambda2) * sH2;
+      sigQCLR = 2 * pow2(qCetaLR/qCLambda2) * uH2;
+    } else {
+      sigQCLL = pow2(qCetaLL/qCLambda2) * uH2;
+      sigQCRR = pow2(qCetaRR/qCLambda2) * uH2;
+      sigQCLR = 2 * pow2(qCetaLR/qCLambda2) * sH2;
+    }
+  }
+
+  // Answer.
+  double sigma = (M_PI/sH2) * ( pow2(alpS) * sigSum 
+               + sigQCLL + sigQCRR + sigQCLR );
+  return sigma;  
+
+}
+
+//--------------------------------------------------------------------------
+
+// Select identity, colour and anticolour.
+
+void Sigma2QCqq2qq::setIdColAcol() {
+
+  // Outgoing = incoming flavours.
+  setId( id1, id2, id1, id2);
+
+  // Colour flow topologies. Swap when antiquarks.
+  if (id1 * id2 > 0)  setColAcol( 1, 0, 2, 0, 2, 0, 1, 0);
+  else                setColAcol( 1, 0, 0, 1, 2, 0, 0, 2);
+  if (id2 == id1 && (sigT + sigU) * rndmPtr->flat() > sigT)
+                      setColAcol( 1, 0, 2, 0, 1, 0, 2, 0);
+  if (id1 < 0) swapColAcol();
+
+}
+
+//==========================================================================
+
+// Sigma2QCqqbar2qqbar class.
+// Cross section for q qbar -> q' qbar' (quark contact interactions).
+
+//--------------------------------------------------------------------------
+
+// Initialize process. 
+  
+void Sigma2QCqqbar2qqbar::initProc() {
+
+  qCnQuarkNew = settingsPtr->mode("ContactInteractions:nQuarkNew");
+  qCLambda2   = settingsPtr->parm("ContactInteractions:Lambda");
+  qCetaLL     = settingsPtr->mode("ContactInteractions:etaLL");
+  qCetaRR     = settingsPtr->mode("ContactInteractions:etaRR");
+  qCetaLR     = settingsPtr->mode("ContactInteractions:etaLR");
+  qCLambda2  *= qCLambda2; 
+
+}
+
+//--------------------------------------------------------------------------
+
+// Evaluate d(sigmaHat)/d(tHat) - no incoming flavour dependence. 
+
+void Sigma2QCqqbar2qqbar::sigmaKin() { 
+
+  // Pick new flavour.
+  idNew = 1 + int( qCnQuarkNew * rndmPtr->flat() ); 
+  mNew  = particleDataPtr->m0(idNew);
+  m2New = mNew*mNew;
+
+  // Calculate kinematics dependence.
+  double sigQC              = 0.;
+  sigS                      = 0.;
+  if (sH > 4. * m2New) {
+    sigS = (4./9.) * (tH2 + uH2) / sH2; 
+    sigQC = pow2(qCetaLL/qCLambda2) * uH2
+          + pow2(qCetaRR/qCLambda2) * uH2
+          + 2 * pow2(qCetaLR/qCLambda2) * tH2;
+  }
+
+  // Answer is proportional to number of outgoing flavours.
+  sigma = (M_PI / sH2) * qCnQuarkNew * ( pow2(alpS) * sigS + sigQC);  
+
+}
+
+//--------------------------------------------------------------------------
+
+// Select identity, colour and anticolour.
+
+void Sigma2QCqqbar2qqbar::setIdColAcol() {
+
+  // Set outgoing flavours ones.
+  id3 = (id1 > 0) ? idNew : -idNew;
+  setId( id1, id2, id3, -id3);
+
+  // Colour flow topologies. Swap when antiquarks.
+  setColAcol( 1, 0, 0, 2, 1, 0, 0, 2);
+  if (id1 < 0) swapColAcol();
+
+}
+
+//==========================================================================
 
 } // end namespace Pythia8

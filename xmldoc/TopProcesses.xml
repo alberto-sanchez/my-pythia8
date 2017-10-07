@@ -36,8 +36,13 @@ of a <ei>W^+-</ei> boson.
 Code 605.
 </flag>
 
+<flag name="Top:gmgm2ttbar" default="off">
+Scatterings <ei>gamma gamma -> t tbar</ei>. 
+Code 606.
+</flag>
+
 
 </chapter>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->
 

@@ -1,6 +1,8 @@
 <html>
 <head>
 <title>Index</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
 </head>
 <body>
 
@@ -25,27 +27,29 @@ echo "<font color='red'>NO FILE SELECTED YET.. PLEASE DO SO </font><a href='Save
 
 <form method='post' action='Index.php'>
 
-<img src='pythiapicture.gif' alt='Pythia picture' hspace=10/>
+<img src='pythia99.gif' alt='Pythia logo' hspace=10/>
 
 <h2>PYTHIA 8 Index</h2>
 
-<h3><a href="pythia8100.pdf" target="page">Brief Introduction</a> (pdf)</h3>
-
-<h3>Program Overview</h3>
+<h4>Program Overview</h4>
 
 <a href='Frontpage.php?filepath=".$filepath."' target='page'>Frontpage</a><br/>
 <a href='ProgramFlow.php?filepath=".$filepath."' target='page'>Program Flow</a><br/>
 <a href='SettingsScheme.php?filepath=".$filepath."' target='page'>Settings Scheme</a><br/>
 <a href='ParticleDataScheme.php?filepath=".$filepath."' target='page'>Particle Data Scheme</a><br/>
 <a href='ProgramFiles.php?filepath=".$filepath."' target='page'>Program Files</a><br/>
+<a href='ProgramClasses.php?filepath=".$filepath."' target='page'>Program Classes</a><br/>
+<a href='ProgramMethods.php?filepath=".$filepath."' target='page'>Program Methods</a><br/>
+<a href='SampleMainPrograms.php?filepath=".$filepath."' target='page'>Sample Main Programs</a><br/>
 
-<h3>Setup Run Tasks</h3>
+<h4>Setup Run Tasks</h4>
 
 <?php
 $filepath = "files/".$_GET["filename"];
 $filename = $_GET["filename"];
 echo "<a href='SaveSettings.php?returning=1&filename=".$filename."' target='page'><b>Save Settings</b></a><br/>
 <a href='MainProgramSettings.php?filepath=".$filepath."' target='page'>Main-Program Settings</a><br/>
+<a href='BeamParameters.php?filepath=".$filepath."' target='page'>Beam Parameters</a><br/>
 <a href='RandomNumberSeed.php?filepath=".$filepath."' target='page'>Random-Number Seed</a><br/>
 <a href='PDFSelection.php?filepath=".$filepath."' target='page'>PDF Selection</a><br/>
 <a href='MasterSwitches.php?filepath=".$filepath."' target='page'>Master Switches</a><br/>
@@ -73,6 +77,8 @@ echo "<a href='SaveSettings.php?returning=1&filename=".$filename."' target='page
 &nbsp;&nbsp;--&nbsp;&nbsp; 
 <a href='CompositenessProcesses.php?filepath=".$filepath."' target='page'>Compositeness</a><br/>
 &nbsp;&nbsp;--&nbsp;&nbsp; 
+<a href='HiddenValleyProcesses.php?filepath=".$filepath."' target='page'>Hidden Valleys</a><br/>
+&nbsp;&nbsp;--&nbsp;&nbsp; 
 <a href='ExtraDimensionalProcesses.php?filepath=".$filepath."' target='page'>Extra Dimensions</a><br/>
 <a href='ASecondHardProcess.php?filepath=".$filepath."' target='page'>A Second Hard Process</a><br/>
 <a href='PhaseSpaceCuts.php?filepath=".$filepath."' target='page'>Phase Space Cuts</a><br/>
@@ -84,9 +90,11 @@ echo "<a href='SaveSettings.php?returning=1&filename=".$filename."' target='page
 <a href='SpacelikeShowers.php?filepath=".$filepath."' target='page'>Spacelike Showers</a><br/>
 <a href='MultipleInteractions.php?filepath=".$filepath."' target='page'>Multiple Interactions</a><br/>
 <a href='BeamRemnants.php?filepath=".$filepath."' target='page'>Beam Remnants</a><br/>
+<a href='Diffraction.php?filepath=".$filepath."' target='page'>Diffraction</a><br/>
 <a href='Fragmentation.php?filepath=".$filepath."' target='page'>Fragmentation</a><br/>
 <a href='FlavourSelection.php?filepath=".$filepath."' target='page'>Flavour Selection</a><br/>
 <a href='ParticleDecays.php?filepath=".$filepath."' target='page'>Particle Decays</a><br/>
+<a href='RHadrons.php?filepath=".$filepath."' target='page'>R-hadrons</a><br/>
 <a href='BoseEinsteinEffects.php?filepath=".$filepath."' target='page'>Bose-Einstein Effects</a><br/>
 <a href='ParticleData.php?filepath=".$filepath."' target='page'>Particle Data</a><br/>
 <a href='ErrorChecks.php?filepath=".$filepath."' target='page'>Error Checks</a><br/>
@@ -94,7 +102,7 @@ echo "<a href='SaveSettings.php?returning=1&filename=".$filename."' target='page
 
 ";?>
 
-<h3>Study Output</h3>
+<h4>Study Output</h4>
 
 <?php
 $filepath = "files/".$_GET["filename"];
@@ -104,41 +112,50 @@ echo "<a href='FourVectors.php?filepath=".$filepath."' target='page'>Four-Vector
 <a href='EventRecord.php?filepath=".$filepath."' target='page'>Event Record</a><br/>
 <a href='EventInformation.php?filepath=".$filepath."' target='page'>Event Information</a><br/>
 <a href='EventStatistics.php?filepath=".$filepath."' target='page'>Event Statistics</a><br/>
-<a href='Histograms.php?filepath=".$filepath."' target='page'>Histograms</a><br/>
 <a href='EventAnalysis.php?filepath=".$filepath."' target='page'>Event Analysis</a><br/>
-<a href='HepMCInterface.php?filepath=".$filepath."' target='page'>HepMC Interface</a><br/>
+<a href='Histograms.php?filepath=".$filepath."' target='page'>Histograms</a><br/>
+<a href='AdvancedUsage.php?filepath=".$filepath."' target='page'>Advanced Usage</a><br/>
 
 ";?>
 
-<h3>Link to Other Programs</h3>
+<h4>Link to Other Programs</h4>
 
 <?php
 $filepath = "files/".$_GET["filename"];
 $filename = $_GET["filename"];
 echo "<a href='LesHouchesAccord.php?filepath=".$filepath."' target='page'>Les Houches Accord</a><br/>
-<a href='AccessPYTHIA6Processes.php?filepath=".$filepath."' target='page'>Access PYTHIA 6 Processes</a><br/>
+<a href='SUSYLesHouchesAccord.php?filepath=".$filepath."' target='page'>SUSY Les Houches Accord</a><br/>
+<a href='HepMCInterface.php?filepath=".$filepath."' target='page'>HepMC Interface</a><br/>
+<a href='ROOTusage.php?filepath=".$filepath."' target='page'>ROOT usage</a><br/>
+<a href='RIVETusage.php?filepath=".$filepath."' target='page'>RIVET usage</a><br/>
 <a href='SemiInternalProcesses.php?filepath=".$filepath."' target='page'>Semi-Internal Processes</a><br/>
 <a href='SemiInternalResonances.php?filepath=".$filepath."' target='page'>Semi-Internal Resonances</a><br/>
+<a href='MadGraph5Processes.php?filepath=".$filepath."' target='page'>MadGraph 5 Processes</a><br/>
 <a href='HadronLevelStandalone.php?filepath=".$filepath."' target='page'>Hadron-Level Standalone</a><br/>
-<a href='SUSYLesHouchesAccord.php?filepath=".$filepath."' target='page'>SUSY Les Houches Accord</a><br/>
-<a href='PartonDistributions.php?filepath=".$filepath."' target='page'>Parton Distributions</a><br/>
 <a href='ExternalDecays.php?filepath=".$filepath."' target='page'>External Decays</a><br/>
-<a href='UserHooks.php?filepath=".$filepath."' target='page'>User Hooks</a><br/>
+<a href='BeamShape.php?filepath=".$filepath."' target='page'>Beam Shape</a><br/>
+<a href='PartonDistributions.php?filepath=".$filepath."' target='page'>Parton Distributions</a><br/>
+<a href='JetFinders.php?filepath=".$filepath."' target='page'>Jet Finders</a><br/>
 <a href='RandomNumbers.php?filepath=".$filepath."' target='page'>Random Numbers</a><br/>
+<a href='UserHooks.php?filepath=".$filepath."' target='page'>User Hooks</a><br/>
 <a href='ImplementNewShowers.php?filepath=".$filepath."' target='page'>Implement New Showers</a><br/>
 
 ";?>
 
-<h3>Reference Materiel</h3>
+<h4>Reference Materiel</h4>
 
+<a href='PYTHIA6TranslationTable.php?filepath=".$filepath."' target='page'>PYTHIA 6 Translation Table</a><br/>
+<a href='UpdateHistory.php?filepath=".$filepath."' target='page'>Update History</a><br/>
 <a href='Bibliography.php?filepath=".$filepath."' target='page'>Bibliography</a><br/>
-<a href='Glossary.php?filepath=".$filepath."' target='page'>Glossary</a>
+<a href='Glossary.php?filepath=".$filepath."' target='page'>Glossary</a><br/>
+<a href='Version.php?filepath=".$filepath."' target='page'>Version</a>
 
-<h3>Internal</h3>
+<h4>Separate documents</h4>
 
-<a href='Version.php?filepath=".$filepath."' target='page'>Version</a><br/>
+<a href="pythia8100.pdf" target="page">Brief Introduction</a><br/>
+<a href="worksheet.pdf" target="page">Worksheet</a> 
 
 </body>
 </html>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->

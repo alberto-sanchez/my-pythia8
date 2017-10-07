@@ -1,6 +1,8 @@
 <html>
 <head>
 <title>Semi-Internal Resonances</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
 </head>
 <body>
 
@@ -36,8 +38,8 @@ echo "<a href='ParticleDataScheme.php?filepath=".$filepath."' target='page'>";?>
 to introduce a new particle (<code>id:all = ...</code>) and new
 decay channels (<code>id:addChannel = ...</code>). By default this 
 only allows you to define a fixed total width and fixed branching
-ratios. Using <?php $filepath = $_GET["filepath"];
-echo "<a href='ResonanceDecays.php?filepath=".$filepath."' target='page'>";?><code>meMode</code></a> 
+ratios. Using <code><?php $filepath = $_GET["filepath"];
+echo "<a href='ResonanceDecays.php?filepath=".$filepath."' target='page'>";?>meMode</a></code> 
 values 100 or bigger provides the possibility of a very 
 simple threshold behaviour. 
 
@@ -95,9 +97,11 @@ the Breit-Wigner expression. Then the methods in the base class take
 care of selecting only allowed channels where that is required, and 
 also of including effects of closed channels in secondary decays. 
 These methods can be accessed indirectly via the 
-<?php $filepath = $_GET["filepath"];
-echo "<a href='ResonanceDecays.php?filepath=".$filepath."' target='page'>";?><code>res...</code></a>
-methods of the normal particle database. 
+<code><?php $filepath = $_GET["filepath"];
+echo "<a href='ResonanceDecays.php?filepath=".$filepath."' target='page'>";?>res...</a></code>
+methods of the normal 
+<code><?php $filepath = $_GET["filepath"];
+echo "<a href='ParticleDataScheme.php?filepath=".$filepath."' target='page'>";?>particle database</a></code>. 
 
 <p/>
 A <b>constructor</b> for the derived class obviously must be available.
@@ -129,13 +133,16 @@ at that point. If you call such a destructor you will leave a pointer
 dangling inside the <code>Pythia</code> object you gave it in to,
 if that still exists. 
 
-<p/><code>method&nbsp; </code><strong> void initConstants() &nbsp;</strong> <br/>
+<a name="method1"></a>
+<p/><strong>void ResonanceWidths::initConstants() &nbsp;</strong> <br/>
 is called once during initialization, and can then be used to set up
 further parameters specific to this particle species, such as couplings, 
 and perform calculations that need not be repeated for each new event, 
 thereby saving time. This method needs not be implemented.
+  
 
-<p/><code>method&nbsp; </code><strong> void calcPreFac(bool calledFromInit = false) &nbsp;</strong> <br/>
+<a name="method2"></a>
+<p/><strong>void ResonanceWidths::calcPreFac(bool calledFromInit = false) &nbsp;</strong> <br/>
 is called once a mass has been chosen for the resonance, but before
 a specific final state is considered. This routine can therefore 
 be used to perform calculations that otherwise might have to be repeated 
@@ -152,8 +159,10 @@ description of interference effects, but not for other resonances.
 above, <code>mHat</code> contains the current mass of the resonance.
 At initialization this agrees with the nominal mass <code>mRes</code>,
 but during the run it will not (in general). 
+  
 
-<p/><code>method&nbsp; </code><strong> void calcWidth(bool calledFromInit = false) &nbsp;</strong> <br/>
+<a name="method3"></a>
+<p/><strong>void ResonanceWidths::calcWidth(bool calledFromInit = false) &nbsp;</strong> <br/>
 is the key method for width calculations and returns a partial width
 value, as further described below. It is called for a specific 
 final state, typically in a loop over all allowed final states,
@@ -189,13 +198,15 @@ couplings; see the existing code for examples.
 <br/>The result of your calculation should be stored in 
 <br/><code>widNow</code> : the partial width of the current channel,
 expressed in GeV. 
+  
 
-<p/><code>method&nbsp; </code><strong> double widthChan( mHat, idAbs1, idAbs2) &nbsp;</strong> <br/>
+<a name="method4"></a>
+<p/><strong>double ResonanceWidths::widthChan( double mHat, int idAbs1, int idAbs2) &nbsp;</strong> <br/>
 is not normally used. In PYTHIA the only exception is Higgs decays,
 where it is used to define the width (except for colour factors) 
-associated with a specific incoming state. It allows the results of
-some loop expressions to be pretabulated. 
-
+associated with a specific incoming/outgoing state. It allows the 
+results of some loop expressions to be pretabulated. 
+  
 
 <h3>Access to resonance widths</h3> 
 
@@ -222,7 +233,7 @@ it would be simple to include it as a permanently available process
 in the standard program distribution. The final step of that integration 
 ought to be left for the PYTHIA authors, but basically all that is 
 needed is to add one line in 
-<code>ParticleDataTable::initResonances</code>, where one creates an 
+<code>ParticleData::initResonances</code>, where one creates an 
 instance of the resonance in the same way as for the resonances already 
 there. In addition, the particle data and decay table for the new
 resonance has to be added to the permanent
@@ -234,4 +245,4 @@ to <code>include/ResonanceWidths.h</code> and
 </body>
 </html>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->

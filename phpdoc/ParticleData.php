@@ -1,6 +1,8 @@
 <html>
 <head>
 <title>Particle Data</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
 </head>
 <body>
 
@@ -39,16 +41,18 @@ Apart from the data itself, the particle data table only contains
 a few aspects that are available to change:
 
 <br/><br/><table><tr><td><strong>ParticleData:modeBreitWigner  </td><td>  &nbsp;&nbsp;(<code>default = <strong>4</strong></code>; <code>minimum = 0</code>; <code>maximum = 4</code>)</td></tr></table>
-<modepick name="ParticleData:modeBreitWigner" default="4" min="0" max="4">
 Selection of particle masses when the <code>mass(id)</code> is called
 to provide a new mass:
 <br/>
-<input type="radio" name="1" value="0"><strong>0 </strong>: mass is fixed at the nominal <ei>m_0</ei> value.<br/>
-<input type="radio" name="1" value="1"><strong>1 </strong>: particles registered as having a mass width are given a mass in the range <ei>m_min &lt; m &lt; m_max</ei>, accordingto a truncated nonrelativistic Breit-Wigner, i.e. linear in <ei>m</ei>.<br/>
-<input type="radio" name="1" value="2"><strong>2 </strong>: as above, except that the width is made mass-dependent:<ei>Gamma = Gamma_0 * sqrt( (m^2 - m_thr^2) / (m_0^2 - m_thr^2) )</ei>where <ei>m</ei> is the current mass, <ei>m_0</ei> the nominal one and<ei>m_thr</ei> is the mass threshold, given by the sum of the nominalmasses of the decay products. In order to decouple production and decaythe threshold is defined as the branching-ratio-weighted average overall allowed decay channels. <br/>
-<input type="radio" name="1" value="3"><strong>3 </strong>:  particles registered as having a mass width are given a mass in the range <ei>m_min &lt; m &lt; m_max</ei>, accordingto a truncated nonrelativistic Breit-Wigner, i.e. quadratic in <ei>m</ei>.<br/>
-<input type="radio" name="1" value="4" checked="checked"><strong>4 </strong>:  as 3, but the width is modified as for 2, and the current mass is used for its phase-space prefactor, i.e. <ei>m_0 Gamma_0 -> m Gamma(m)</ei>.<br/>
-</modepick>
+<input type="radio" name="1" value="0"><strong>0 </strong>:  mass is fixed at the nominal <ei>m_0</ei> value. <br/>
+<input type="radio" name="1" value="1"><strong>1 </strong>:  particles registered as having a mass width are given a mass  in the range <ei>m_min &lt; m &lt; m_max</ei>, according to a truncated nonrelativistic Breit-Wigner, i.e. linear in <ei>m</ei>. <br/>
+<input type="radio" name="1" value="2"><strong>2 </strong>:  as above, except that the width is made mass-dependent: <ei>Gamma = Gamma_0 * sqrt( (m^2 - m_thr^2) / (m_0^2 - m_thr^2) )</ei> where <ei>m</ei> is the current mass, <ei>m_0</ei> the nominal one and <ei>m_thr</ei> is the mass threshold, given by the sum of the nominal masses of the decay products. In order to decouple production and decay the threshold is defined as the branching-ratio-weighted average over all allowed decay channels.  <br/>
+<input type="radio" name="1" value="3"><strong>3 </strong>:   particles registered as having a mass width are given a mass  in the range <ei>m_min &lt; m &lt; m_max</ei>, according to a truncated relativistic Breit-Wigner, i.e. quadratic in <ei>m</ei>. <br/>
+<input type="radio" name="1" value="4" checked="checked"><strong>4 </strong>:   as 3, but the width is modified as for 2, and the current mass is used  for its phase-space prefactor, i.e. <ei>m_0 Gamma_0 -> m Gamma(m)</ei>. <br/>
+<br/><b>Note:</b> this mode only applies to normal hadronic 
+resonances like the <ei>rho</ei>. The more massive states of the 
+<code>isResonance()</code> type, like <ei>Z^0</ei> or top, are
+considered separately.
 
 <br/><br/><table><tr><td><strong>ParticleData:maxEnhanceBW </td><td></td><td> <input type="text" name="2" value="2.5" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>2.5</strong></code>; <code>minimum = 1.</code>; <code>maximum = 5.</code>)</td></tr></table>
 The modifications in options 2 and 4 above enhance the large-mass tail 
@@ -74,25 +78,32 @@ never should be called below the <i>m_b</i> scale anyway.)
 
 <br/><br/><table><tr><td><strong>ParticleData:mdRun </td><td></td><td> <input type="text" name="3" value="0.006" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.006</strong></code>; <code>minimum = 0.003</code>; <code>maximum = 0.008</code>)</td></tr></table>
 the d quark MSbar mass at 2 GeV scale.
+  
 
 <br/><br/><table><tr><td><strong>ParticleData:muRun </td><td></td><td> <input type="text" name="4" value="0.003" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.003</strong></code>; <code>minimum = 0.001</code>; <code>maximum = 0.006</code>)</td></tr></table>
 the u quark MSbar mass at 2 GeV scale.
+  
 
 <br/><br/><table><tr><td><strong>ParticleData:msRun </td><td></td><td> <input type="text" name="5" value="0.095" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.095</strong></code>; <code>minimum = 0.060</code>; <code>maximum = 0.150</code>)</td></tr></table>
+  
 the s quark MSbar mass at 2 GeV scale.
 
 <br/><br/><table><tr><td><strong>ParticleData:mcRun </td><td></td><td> <input type="text" name="6" value="1.25" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>1.25</strong></code>; <code>minimum = 1.00</code>; <code>maximum = 1.50</code>)</td></tr></table>
+  
 the c quark MSbar mass at the mass scale itself.
 
 <br/><br/><table><tr><td><strong>ParticleData:mbRun </td><td></td><td> <input type="text" name="7" value="4.20" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>4.20</strong></code>; <code>minimum = 4.00</code>; <code>maximum = 4.50</code>)</td></tr></table>
 the b quark MSbar mass at the mass scale itself.
+  
 
 <br/><br/><table><tr><td><strong>ParticleData:mtRun </td><td></td><td> <input type="text" name="8" value="165.0" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>165.0</strong></code>; <code>minimum = 150.0</code>; <code>maximum = 175.0</code>)</td></tr></table>
 the t quark MSbar mass at the mass scale itself.
+  
 
 <br/><br/><table><tr><td><strong>ParticleData:alphaSvalueMRun </td><td></td><td> <input type="text" name="9" value="0.125" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>0.125</strong></code>; <code>minimum = 0.10</code>; <code>maximum = 0.20</code>)</td></tr></table>
 the <i>alpha_s(M_Z)</i> value used to define tha rate at which MSbar
 masses run.
+  
 
 
 <h3>Comments on the data</h3>
@@ -200,56 +211,44 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="15" name="tau-" antiName="tau+" spinType="2" chargeType="-3" colType="0"
           m0="1.77699" tau0="8.71100e-02"
- <br/>      channel: onMode="1" bRatio="0.1784000" meMode="22" products="-12 11 16"
- <br/>      channel: onMode="1" bRatio="0.1736000" meMode="22" products="-14 13 16"
- <br/>      channel: onMode="1" bRatio="0.1090000" products="16 -211"
- <br/>      channel: onMode="1" bRatio="0.2520000" products="16 -213"
- <br/>      channel: onMode="1" bRatio="0.0030000" meMode="21" products="16 -211 111"
- <br/>      channel: onMode="1" bRatio="0.0900000" meMode="21" products="16 -213 111"
- <br/>      channel: onMode="1" bRatio="0.0025000" meMode="21" products="16 -211 111 111"
- <br/>      channel: onMode="1" bRatio="0.0095000" meMode="21" products="16 -213 111 111"
- <br/>      channel: onMode="1" bRatio="0.0009000" meMode="21" products="16 -211 111 111 111"
- <br/>      channel: onMode="1" bRatio="0.0010000" meMode="21" products="16 -213 111 111 111"
- <br/>      channel: onMode="1" bRatio="0.0069100" products="16 -321"
- <br/>      channel: onMode="1" bRatio="0.0120000" products="16 -323"
- <br/>      channel: onMode="1" bRatio="0.0005200" meMode="21" products="16 -321 111"
- <br/>      channel: onMode="1" bRatio="0.0005800" meMode="21" products="16 -321 111 111"
- <br/>      channel: onMode="1" bRatio="0.0004200" meMode="21" products="16 -321 111 111 111"
- <br/>      channel: onMode="1" bRatio="0.0010000" meMode="21" products="16 -311 -211"
- <br/>      channel: onMode="1" bRatio="0.0022000" meMode="21" products="16 -311 -213"
- <br/>      channel: onMode="1" bRatio="0.0016000" meMode="21" products="16 -311 -211 111"
- <br/>      channel: onMode="1" bRatio="0.0002600" meMode="21" products="16 -311 -211 111 111"
- <br/>      channel: onMode="1" bRatio="0.0015300" meMode="21" products="16 -321 311"
- <br/>      channel: onMode="1" bRatio="0.0015400" meMode="21" products="16 -321 311 111"
- <br/>      channel: onMode="1" bRatio="0.0002400" meMode="21" products="16 310 310 -211"
- <br/>      channel: onMode="1" bRatio="0.0011200" meMode="21" products="16 310 130 -211"
- <br/>      channel: onMode="1" bRatio="0.0002400" meMode="21" products="16 130 130 -211"
- <br/>      channel: onMode="1" bRatio="0.0003100" meMode="21" products="16 130 130 -211 111"
- <br/>      channel: onMode="1" bRatio="0.0700000" meMode="21" products="16 -211 113"
- <br/>      channel: onMode="1" bRatio="0.0199000" meMode="21" products="16 -211 211 -211"
- <br/>      channel: onMode="1" bRatio="0.0269000" meMode="21" products="16 -211 211 -211 111"
- <br/>      channel: onMode="1" bRatio="0.0009000" meMode="21" products="16 -211 211 -211 111 111"
- <br/>      channel: onMode="1" bRatio="0.0002200" meMode="21" products="16 -211 211 -211 111 111 111"
- <br/>      channel: onMode="1" bRatio="0.0016000" meMode="21" products="16 -321 113"
- <br/>      channel: onMode="1" bRatio="0.0017300" meMode="21" products="16 -321 211 -211"
- <br/>      channel: onMode="1" bRatio="0.0003100" meMode="21" products="16 -321 211 -211 111"
- <br/>      channel: onMode="1" bRatio="0.0015300" meMode="21" products="16 -321 321 -211"
- <br/>      channel: onMode="1" bRatio="0.0000610" meMode="21" products="16 -321 321 -211 111"
- <br/>      channel: onMode="1" bRatio="0.0008380" meMode="21" products="16 -211 211 -211 211 -211"
- <br/>      channel: onMode="1" bRatio="0.0001780" meMode="21" products="16 -211 211 -211 211 -211 111"
- <br/>      channel: onMode="1" bRatio="0.0015000" meMode="21" products="16 221 -213"
- <br/>      channel: onMode="1" bRatio="0.0002700" meMode="21" products="16 221 -211 111"
- <br/>      channel: onMode="1" bRatio="0.0001500" meMode="21" products="16 221 -213 111"
- <br/>      channel: onMode="1" bRatio="0.0002300" meMode="21" products="16 221 -211 211 -211"
- <br/>      channel: onMode="1" bRatio="0.0002700" meMode="21" products="16 221 -321"
- <br/>      channel: onMode="1" bRatio="0.0002900" meMode="21" products="16 221 -323"
- <br/>      channel: onMode="1" bRatio="0.0000800" meMode="21" products="16 221 -321 111"
- <br/>      channel: onMode="1" bRatio="0.0000300" meMode="21" products="16 221 -311 -211"
- <br/>      channel: onMode="1" bRatio="0.0178730" meMode="21" products="16 223 -211"
- <br/>      channel: onMode="1" bRatio="0.0004100" meMode="21" products="16 223 -321"
- <br/>      channel: onMode="1" bRatio="0.0041000" meMode="21" products="16 223 -211 111"
- <br/>      channel: onMode="1" bRatio="0.0001400" meMode="21" products="16 223 -211 111 111"
- <br/>      channel: onMode="1" bRatio="0.0001200" meMode="21" products="16 223 -211 211 -211"
+ <br/>      channel: onMode="1" bRatio="0.108924" meMode="1521" products="16 -211"
+ <br/>      channel: onMode="1" bRatio="0.006885" meMode="1521" products="16 -321"
+ <br/>      channel: onMode="1" bRatio="0.178345" meMode="1531" products="16  11  -12"
+ <br/>      channel: onMode="1" bRatio="0.173545" meMode="1531" products="16  13  -14"
+ <br/>      channel: onMode="1" bRatio="0.254890" meMode="1532" products="16  111 -211"
+ <br/>      channel: onMode="1" bRatio="0.001513" meMode="1532" products="16  311 -321"
+ <br/>      channel: onMode="1" bRatio="0.000263" meMode="1532" products="16  221 -321"
+ <br/>      channel: onMode="1" bRatio="0.008957" meMode="1533" products="16 -211 -311"
+ <br/>      channel: onMode="1" bRatio="0.004491" meMode="1533" products="16  111 -321"
+ <br/>      channel: onMode="1" bRatio="0.092370" meMode="1541" products="16  111  111 -211"
+ <br/>      channel: onMode="1" bRatio="0.089813" meMode="1541" products="16 -211 -211  211"
+ <br/>      channel: onMode="1" bRatio="0.044435" meMode="1551" products="16  111 -211 -211  211"
+ <br/>      channel: onMode="1" bRatio="0.010313" meMode="1551" products="16  111  111  111 -211"
+ <br/>      channel: onMode="1" bRatio="0.003757" meMode="0" products="16 111 -211 -311"
+ <br/>      channel: onMode="1" bRatio="0.003292" meMode="0" products="16 -211 211 -321"
+ <br/>      channel: onMode="1" bRatio="0.000555" meMode="0" products="16 111 111 -321"
+ <br/>      channel: onMode="1" bRatio="0.001519" meMode="0" products="16 -211 -321 321"
+ <br/>      channel: onMode="1" bRatio="0.001518" meMode="0" products="16 111 311 -321"
+ <br/>      channel: onMode="1" bRatio="0.001087" meMode="0" products="16 130 -211 310"
+ <br/>      channel: onMode="1" bRatio="0.000235" meMode="0" products="16 130 130 -211"
+ <br/>      channel: onMode="1" bRatio="0.000235" meMode="0" products="16 -211 310 310"
+ <br/>      channel: onMode="1" bRatio="0.001762" meMode="0" products="16 22 111 -211"
+ <br/>      channel: onMode="1" bRatio="0.004935" meMode="0" products="16 111 111 -211 -211 211"
+ <br/>      channel: onMode="1" bRatio="0.001744" meMode="0" products="16 111 -211 221"
+ <br/>      channel: onMode="1" bRatio="0.000957" meMode="0" products="16 111 111 111 111 -211"
+ <br/>      channel: onMode="1" bRatio="0.000834" meMode="0" products="16 -211 -211 -211 211 211"
+ <br/>      channel: onMode="1" bRatio="0.000225" meMode="0" products="16 -211 -211 211 221"
+ <br/>      channel: onMode="1" bRatio="0.000145" meMode="0" products="16 111 111 -211 221"
+ <br/>      channel: onMode="1" bRatio="0.000135" meMode="0" products="16 111 111 -211 223"
+ <br/>      channel: onMode="1" bRatio="0.000118" meMode="0" products="16 -211 -211 211 223"
+ <br/>      channel: onMode="1" bRatio="0.000400" meMode="0" products="16 223 -321"
+ <br/>      channel: onMode="1" bRatio="0.000397" meMode="0" products="16 111 111 111 -321"
+ <br/>      channel: onMode="1" bRatio="0.000307" meMode="0" products="16 111 -211 211 -321"
+ <br/>      channel: onMode="1" bRatio="0.000280" meMode="0" products="16 221 -323"
+ <br/>      channel: onMode="1" bRatio="0.000238" meMode="0" products="16 111 111 -211 -311"
+ <br/>      channel: onMode="1" bRatio="0.000225" meMode="0" products="16 -211 -211 211 -311"
+ <br/>      channel: onMode="1" bRatio="0.000297" meMode="0" products="16 111 -211 -311 311"
+ <br/>      channel: onMode="1" bRatio="0.000059" meMode="0" products="16 111 -211 -321 321"
 
 <p/>particle: id="16" name="nu_tau" antiName="nu_taubar" spinType="2" chargeType="0" colType="0"
           m0="0.00000"
@@ -636,7 +635,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 <p/>particle: id="90" name="system" spinType="0" chargeType="0" colType="0"
           m0="0.00000"
 
-<p/>particle: id="110" name="reggeon" spinType="0" chargeType="0" colType="0"
+<p/>particle: id="110" name="Reggeon" spinType="0" chargeType="0" colType="0"
           m0="0.00000"
 
 <p/>particle: id="111" name="pi0" spinType="1" chargeType="0" colType="0"
@@ -3245,7 +3244,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
  <br/>      channel: onMode="1" bRatio="0.2200000" products="553 22"
  <br/>      channel: onMode="1" bRatio="0.7800000" meMode="91" products="21 21"
 
-<p/>particle: id="990" name="pomeron" spinType="0" chargeType="0" colType="0"
+<p/>particle: id="990" name="Pomeron" spinType="0" chargeType="0" colType="0"
           m0="0.00000"
 
 <p/>particle: id="1103" name="dd_1" antiName="dd_1bar" spinType="3" chargeType="-2" colType="-1"
@@ -4615,7 +4614,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000001" name="~d_L" antiName="~d_Lbar" spinType="1" chargeType="-1" colType="1"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 1"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 1"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000024 2"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000037 2"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 1"
@@ -4663,7 +4662,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000002" name="~u_L" antiName="~u_Lbar" spinType="1" chargeType="2" colType="1"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 2"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 2"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000024 1"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000037 1"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 2"
@@ -4690,7 +4689,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000003" name="~s_L" antiName="~s_Lbar" spinType="1" chargeType="-1" colType="1"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 3"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 3"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000024 4"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000037 4"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 3"
@@ -4738,7 +4737,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000004" name="~c_L" antiName="~c_Lbar" spinType="1" chargeType="2" colType="1"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 4"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 4"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000024 3"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000037 3"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 4"
@@ -4765,7 +4764,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000005" name="~b_1" antiName="~b_1bar" spinType="1" chargeType="-1" colType="1"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 5"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 5"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000024 6"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000037 6"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 5"
@@ -4813,7 +4812,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000006" name="~t_1" antiName="~t_1bar" spinType="1" chargeType="2" colType="1"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 6"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 6"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000024 5"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000037 5"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 6"
@@ -4841,7 +4840,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000011" name="~e_L-" antiName="~e_L+" spinType="1" chargeType="-3" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 11"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 11"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000024 12"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000037 12"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 11"
@@ -4875,7 +4874,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000012" name="~nu_eL" antiName="~nu_eLbar" spinType="1" chargeType="0" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 12"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 12"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000024 11"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000037 11"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 12"
@@ -4904,7 +4903,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000013" name="~mu_L-" antiName="~mu_L+" spinType="1" chargeType="-3" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 13"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 13"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000024 14"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000037 14"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 13"
@@ -4939,7 +4938,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000014" name="~nu_muL" antiName="~nu_muLbar" spinType="1" chargeType="0" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 14"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 14"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000024 13"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000037 13"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 14"
@@ -4968,7 +4967,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000015" name="~tau_1-" antiName="~tau_1+" spinType="1" chargeType="-3" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 15"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 15"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000024 16"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000037 16"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 15"
@@ -5003,7 +5002,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000016" name="~nu_tauL" antiName="~nu_tauLbar" spinType="1" chargeType="0" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 16"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 16"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000024 15"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000037 15"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 16"
@@ -5032,7 +5031,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000021" name="~g" spinType="2" chargeType="0" colType="2"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 21"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 21"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000001 -1"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000001 1"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="2000001 -1"
@@ -5222,7 +5221,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000022" name="~chi_10" spinType="2" chargeType="0" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="20.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 22"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 22"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 23"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 25"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 35"
@@ -5392,7 +5391,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000023" name="~chi_20" spinType="2" chargeType="0" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 22"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 22"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 23"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 25"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 35"
@@ -5659,7 +5658,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000024" name="~chi_1+" antiName="~chi_1-" spinType="2" chargeType="3" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 24"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 24"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 37"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 24"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 -11 12"
@@ -5893,7 +5892,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000025" name="~chi_30" spinType="2" chargeType="0" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 22"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 22"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 23"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 25"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 35"
@@ -6176,7 +6175,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000035" name="~chi_40" spinType="2" chargeType="0" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 22"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 22"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 23"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 25"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 35"
@@ -6475,7 +6474,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="1000037" name="~chi_2+" antiName="~chi_2-" spinType="2" chargeType="3" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 24"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 24"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 37"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000024 23"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000024 11 -11"
@@ -6734,9 +6733,213 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 <p/>particle: id="1000039" name="~Gravitino" spinType="0" chargeType="0" colType="0"
           m0="1.000e-03"
 
+<p/>particle: id="1000045" name="~chi_50" spinType="2" chargeType="0" colType="0"
+          m0="500.00000" mMin="10.00000" mMax="0.00000"
+
+<p/>particle: id="1000512" name="R0(~b dbar)" antiName="R0(~bbar d)" spinType="2" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1000522" name="R-(~b ubar)" antiName="R+(~bbar u)" spinType="2" chargeType="-3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1000532" name="R0(~b sbar)" antiName="R0(~bbar s)" spinType="2" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1000542" name="R-(~b cbar)" antiName="R+(~bbar c)" spinType="2" chargeType="-3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1000552" name="R0(~b bbar)" antiName="R0(~bbar b)" spinType="2" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1000612" name="R+(~t dbar)" antiName="R-(~tbar d)" spinType="2" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1000622" name="R0(~t ubar)" antiName="R0(~tbar u)" spinType="2" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1000632" name="R+(~t sbar)" antiName="R-(~tbar s)" spinType="2" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1000642" name="R0(~t cbar)" antiName="R0(~tbar c)" spinType="2" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1000652" name="R+(~t bbar)" antiName="R-(~tbar b)" spinType="2" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1000993" name="R0(~g g)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1005113" name="R-(~b dd1)" antiName="Rbar+(~b dd1)" spinType="3" chargeType="-3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1005211" name="R0(~b ud0)" antiName="Rbar0(~b ud0)" spinType="1" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1005213" name="R0(~b ud1)" antiName="Rbar0(~b ud1)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1005223" name="R+(~b uu1)" antiName="Rbar-(~b uu1)" spinType="3" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1005311" name="R-(~b sd0)" antiName="Rbar+(~b sd0)" spinType="1" chargeType="-3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1005313" name="R-(~b sd1)" antiName="Rbar+(~b sd1)" spinType="3" chargeType="-3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1005321" name="R0(~b su0)" antiName="Rbar0(~b su0)" spinType="1" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1005323" name="R0(~b su1)" antiName="Rbar0(~b su1)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1005333" name="R-(~b ss1)" antiName="Rbar+(~b ss1)" spinType="3" chargeType="-3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1006113" name="R0(~t dd1)" antiName="Rbar0(~t dd1)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1006211" name="R+(~t ud0)" antiName="Rbar-(~t ud0)" spinType="1" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1006213" name="R+(~t ud1)" antiName="Rbar-(~t ud1)" spinType="3" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1006223" name="R++(~t uu1)" antiName="Rbar--(~t uu1)" spinType="3" chargeType="6" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1006311" name="R-(~t sd0)" antiName="Rbar+(~t sd0)" spinType="1" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1006313" name="R-(~t sd1)" antiName="Rbar+(~t sd1)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1006321" name="R0(~t su0)" antiName="Rbar0(~t su0)" spinType="1" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1006323" name="R0(~t su1)" antiName="Rbar0(~t su1)" spinType="3" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1006333" name="R0(~t ss1)" antiName="Rbar0(~t ss1)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009002" name="Rtemp(~g q)" antiName="Rtemp(~g qbar)" spinType="2" chargeType="0" colType="1"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009113" name="R0(~g d dbar)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009213" name="R+(~g u dbar)" antiName="R-(~g d ubar)" spinType="3" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009223" name="R0(~g u ubar)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009313" name="R0(~g d sbar)" antiName="R0(~g s dbar)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009323" name="R+(~g u sbar)" antiName="R-(~g s ubar)" spinType="3" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009333" name="R0(~g s sbar)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009413" name="R+(~g c dbar)" antiName="R-(~g d cbar)" spinType="3" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009423" name="R0(~g c ubar)" antiName="R0(~g u cbar)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009433" name="R+(~g c sbar)" antiName="R-(~g s cbar)" spinType="3" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009443" name="R0(~g c cbar)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009513" name="R0(~g d bbar)" antiName="R0(~g b dbar)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009523" name="R+(~g u bbar)" antiName="R-(~g b ubar)" spinType="3" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009533" name="R0(~g s bbar)" antiName="R0(~g b sbar)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009543" name="R+(~g c bbar)" antiName="R-(~g b cbar)" spinType="3" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1009553" name="R0(~g b bbar)" spinType="3" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1091114" name="R-(~g ddd)" antiName="Rbar+(~g ddd)" spinType="4" chargeType="-3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1092114" name="R0(~g udd)" antiName="Rbar0(~g udd)" spinType="4" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1092214" name="R+(~g uud)" antiName="Rbar-(~g uud)" spinType="4" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1092224" name="R++(~g uuu)" antiName="Rbar--(~g uuu)" spinType="4" chargeType="6" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1093114" name="R-(~g sdd)" antiName="Rbar+(~g sdd)" spinType="4" chargeType="-3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1093214" name="R0(~g sud)" antiName="Rbar0(~g sud)" spinType="4" chargeType="0" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1093224" name="R+(~g suu)" antiName="Rbar-(~g suu)" spinType="4" chargeType="3" colType="0"
+          m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1093314" name="R-(~g ssd)" antiName="Rbar+(~g ssd)" spinType="4" chargeType="-3" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1093324" name="R0(~g ssu)" antiName="Rbar0(~g ssu)" spinType="4" chargeType="0" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1093334" name="R-(~g sss)" antiName="Rbar+(~g sss)" spinType="4" chargeType="-3" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1094114" name="R0(~g cdd)" antiName="Rbar0(~g cdd)" spinType="4" chargeType="0" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1094214" name="R+(~g cud)" antiName="Rbar-(~g cud)" spinType="4" chargeType="3" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1094224" name="R++(~g cuu)" antiName="Rbar--(~g cuu)" spinType="4" chargeType="6" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1094314" name="R0(~g csd)" antiName="Rbar0(~g csd)" spinType="4" chargeType="0" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1094324" name="R+(~g csu)" antiName="Rbar-(~g csu)" spinType="4" chargeType="3" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1094334" name="R0(~g css)" antiName="Rbar0(~g css)" spinType="4" chargeType="0" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1095114" name="R-(~g bdd)" antiName="Rbar+(~g bdd)" spinType="4" chargeType="-3" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1095214" name="R0(~g bud)" antiName="Rbar0(~g bud)" spinType="4" chargeType="0" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1095224" name="R+(~g buu)" antiName="Rbar-(~g buu)" spinType="4" chargeType="3" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1095314" name="R-(~g bsd)" antiName="Rbar+(~g bsd)" spinType="4" chargeType="-3" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1095324" name="R0(~g bsu)" antiName="Rbar0(~g bsu)" spinType="4" chargeType="0" colType="0"
+           m0="500.00000" tau0="1e-05"
+
+<p/>particle: id="1095334" name="R-(~g bss)" antiName="Rbar+(~g bss)" spinType="4" chargeType="-3" colType="0"
+           m0="500.00000" tau0="1e-05"
+
 <p/>particle: id="2000001" name="~d_R" antiName="~d_Rbar" spinType="1" chargeType="-1" colType="1"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 1"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 1"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000024 2"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000037 2"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 1"
@@ -6788,7 +6991,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="2000002" name="~u_R" antiName="~u_Rbar" spinType="1" chargeType="2" colType="1"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 2"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 2"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000024 1"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000037 1"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 2"
@@ -6819,7 +7022,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="2000003" name="~s_R" antiName="~s_Rbar" spinType="1" chargeType="-1" colType="1"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 3"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 3"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000024 4"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000037 4"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 3"
@@ -6871,7 +7074,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="2000004" name="~c_R" antiName="~c_Rbar" spinType="1" chargeType="2" colType="1"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 4"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 4"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000024 3"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000037 3"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 4"
@@ -6902,7 +7105,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="2000005" name="~b_2" antiName="~b_2bar" spinType="1" chargeType="-1" colType="1"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 5"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 5"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000024 6"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000037 6"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 5"
@@ -6954,7 +7157,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="2000006" name="~t_2" antiName="~t_2bar" spinType="1" chargeType="2" colType="1"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 6"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 6"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000024 5"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000037 5"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 6"
@@ -6985,7 +7188,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="2000011" name="~e_R-" antiName="~e_R+" spinType="1" chargeType="-3" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 11"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 11"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000024 12"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000037 12"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 11"
@@ -7027,7 +7230,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="2000013" name="~mu_R-" antiName="~mu_R+" spinType="1" chargeType="-3" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 13"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 13"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000024 14"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000037 14"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 13"
@@ -7069,7 +7272,7 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
 
 <p/>particle: id="2000015" name="~tau_2-" antiName="~tau_2+" spinType="1" chargeType="-3" colType="0"
           m0="500.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
- <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000039 15"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1000039 15"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000024 16"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="-1000037 16"
  <br/>      channel: onMode="1" bRatio="0.0000000" meMode="103" products="1000022 15"
@@ -7352,14 +7555,150 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
           m0="400.00000" mWidth="0.42896" mMin="50.00000" mMax="0.00000"
  <br/>      channel: onMode="1" bRatio="0.2944480" products="22 15"
  <br/>      channel: onMode="1" bRatio="0.1094500" products="23 15"
- <br/>      channel: onMode="1" bRatio="0.5961020" products="-24 126"
+ <br/>      channel: onMode="1" bRatio="0.5961020" products="-24 16"
 
 <p/>particle: id="4000016" name="nu*_tau0" antiName="nu*_taubar0" spinType="2" chargeType="0" colType="0"
           m0="400.00000" mWidth="0.41912" mMin="50.00000" mMax="0.00000"
  <br/>      channel: onMode="1" bRatio="0.3899060" products="23 16"
  <br/>      channel: onMode="1" bRatio="0.6100940" products="24 15"
 
-<p/>particle: id="5000039" name="Graviton*" spinType="5" chargeType="0" colType="0"
+<p/>particle: id="4900001" name="Dv" antiName="Dvbar" spinType="2" chargeType="-1" colType="1"
+          m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="1 4900101"
+
+<p/>particle: id="4900002" name="Uv" antiName="Uvbar" spinType="2" chargeType="2" colType="1"
+          m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="2 4900101"
+
+<p/>particle: id="4900003" name="Sv" antiName="Svbar" spinType="2" chargeType="-1" colType="1"
+          m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="3 4900101"
+
+<p/>particle: id="4900004" name="Cv" antiName="Cvbar" spinType="2" chargeType="2" colType="1"
+          m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="4 4900101"
+
+<p/>particle: id="4900005" name="Bv" antiName="Bvbar" spinType="2" chargeType="-1" colType="1"
+          m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="5 4900101"
+
+<p/>particle: id="4900006" name="Tv" antiName="Tvbar" spinType="2" chargeType="2" colType="1"
+          m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="6 4900101"
+
+<p/>particle: id="4900011" name="Ev" antiName="Evbar" spinType="2" chargeType="-3" colType="0"
+          m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="11 4900101"
+
+<p/>particle: id="4900012" name="nuEv" antiName="nuEvbar" spinType="2" chargeType="0" colType="0"
+          m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="12 4900101"
+
+<p/>particle: id="4900013" name="MUv" antiName="MUvbar" spinType="2" chargeType="-3" colType="0"
+          m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="13 4900101"
+
+<p/>particle: id="4900014" name="nuMUv" antiName="nuMUvbar" spinType="2" chargeType="0" colType="0"
+          m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="14 4900101"
+
+<p/>particle: id="4900015" name="TAUv" antiName="TAUvbar" spinType="2" chargeType="-3" colType="0"
+          m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="15 4900101"
+
+<p/>particle: id="4900016" name="nuTAUv" antiName="nuTAUvbar" spinType="2" chargeType="0" colType="0"
+          m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"
+ <br/>      channel: onMode="1" bRatio="1.0000000" meMode="103" products="16 4900101"
+
+<p/>particle: id="4900021" name="gv" spinType="3" chargeType="0" colType="0"
+          m0="0.00000"
+
+<p/>particle: id="4900022" name="gammav" spinType="3" chargeType="0" colType="0"
+          m0="0.00000"
+ <br/>      channel: onMode="0" bRatio="0.05" meMode="91" products="1 -1"
+ <br/>      channel: onMode="0" bRatio="0.20" meMode="91" products="2 -2"
+ <br/>      channel: onMode="0" bRatio="0.05" meMode="91" products="3 -3"
+ <br/>      channel: onMode="0" bRatio="0.20" meMode="91" products="4 -4"
+ <br/>      channel: onMode="0" bRatio="0.05" meMode="91" products="5 -5"
+ <br/>      channel: onMode="0" bRatio="0.15" meMode="91" products="11 -11"
+ <br/>      channel: onMode="0" bRatio="0.00" meMode="91" products="12 -12"
+ <br/>      channel: onMode="0" bRatio="0.15" meMode="91" products="13 -13"
+ <br/>      channel: onMode="0" bRatio="0.00" meMode="91" products="14 -14"
+ <br/>      channel: onMode="0" bRatio="0.15" meMode="91" products="15 -15"
+ <br/>      channel: onMode="0" bRatio="0.00" meMode="91" products="16 -16"
+
+<p/>particle: id="4900023" name="Zv" spinType="3" chargeType="0" colType="0"
+          m0="1000.00000" mWidth="20.00000" mMin="100.00000" mMax="0.00000"
+ <br/>      channel: onMode="1" bRatio="0.075" meMode="102" products="1 -1"
+ <br/>      channel: onMode="1" bRatio="0.075" meMode="102" products="2 -2"
+ <br/>      channel: onMode="1" bRatio="0.075" meMode="102" products="3 -3"
+ <br/>      channel: onMode="1" bRatio="0.075" meMode="102" products="4 -4"
+ <br/>      channel: onMode="1" bRatio="0.075" meMode="102" products="5 -5"
+ <br/>      channel: onMode="1" bRatio="0.075" meMode="102" products="6 -6"
+ <br/>      channel: onMode="1" bRatio="0.025" meMode="102" products="11 -11"
+ <br/>      channel: onMode="1" bRatio="0.025" meMode="102" products="12 -12"
+ <br/>      channel: onMode="1" bRatio="0.025" meMode="102" products="13 -13"
+ <br/>      channel: onMode="1" bRatio="0.025" meMode="102" products="14 -14"
+ <br/>      channel: onMode="1" bRatio="0.025" meMode="102" products="15 -15"
+ <br/>      channel: onMode="1" bRatio="0.025" meMode="102" products="16 -16"
+ <br/>      channel: onMode="1" bRatio="0.400" meMode="102" products="4900101 -4900101"
+
+<p/>particle: id="4900101" name="qv" antiName="qvbar" spinType="1" chargeType="0" colType="0"
+          m0="100.00000"
+
+<p/>particle: id="4900111" name="pivDiag" spinType="1" chargeType="0" colType="0"
+          m0="10.00000"
+ <br/>      channel: onMode="0" bRatio="1.23e-6" meMode="91" products="1 -1"
+ <br/>      channel: onMode="0" bRatio="4.96e-7" meMode="91" products="2 -2"
+ <br/>      channel: onMode="0" bRatio="0.000492" meMode="91" products="3 -3"
+ <br/>      channel: onMode="0" bRatio="0.079384" meMode="91" products="4 -4"
+ <br/>      channel: onMode="0" bRatio="0.8679713" meMode="91" products="5 -5"
+ <br/>      channel: onMode="0" bRatio="4.0e-9" meMode="91" products="11 -11"
+ <br/>      channel: onMode="0" bRatio="0.00" meMode="91" products="12 -12"
+ <br/>      channel: onMode="0" bRatio="0.000184" meMode="91" products="13 -13"
+ <br/>      channel: onMode="0" bRatio="0.00" meMode="91" products="14 -14"
+ <br/>      channel: onMode="0" bRatio="0.051967" meMode="91" products="15 -15"
+ <br/>      channel: onMode="0" bRatio="0.00" meMode="91" products="16 -16"
+
+<p/>particle: id="4900113" name="rhovDiag" spinType="3" chargeType="0" colType="0"
+          m0="10.00000"
+ <br/>      channel: onMode="0" bRatio="0.05" meMode="91" products="1 -1"
+ <br/>      channel: onMode="0" bRatio="0.20" meMode="91" products="2 -2"
+ <br/>      channel: onMode="0" bRatio="0.05" meMode="91" products="3 -3"
+ <br/>      channel: onMode="0" bRatio="0.20" meMode="91" products="4 -4"
+ <br/>      channel: onMode="0" bRatio="0.05" meMode="91" products="5 -5"
+ <br/>      channel: onMode="0" bRatio="0.15" meMode="91" products="11 -11"
+ <br/>      channel: onMode="0" bRatio="0.00" meMode="91" products="12 -12"
+ <br/>      channel: onMode="0" bRatio="0.15" meMode="91" products="13 -13"
+ <br/>      channel: onMode="0" bRatio="0.00" meMode="91" products="14 -14"
+ <br/>      channel: onMode="0" bRatio="0.15" meMode="91" products="15 -15"
+ <br/>      channel: onMode="0" bRatio="0.00" meMode="91" products="16 -16"
+
+<p/>particle: id="4900211" name="pivUp" antiName="pivDn" spinType="1" chargeType="0" colType="0"
+          m0="10.00000"
+
+<p/>particle: id="4900213" name="rhovUp" antiName="rhovDn" spinType="3" chargeType="0" colType="0"
+          m0="10.00000"
+
+<p/>particle: id="4900991" name="ggv" spinType="1" chargeType="0" colType="0"
+          m0="1.00000"
+
+<p/>particle: id="5000023" name="Z_KK" spinType="3" chargeType="0" colType="0"
+          m0="4000.00000" mWidth="240.00000" mMin="1000.00000" mMax="0.00000"
+
+<p/>particle: id="5000039" name="Graviton" spinType="5" chargeType="0" colType="0"
+           m0="0.00000"
+
+<p/>particle: id="5100021" name="KKgluon*" spinType="3" chargeType="0" colType="2"
+           m0="1.000e+03" mWidth="1.7e02" mMin="5.000e+01" mMax="0.000e+00"
+  <br/      channel: onMode="1" bRatio="0.005" products="1 -1"
+  <br/>      channel: onMode="1" bRatio="0.005" products="2 -2"
+  <br/>      channel: onMode="1" bRatio="0.005" products="3 -3"
+  <br/>      channel: onMode="1" bRatio="0.005" products="4 -4"
+  <br/>      channel: onMode="1" bRatio="0.055" products="5 -5"
+  <br/>      channel: onMode="1" bRatio="0.925" products="6 -6"
+
+<p/>particle: id="5100039" name="Graviton*" spinType="5" chargeType="0" colType="0"
           m0="1.000e+03" mWidth="1.415e-01" mMin="5.000e+01" mMax="0.000e+00"
  <br/>      channel: onMode="1" bRatio="0.0633000" products="1 -1"
  <br/>      channel: onMode="1" bRatio="0.0633000" products="2 -2"
@@ -7419,8 +7758,8 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
  <br/>      channel: onMode="1" bRatio="0.0003670" products="-11 5 -4"
  <br/>      channel: onMode="1" bRatio="0.0819670" products="-11 5 -6"
  <br/>      channel: onMode="1" bRatio="0.0000000" products="11 -13 9900014"
- <br/>      channel: onMode="1" bRatio="0.0000000" products="11 -13 9900014"
- <br/>      channel: onMode="1" bRatio="0.0000000" products="-11 15 9900016"
+ <br/>      channel: onMode="1" bRatio="0.0000000" products="-11 13 9900014"
+ <br/>      channel: onMode="1" bRatio="0.0000000" products="11 -15 9900016"
  <br/>      channel: onMode="1" bRatio="0.0000000" products="-11 15 9900016"
 
 <p/>particle: id="9900014" name="nu_Rmu" spinType="2" chargeType="0" colType="0"
@@ -7444,8 +7783,8 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
  <br/>      channel: onMode="1" bRatio="0.0003670" products="-13 5 -4"
  <br/>      channel: onMode="1" bRatio="0.0818930" products="-13 5 -6"
  <br/>      channel: onMode="1" bRatio="0.0000000" products="13 -11 9900012"
- <br/>      channel: onMode="1" bRatio="0.0000000" products="13 -11 9900012"
- <br/>      channel: onMode="1" bRatio="0.0000000" products="-13 15 9900016"
+ <br/>      channel: onMode="1" bRatio="0.0000000" products="-13 11 9900012"
+ <br/>      channel: onMode="1" bRatio="0.0000000" products="13 -15 9900016"
  <br/>      channel: onMode="1" bRatio="0.0000000" products="-13 15 9900016"
 
 <p/>particle: id="9900016" name="nu_Rtau" spinType="2" chargeType="0" colType="0"
@@ -7469,8 +7808,8 @@ echo "<a href='ParticleDecays.php?filepath=".$filepath."' target='page'>";?>here
  <br/>      channel: onMode="1" bRatio="0.0003680" products="-15 5 -4"
  <br/>      channel: onMode="1" bRatio="0.0807330" products="-15 5 -6"
  <br/>      channel: onMode="1" bRatio="0.0000000" products="15 -11 9900012"
- <br/>      channel: onMode="1" bRatio="0.0000000" products="15 -11 9900012"
- <br/>      channel: onMode="1" bRatio="0.0000000" products="-15 13 9900014"
+ <br/>      channel: onMode="1" bRatio="0.0000000" products="-15 11 9900012"
+ <br/>      channel: onMode="1" bRatio="0.0000000" products="15 -13 9900014"
  <br/>      channel: onMode="1" bRatio="0.0000000" products="-15 13 9900014"
 
 <p/>particle: id="9900023" name="Z_R0" spinType="3" chargeType="0" colType="0"
@@ -7638,4 +7977,4 @@ fclose($handle);
 </body>
 </html>
 
-<!-- Copyright (C) 2007 Torbjorn Sjostrand -->
+<!-- Copyright (C) 2011 Torbjorn Sjostrand -->

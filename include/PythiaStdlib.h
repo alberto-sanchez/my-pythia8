@@ -1,21 +1,24 @@
 // PythiaStdlib.h is a part of the PYTHIA event generator.
-// Copyright (C) 2007 Torbjorn Sjostrand.
+// Copyright (C) 2011 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
 // Header file for functionality pulled in from Stdlib,
-// plus a few useful utilities (small powers).
+// plus a few useful utilities (small powers; positive square root,
+// Gamma function).
 
 #ifndef Pythia8_PythiaStdlib_H
 #define Pythia8_PythiaStdlib_H
 
 // Stdlib header files for mathematics.
 #include <cmath>
+#include <cstdlib>
 
 // Stdlib header files for strings and containers.
 #include <string>
 #include <vector>
 #include <map>
+#include <deque>
 
 // Stdlib header file for input and output.
 #include <iostream>
@@ -43,6 +46,7 @@ using std::abs;
 using std::string; 
 using std::vector; 
 using std::map; 
+using std::deque; 
 // Input/output streams.
 using std::cin; 
 using std::cout; 
@@ -71,9 +75,13 @@ inline double pow2(const double& x) {return x*x;}
 inline double pow3(const double& x) {return x*x*x;}
 inline double pow4(const double& x) {return x*x*x*x;}
 inline double pow5(const double& x) {return x*x*x*x*x;}
+inline double pow6(const double& x) {return x*x*x*x*x*x;}
 
 // Avoid problem with negative square root argument (from roundoff).
 inline double sqrtpos(const double& x) {return sqrt( max( 0., x));}
+
+// The Gamma function for real argument.
+double GammaReal(double x);
 
 } // end namespace Pythia8
 
