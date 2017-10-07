@@ -37,7 +37,7 @@ This offers complementary information.
 Already at the top of the main program file, you need to include the proper 
 header file
 <pre>
-    #include "Pythia.h"
+    #include "Pythia8/Pythia.h"
 </pre>
 To simplify typing, it also makes sense to declare
 <pre>
@@ -987,9 +987,11 @@ figure out if any colour junctions are present. If so, the colour
 topology of such junctions must be sorted out. In tricky cases this 
 might fail, and then hadronization will not work. A user who is 
 aware of this and knows the intended colour flow can set up the 
-junction information in the event record, and then call
+junction information (if any) in the event record, and then call
 <code>forceHadronLevel(false)</code> so as not to have this information
-overwritten.   
+overwritten. (If the event record contains no unhadronized partons 
+then no junction search will be performed in any case.)
+  
 <br/><b>Note:</b> The method returns false if the hadronization
 fails. The event record is then not consistent and should not be
 studied.

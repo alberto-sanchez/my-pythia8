@@ -6,7 +6,7 @@
 // Function definitions (not found in the header) for 
 // the ResonanceDecays class.
 
-#include "ResonanceDecays.h"
+#include "Pythia8/ResonanceDecays.h"
 
 namespace Pythia8 {
 
@@ -45,10 +45,11 @@ const double ResonanceDecays::WTCORRECTION[11] = { 1., 1., 1.,
 
 //--------------------------------------------------------------------------
   
-bool ResonanceDecays::next( Event& process) {
+bool ResonanceDecays::next( Event& process, int iDecNow) {
 
   // Loop over all entries to find resonances that should decay.
-  int iDec = 0;
+  // (Except for iDecNow > 0, where only it will be handled.)
+  int iDec = iDecNow;
   do {
     Particle& decayer = process[iDec];
     if (decayer.isFinal() && decayer.canDecay() && decayer.mayDecay() 
@@ -138,7 +139,7 @@ bool ResonanceDecays::next( Event& process) {
                  
     // End of loop over all entries.
     }
-  } while (++iDec < process.size());
+  } while (iDecNow == 0 && ++iDec < process.size());
 
   // Done.
   return true;
@@ -204,7 +205,7 @@ bool ResonanceDecays::pickMasses() {
       if (iTryMasses == NTRYMASSES) return false;
       mSum = 0.;
       for (int i = 1; i <= mult; ++i) {
-        if (useBW[i])  mProd[i] = particleDataPtr->mass( idProd[i] ); 
+        if (useBW[i])  mProd[i] = particleDataPtr->mSel( idProd[i] ); 
         mSum += mProd[i];   
       }
       wt = (mSum + 0.5 * MSAFETY < mMother)

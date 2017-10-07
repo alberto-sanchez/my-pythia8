@@ -11,7 +11,17 @@
 // to improve statistics when this could be a problem.
 // Option (a) is faster than (b), but less generic.
 
-#include "Pythia.h"
+// Note 1: the compartmentalization of hadronization in forceHadronLevel
+// from the rest of the event processing somewhat limits the ways the 
+// program can retry in case of problems, and so an occasional abort
+// may occur more easily than normally.
+
+// Note 2: for simple cases, where it is only one particle that is to be
+// decayed repeatedly, the event[i].undoDecay() method is handy.
+// When used for several particles, remember that the position of
+// some particles may be moved by the undoDecay step.
+
+#include "Pythia8/Pythia.h"
 using namespace Pythia8;
  
 int main() {
@@ -35,7 +45,7 @@ int main() {
 
   // Simulate b production above given pTmin scale.
   // Warning: these processes do not catch all possible production modes.
-  // You would need to use HardQCD:all or even SoftQCD:minBias for that.
+  // You would need to use HardQCD:all or even SoftQCD:nonDiffractive for that.
   pythia.readString("HardQCD:gg2bbbar = on");    
   pythia.readString("HardQCD:qqbar2bbbar = on");    
   pythia.readString("PhaseSpace:pTHatMin = 50.");  

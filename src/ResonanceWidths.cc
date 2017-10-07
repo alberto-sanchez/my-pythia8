@@ -6,9 +6,9 @@
 // Function definitions (not found in the header) for 
 // the ResonanceWidths class and classes derived from it.
 
-#include "ParticleData.h"
-#include "ResonanceWidths.h"
-#include "PythiaComplex.h"
+#include "Pythia8/ParticleData.h"
+#include "Pythia8/ResonanceWidths.h"
+#include "Pythia8/PythiaComplex.h"
 
 namespace Pythia8 {
 
@@ -42,7 +42,7 @@ bool ResonanceWidths::init(Info* infoPtrIn, Settings* settingsPtrIn,
   particleDataPtr = particleDataPtrIn;
   couplingsPtr    = couplingsPtrIn;
 
-  // Perform any model dependent initialisations (pure dummy in base class)
+  // Perform any model dependent initialisations (pure dummy in base class).
   bool isInit = initBSM();
   
   // Minimal decaying-resonance width. Minimal phase space for meMode = 103.
@@ -70,7 +70,7 @@ bool ResonanceWidths::init(Info* infoPtrIn, Settings* settingsPtrIn,
 
   // For very narrow resonances assign fictitious small width.
   if (GammaRes < minWidth) GammaRes = 0.1 * minWidth;  
-  GamMRat      = GammaRes / mRes;
+  GamMRat      = (mRes == 0.) ? 0. : GammaRes / mRes;
 
   // Secondary decay chains by default all on.
   openPos      = 1.;
@@ -85,8 +85,8 @@ bool ResonanceWidths::init(Info* infoPtrIn, Settings* settingsPtrIn,
       " unknown resonance identity code");   
 
   // Check if we are supposed to do the width calculation
-  // (can be false e.g. if SLHA decay table should take precedence instead)
-  bool allowCalcWidth = isInit && allowCalc();
+  // (can be false e.g. if SLHA decay table should take precedence instead).
+  allowCalcWidth = isInit && allowCalc();
   if ( allowCalcWidth ) {
     // Initialize constants used for a resonance.
     initConstants();
@@ -166,7 +166,7 @@ bool ResonanceWidths::init(Info* infoPtrIn, Settings* settingsPtrIn,
       idAnti    = (particleDataPtr->hasAnti(idNow)) ? -idNow : idNow;
       // Secondary widths not yet initialized for heavier states,
       // so have to assume unit open fraction there.
-      if (idNow == 23 || abs(idNow) == 24 
+      if (idNow == 23 || abs(idNow) == 24 || idNow == 93 || abs(idNow) == 94 
 	|| particleDataPtr->m0(abs(idNow)) < mRes) {
         openSecPos *= particleDataPtr->resOpenFrac(idNow); 
         openSecNeg *= particleDataPtr->resOpenFrac(idAnti);
@@ -247,7 +247,7 @@ double ResonanceWidths::width(int idSgn, double mHatIn, int idInFlavIn,
   // Calculate various prefactors for the current mass.
   mHat          = mHatIn;
   idInFlav      = idInFlavIn;
-  calcPreFac(false);
+  if (allowCalcWidth) calcPreFac(false);
 
   // Reset quantities to sum. Declare variables inside loop.
   double widSum = 0.; 
@@ -574,6 +574,9 @@ void ResonanceGmZ::initConstants() {
   gmZmode     = settingsPtr->mode("WeakZ0:gmZmode");
   thetaWRat   = 1. / (16. * couplingsPtr->sin2thetaW() 
                 * couplingsPtr->cos2thetaW());
+
+  // The Z0copy with id = 93 is a pure Z0.
+  if (idRes == 93) gmZmode = 2;  
 
 }
 

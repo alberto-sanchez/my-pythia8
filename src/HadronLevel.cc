@@ -5,7 +5,7 @@
 
 // Function definitions (not found in the header) for the HadronLevel class.
 
-#include "HadronLevel.h"
+#include "Pythia8/HadronLevel.h"
 
 namespace Pythia8 {
 
@@ -278,6 +278,10 @@ bool HadronLevel::findSinglets(Event& event) {
   colConfig.clear();
   iPartonJun.resize(0);
   iPartonAntiJun.resize(0);
+
+  // No need to do anything if no final partons.
+  if (iColEnd.size() == 0 && iAcolEnd.size() == 0 
+    && iColAndAcol.size() == 0) return true;
 
   // Junctions: loop over them, and identify kind.
   for (int iJun = 0; iJun < event.sizeJunction(); ++iJun)     

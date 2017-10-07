@@ -181,6 +181,20 @@ but there is also nothing wrong with it.
   
 
 <p/>
+The CMW rescaling of <i>Lambda_QCD</i> (see the section on 
+<a href="StandardModelParameters.html" target="page">StandardModelParameters</a>) 
+can be applied to the <i>alpha_strong</i> values used for 
+timelike showers. Note that tunes using this option need lower values of 
+<i>alpha_strong(m_Z^2)</i> than tunes that do not.
+<p/><code>flag&nbsp; </code><strong> TimeShower:alphaSuseCMW &nbsp;</strong> 
+ (<code>default = <strong>false</strong></code>)<br/>
+<br/><code>option </code><strong> false</strong> : Do not apply the CMW rescaling.   
+<br/><code>option </code><strong> true</strong> : Apply the CMW rescaling, increasing  
+ <i>Lambda_QCD</i> for timelike showers by a factor roughly 1.6.
+  
+  
+
+<p/>
 QED radiation is regulated by the <i>alpha_electromagnetic</i>
 value at the <i>pT^2</i> scale of a branching.
  
@@ -254,7 +268,7 @@ In addition, the shower contribution only contains the pure
 the mass spectrum above 50 GeV or so would not be well described.
 
 <p/><code>parm&nbsp; </code><strong> TimeShower:mMaxGamma &nbsp;</strong> 
- (<code>default = <strong>10.0</strong></code>; <code>minimum = 0.001</code>; <code>maximum = 50.0</code>)<br/>
+ (<code>default = <strong>10.0</strong></code>; <code>minimum = 0.001</code>; <code>maximum = 5000.0</code>)<br/>
 Maximum invariant mass allowed for the created fermion pair in a 
 <i>gamma -> f fbar</i> branching in the shower.
   
@@ -426,6 +440,66 @@ radiation before the first final-state one, and then there is not
 likely to be any matrix elements available for matching.
   
 
+<p/>
+Two variations of the scheme outlined above are also available,
+(motivated by comparative studies within aMC@NLO). These studies indicate
+that global recoils should be used as sparsely as possible, in order to
+retain desirable features of the radiation pattern produced with the local
+recoil prescription.
+
+<p/><code>mode&nbsp; </code><strong> TimeShower:globalRecoilMode &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = 0</code>; <code>maximum = 2</code>)<br/>
+Choice which splittings are produced with the global recoil approach.
+<br/><code>option </code><strong> 0</strong> : Global recoil mode as outlined above, i.e. using global
+recoils until the number of final state particles exceeds 
+<code>TimeShower:nMaxGlobalRecoil</code>.  
+<br/><code>option </code><strong> 1</strong> : Global recoil only for the first branching of
+final state legs that have an ancestor in the hard process, and
+if the maximal number of branchings generated according to the global
+recoil scheme (see <code>TimeShower:nMaxGlobalBranch</code> below) has
+not yet been reached.  
+<br/><code>option </code><strong> 2</strong> : Global recoil only if the first branching in 
+the whole evolution is a timelike splitting of a parton in an 
+event with Born-like kinematics (i.e.\ an S-event).
+The impact of global recoils should be minimal in this case.
+This option is only sensible for interleaved evolution.
+  
+  
+
+<p/><code>mode&nbsp; </code><strong> TimeShower:nMaxGlobalBranch &nbsp;</strong> 
+ (<code>default = <strong>-1</strong></code>)<br/>
+The maximum number of splittings in the final state for which
+the next final-state emission can be performed with the global recoil
+strategy. This number has to be set if <code>TimeShower:globalRecoilMode = 1
+</code> or <code>TimeShower:globalRecoilMode = 2</code>
+  
+
+<p/><code>mode&nbsp; </code><strong> TimeShower:nPartonsInBorn &nbsp;</strong> 
+ (<code>default = <strong>-1</strong></code>)<br/>
+The number of partons for Born-like phase space points. This number needs
+to be set if a different treatment of S-events (with Born-like kinematics)
+and H-events (with real-emission kinematics) is desired. This number has
+to be set if <code>TimeShower:globalRecoilMode = 2</code>.
+  
+
+<p/><code>flag&nbsp; </code><strong> TimeShower:limitPTmaxGlobal &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+If on, limit the maximal pT produced in branchings in the global recoil scheme
+exactly as in the default (local) scheme. This means that the mass of the
+splitting dipole will set an upper bound for the pT of an emission. To be more
+explicit, this disallows emissions with pT larger than <i>min{&mu;<sub>start
+</sub><sup>2</sup>, m<sub>D</sub><sup>2</sup>/4}</i>, with <i>m<sub>D</sub>
+<sup>2</sup> =
+(&radic;<span style="text-decoration:overline;color:green">&nbsp;(p<sub>r
+</sub>+p<sub>s</sub>)<sup>2</sup>&nbsp;</span>-m<sub>0,s</sub>)<sup>2</sup>
+- m<sub>0,r</sub><sup>2</sup> </i>, where
+the shower starting scale is <i>&mu;<sub>start</sub></i> (i.e. SCALUP when
+reading LHE files, and <code> Info.QFac()</code> otherwise), <i>r</i> the
+radiating parton, and <i>s</i> the recoiling particle that would have been
+used in the local recoil scheme. This option is only used if wimpy showers are
+enabled.
+  
+
 <p/> 
 The global-recoil machinery does not work well with rescattering in the
 MPI machinery, since then the recoiling system is not uniquely defined.
@@ -521,6 +595,135 @@ The colour factor used used in the splitting kernel for those octet onium
 states that are allowed to radiate, normalized to the <i>q -> q g</i>
 splitting kernel. Thus the default corresponds to twice the radiation
 off a quark. The physically preferred range would be between 1 and 9/4.
+  
+ 
+<h3>Weak showers</h3>
+
+The emission of <i>W^+-</i> and <i>Z^0</i> gauge bosons off fermions 
+is intended to become an integrated part of the initial- and final-state
+radiation frameworks, and is fully interleaved with QCD and QED emissions. 
+Currently it is under development, and off by default. 
+Another restriction is that
+there is no simulation of the full <i>gamma^*/Z^0</i> interference:
+at low masses the QED shower involves a pure <i>gamma^*</i> component, 
+whereas the weak shower generates a pure <i>Z^0</i>. 
+
+<p/>
+Most events will not contain a <i>W^+-/Z^0</i> emission at all, and in 
+a shower framework it is not straightforward to force such emissions to 
+happen without biasing the event sample in some respect. An option is 
+available to enhance the emission rate artificially, but it is then the 
+responsibility of the user to correct the cross section accordingly, and 
+not to pick an enhancement so big that the probability for more than one 
+emission is non-negligible. (It is not enough to assign an event weight 
+<i>1/e^n</i> where <i>e</i> is the enhancement factor and <i>n</i> 
+is the number of emitted gauge bosons. This still misses to account for the 
+change in phase space for late emissions by the effect of earlier ones,
+or equivalently for the unwanted change in the Sudakov form factor. See
+[<a href="Bibliography.html" target="page">Lon12a</a>] for a detailed discussion and possible solutions.) 
+
+<p/>
+Another enhancement probability is to only allow some specific 
+<i>W^+-/Z^0</i> decay modes. By default the shower is inclusive,
+since it should describe all that can happen with unit probability. 
+This also holds even if the <i>W^+-</i> and <i>Z^0</i> produced 
+in the hard process have been restricted to specific decay channels.
+The trick that allows this is that two new "aliases" have been produced,
+a <code>Zcopy</code> with identity code 93 and a <code>Wcopy</code> with
+code 94. These copies are used specifically to bookkeep decay channels
+open for <i>W^+-/Z^0</i> bosons produced in the shower. For the rest
+they are invisible, i.e. you will not find them in event listings.
+The separation into two sets of gauge bosons then also allows the  
+selection of specific decay modes for 93 and 94, i.e. for only the
+gauge bosons produced in the shower. As above it is here up to the user 
+to reweight the event to compensate for the bias introduced, and to watch
+out for possible complications. In this case there is no kinematics bias,
+but one would miss out on topologies where a not-selected decay channel
+could be part of the background to the selected one, notably when more
+than one gauge boson is produced.
+
+<p/>
+Note that the common theme is that a bias leads to an event-specific
+weight, since each event is unique. It also means that the cross-section
+information obtained e.g. by <code>Pythia::stat()</code> is misleading,
+since it has not been corrected for such weights. This is different from 
+biases in a predetermined hard process, where the net reduction in cross 
+section can be calculated once and for all at initialization, and events 
+generated with unit weight thereafter.
+
+<p/>
+Special for the weak showers is that couplings are different for left- and
+righthanded fermions. With incoming unpolarized beams this should average out,
+at least so long as only one weak emission occurs. In the case of several
+weak emissions off the same fermion the correlation between them will carry 
+a memory of the fermion helicity. Such a memory is retained for the 
+affected dipole end, and is reflected in the <code>Particle::pol()</code>
+property, it being <i>+1</i> (<i>-1</i>) for fermions considered 
+righthanded (lefthanded), and 0 for the bulk where no choice has been
+made.  
+
+<p/>
+The FSR shower emission is always matched to the matrix element for 
+emission off a <i>f fbar</i> weak dipole. (Emission rates are normalized 
+to the invariant mass of the dipole at the time of the weak emission, 
+i.e. discounting the energy lost by previous QCD/QED emissions.)
+Also the angular distribution in the subsequent <i>V = W^+-/Z^0</i> decay 
+is matched to the matrix element expression for 
+<i>f fbar -> f fbar V -> f fbar f' fbar'</i>. Afterwards the 
+<i>f' fbar'</i> system undergoes showers and hadronization just like
+any <i>W^+-/Z^0</i> decay products would. 
+
+<p/>
+A few special switches are available for the weak framework, several mainly 
+intended for tryout purposes, as follows.
+
+<p/><code>flag&nbsp; </code><strong> TimeShower:weakShower &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Allow a weak shower, yes or no.
+  
+
+<p/><code>mode&nbsp; </code><strong> TimeShower:weakShowerMode &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = 0</code>; <code>maximum = 2</code>)<br/>
+Determine which branchings are allowed.
+<br/><code>option </code><strong> 0</strong> :  both <i>W^+-</i> and <i>Z^0</i> branchings. 
+  
+<br/><code>option </code><strong> 1</strong> :  only <i>W^+-</i> branchings.   
+<br/><code>option </code><strong> 2</strong> :  only <i>Z^0</i> branchings.   
+  
+
+<p/><code>parm&nbsp; </code><strong> TimeShower:pTminWeak &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 2.0</code>)<br/>
+Parton shower cut-off <i>pT</i> for weak branchings.
+
+<p/><code>parm&nbsp; </code><strong> TimeShower:weakShowerEnhancement &nbsp;</strong> 
+ (<code>default = <strong>1.</strong></code>; <code>minimum = 1.</code>; <code>maximum = 1000.</code>)<br/>
+Enhancement factor for the weak shower. This is used to increase the statistics 
+of weak shower emissions. Remember afterwards to correct for the additional 
+weak emissions (i.e. divide the rate of weak emissions by the same factor).
+  
+
+<p/><code>flag&nbsp; </code><strong> TimeShower:singleWeakEmission &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+This parameter allows to stop the weak shower after a single emission.
+<br/>If on, only a single weak emission is allowed.
+<br/>If off, an unlimited number of weak emissions possible.
+  
+
+<p/><code>parm&nbsp; </code><strong> TimeShower:extraScaleTerm &nbsp;</strong> 
+ (<code>default = <strong>0.</strong></code>; <code>minimum = 0.</code>; <code>maximum = 2.</code>)<br/>
+The normal showers uses <i>pT^2</i> as ordering variable, but for 
+massive particles it could be preferred to use <i>pT^2 + M^2</i> 
+instead. This parameter allows to use <i>pT^2 + k * M^2</i> for 
+weak showers, thus <i>k = 0</i> is the standard ordering and 
+is used as default.
+  
+
+<p/><code>flag&nbsp; </code><strong> TimeShower:dopTDampMass &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+Add an extra dampening to the weak shower to lower the production
+of low-<i>pT</i> <i>W/Z</i>'s. The dampening is given by
+<i>(pT^2 + 0.25 M^2)/ (pT^2 + M^2)</i>, where <i>M^2</i> is the 
+squared mass of the <i>W/Z</i>.
   
 
 <h3>Further variables</h3>

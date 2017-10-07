@@ -7,9 +7,110 @@
 // Function definitions (not found in the header) for the 
 // supersymmetry simulation classes. 
 
-#include "SigmaSUSY.h"
+#include "Pythia8/SigmaSUSY.h"
 
 namespace Pythia8 {
+  
+//==========================================================================
+
+// Sigma2SUSY
+// An intermediate class for SUSY 2 -> 2 processes with nontrivial decay angles.
+
+//--------------------------------------------------------------------------
+
+double Sigma2SUSY::weightDecay( Event& process, int iResBeg, int iResEnd) {
+
+  // Do nothing if decays present already at input.
+
+  // Identity of mother of decaying resonance(s).
+  int idMother = process[process[iResBeg].mother1()].idAbs();
+
+  // For Higgs decay hand over to standard routine.
+  if (idMother == 25 || idMother == 35 || idMother == 36) 
+    return weightHiggsDecay( process, iResBeg, iResEnd);
+
+  // For top decay hand over to standard routine.
+  if (idMother == 6) 
+    return weightTopDecay( process, iResBeg, iResEnd);
+
+  // For Neutralino(i) decay hand over to standard routine.
+  if ( settingsPtr->flag("SUSYResonance:3BodyMatrixElement")
+    && (idMother == 1000023 || idMother == 1000025 || idMother == 1000035) ) {
+
+    // Nj -> Ni f fbar
+    if (iResEnd - iResBeg != 2) return(1.0);
+    int iW1  = iResBeg;
+    int iF   = iResBeg + 1;
+    int iFbar= iResBeg + 2;
+    int iT   = process[iW1].mother1(); 
+    if( iT <= 0 ) return(1.0);
+    int idDau= process[iW1].idAbs();
+
+    // Neutralino decays to charginos not yet implemented
+    if (idDau == 1000024 || idDau == 1000037 ) return(1.0);
+    if (idDau != 1000022 && idDau != 1000023 && idDau != 1000025 
+      && idDau != 1000035 ) {
+      return(1.0);
+    } else {
+      if( process[iF].idAbs() != process[iFbar].idAbs() ) return(1.0);
+      int idmo = -1; int iddau = -1;
+      switch (idMother) {
+        case 1000023: idmo = 2; break;
+        case 1000025: idmo = 3; break;
+        case 1000035: idmo = 4; break;
+      }
+      switch (idDau) {
+        case 1000022: iddau = 1; break;
+        case 1000023: iddau = 2; break;
+        case 1000025: iddau = 3; break;
+      }
+      if( idmo<0 || iddau<0 ) return(1.0);
+      
+      Sigma2qqbar2chi0chi0 localDecay(idmo,iddau,0);
+      localDecay.init(infoPtr, settingsPtr, particleDataPtr,NULL,NULL,
+		      NULL,couplingsPtr);
+      localDecay.initProc();
+      localDecay.alpEM = 1;
+      localDecay.id1 = process[iF].id();
+      localDecay.id2 = process[iFbar].id();
+      double xm3 = process[iT].m();
+      double xm4 = process[iW1].m();
+      localDecay.m3 = xm3;
+      localDecay.m4 = xm4;
+      localDecay.s3 = xm3*xm3;
+      localDecay.s4 = xm4*xm4;
+      localDecay.sH = (process[iF].p()+process[iFbar].p()).m2Calc();
+      localDecay.sH2 = pow2(localDecay.sH);
+      localDecay.tH = (process[iF].p()-process[iT].p()).m2Calc();
+      localDecay.uH = localDecay.s3+localDecay.s4-localDecay.tH-localDecay.sH;
+      localDecay.sigmaKin();
+      double wt = -localDecay.sigmaHat();
+      // Estimate maximum weight by sampling kinematic extremes
+      // Case I:  neutralino(i) at rest
+      localDecay.sH = pow2(xm4-xm3);
+      localDecay.tH = 0.5*(localDecay.s3+localDecay.s4-localDecay.sH);
+      localDecay.uH = localDecay.tH;
+      localDecay.sigmaKin();
+      double wtmax = -localDecay.sigmaHat();
+      // Case II:  fermion at rest
+      localDecay.sH = 0;
+      localDecay.tH = localDecay.s3;
+      localDecay.uH = localDecay.s3+localDecay.s4-localDecay.tH-localDecay.sH;
+      localDecay.sigmaKin();
+      wtmax += -localDecay.sigmaHat();
+      // Case III: antifermion at rest
+      localDecay.uH = localDecay.s3;
+      localDecay.tH = localDecay.s3+localDecay.s4-localDecay.tH-localDecay.sH;
+      localDecay.sigmaKin();      
+      wtmax += -localDecay.sigmaHat();
+      return(wt/wtmax);
+    }
+  }
+  
+  // Else done.
+  return 1.; 
+
+}
   
 //==========================================================================
 
@@ -81,49 +182,92 @@ double Sigma2qqbar2chi0chi0::sigmaHat() {
   complex QuLL(0.0),QtLL(0.0),QuRR(0.0),QtRR(0.0);
   complex QuLR(0.0),QtLR(0.0),QuRL(0.0),QtRL(0.0);
 
+  double *LqqZloc;
+  double *RqqZloc;
+ 
+  int iAdd=0;
+
+  if( idAbs1 > 10 && idAbs1 < 17 ) {
+    LqqZloc = coupSUSYPtr->LllZ;
+    RqqZloc = coupSUSYPtr->RllZ;
+    iAdd+=10;
+  } else {
+    LqqZloc = coupSUSYPtr->LqqZ;
+    RqqZloc = coupSUSYPtr->RqqZ;
+  }
+
   // s-channel Z couplings
   if (idAbs1 == idAbs2) {
-    QuLL = coupSUSYPtr->LqqZ[idAbs1] * coupSUSYPtr->OLpp[id3chi][id4chi] 
+    QuLL = LqqZloc[idAbs1-iAdd] * coupSUSYPtr->OLpp[id3chi][id4chi] 
          * propZ / 2.0;
-    QtLL = coupSUSYPtr->LqqZ[idAbs1] * coupSUSYPtr->ORpp[id3chi][id4chi] 
+    QtLL = LqqZloc[idAbs1-iAdd] * coupSUSYPtr->ORpp[id3chi][id4chi] 
          * propZ / 2.0;
-    QuRR = coupSUSYPtr->RqqZ[idAbs1] * coupSUSYPtr->ORpp[id3chi][id4chi] 
+    QuRR = RqqZloc[idAbs1-iAdd] * coupSUSYPtr->ORpp[id3chi][id4chi] 
          * propZ / 2.0;
-    QtRR = coupSUSYPtr->RqqZ[idAbs1] * coupSUSYPtr->OLpp[id3chi][id4chi] 
+    QtRR = RqqZloc[idAbs1-iAdd] * coupSUSYPtr->OLpp[id3chi][id4chi] 
          * propZ / 2.0;
   }
 
   // Flavour indices
-  int ifl1 = (idAbs1+1) / 2;
-  int ifl2 = (idAbs2+1) / 2;
+  int ifl1 = (idAbs1+1-iAdd) / 2;
+  int ifl2 = (idAbs2+1-iAdd) / 2;
+
+  complex (*LsddXloc)[4][6]; 
+  complex (*RsddXloc)[4][6];
+  complex (*LsuuXloc)[4][6];
+  complex (*RsuuXloc)[4][6];
+  if( idAbs1 > 10 && idAbs1 < 17 ) {
+    LsddXloc = coupSUSYPtr->LsllX;
+    RsddXloc = coupSUSYPtr->RsllX;
+    LsuuXloc = coupSUSYPtr->LsvvX;
+    RsuuXloc = coupSUSYPtr->RsvvX;
+  } else {
+    LsddXloc = coupSUSYPtr->LsddX;
+    RsddXloc = coupSUSYPtr->RsddX;
+    LsuuXloc = coupSUSYPtr->LsuuX;
+    RsuuXloc = coupSUSYPtr->RsuuX;
+  }
 
   // Add t-channel squark flavour sums to QmXY couplings
   for (int ksq=1; ksq<=6; ksq++) {    
 
     // squark id and squark-subtracted u and t
-    int idsq=((ksq+2)/3)*1000000 + 2*((ksq-1) % 3) + (idAbs1+1) % 2 + 1;
+
+    int idsq;
+    idsq=((ksq+2)/3)*1000000 + 2*((ksq-1) % 3) + (idAbs1+1) % 2 + 1;
+    idsq+=iAdd;
+
     double msq2    = pow(particleDataPtr->m0(idsq),2);
     double usq     = uH - msq2;
     double tsq     = tH - msq2;
     
+    complex Lsqq1X3;
+    complex Lsqq1X4; 
+    complex Lsqq2X3;
+    complex Lsqq2X4;
+    complex Rsqq1X3;
+    complex Rsqq1X4;
+    complex Rsqq2X3;
+    complex Rsqq2X4;
+
     // Couplings
-    complex Lsqq1X3 = coupSUSYPtr->LsuuX[ksq][ifl1][id3chi];
-    complex Lsqq1X4 = coupSUSYPtr->LsuuX[ksq][ifl1][id4chi];
-    complex Lsqq2X3 = coupSUSYPtr->LsuuX[ksq][ifl2][id3chi];
-    complex Lsqq2X4 = coupSUSYPtr->LsuuX[ksq][ifl2][id4chi];
-    complex Rsqq1X3 = coupSUSYPtr->RsuuX[ksq][ifl1][id3chi];
-    complex Rsqq1X4 = coupSUSYPtr->RsuuX[ksq][ifl1][id4chi];
-    complex Rsqq2X3 = coupSUSYPtr->RsuuX[ksq][ifl2][id3chi];
-    complex Rsqq2X4 = coupSUSYPtr->RsuuX[ksq][ifl2][id4chi];
+    Lsqq1X3 = LsuuXloc[ksq][ifl1][id3chi];
+    Lsqq1X4 = LsuuXloc[ksq][ifl1][id4chi];
+    Lsqq2X3 = LsuuXloc[ksq][ifl2][id3chi];
+    Lsqq2X4 = LsuuXloc[ksq][ifl2][id4chi];
+    Rsqq1X3 = RsuuXloc[ksq][ifl1][id3chi];
+    Rsqq1X4 = RsuuXloc[ksq][ifl1][id4chi];
+    Rsqq2X3 = RsuuXloc[ksq][ifl2][id3chi];
+    Rsqq2X4 = RsuuXloc[ksq][ifl2][id4chi];
     if (idAbs1 % 2 != 0) {
-      Lsqq1X3 = coupSUSYPtr->LsddX[ksq][ifl1][id3chi];
-      Lsqq1X4 = coupSUSYPtr->LsddX[ksq][ifl1][id4chi];
-      Lsqq2X3 = coupSUSYPtr->LsddX[ksq][ifl2][id3chi];
-      Lsqq2X4 = coupSUSYPtr->LsddX[ksq][ifl2][id4chi];
-      Rsqq1X3 = coupSUSYPtr->RsddX[ksq][ifl1][id3chi];
-      Rsqq1X4 = coupSUSYPtr->RsddX[ksq][ifl1][id4chi];
-      Rsqq2X3 = coupSUSYPtr->RsddX[ksq][ifl2][id3chi];
-      Rsqq2X4 = coupSUSYPtr->RsddX[ksq][ifl2][id4chi];      
+      Lsqq1X3 = LsddXloc[ksq][ifl1][id3chi];
+      Lsqq1X4 = LsddXloc[ksq][ifl1][id4chi];
+      Lsqq2X3 = LsddXloc[ksq][ifl2][id3chi];
+      Lsqq2X4 = LsddXloc[ksq][ifl2][id4chi];
+      Rsqq1X3 = RsddXloc[ksq][ifl1][id3chi];
+      Rsqq1X4 = RsddXloc[ksq][ifl1][id4chi];
+      Rsqq2X3 = RsddXloc[ksq][ifl2][id3chi];
+      Rsqq2X4 = RsddXloc[ksq][ifl2][id4chi];      
     }
 
     // QuXY
@@ -131,8 +275,7 @@ double Sigma2qqbar2chi0chi0::sigmaHat() {
     QuRR += conj(Rsqq1X4)*Rsqq2X3/usq;
     QuLR += conj(Lsqq1X4)*Rsqq2X3/usq;
     QuRL += conj(Rsqq1X4)*Lsqq2X3/usq;
-    
-    
+
     // QtXY
     QtLL -= conj(Lsqq1X3)*Lsqq2X4/tsq;
     QtRR -= conj(Rsqq1X3)*Rsqq2X4/tsq;
@@ -164,8 +307,10 @@ double Sigma2qqbar2chi0chi0::sigmaHat() {
   weight += norm(QuLR) * ui * uj + norm(QtLR) * ti * tj
     + real(conj(QuLR) * QtLR) * facLR;
 
+  double colorFactor = ( idAbs1 > 10 && idAbs1 < 17 ) ? 3.0 : 1.0;
+
   // Cross section, including colour factor.
-  double sigma = sigma0 * weight / pow2(fac);
+  double sigma = sigma0 * weight / pow2(fac) * colorFactor;
 
   // Answer.
   return sigma;    
@@ -229,8 +374,8 @@ double Sigma2qqbar2charchi0::sigmaHat() {
   // Only allow incoming states with sum(charge) = final state
   if (abs(id1) % 2 == abs(id2) % 2) return 0.0;
   int isPos  = (id3chi > 0 ? 1 : 0);
-  if (id1 < 0 && id1 > -10 && abs(id1) % 2 == 1-isPos ) return 0.0;
-  else if (id1 > 0 && id1 < 10 && abs(id1) % 2 == isPos ) return 0.0;
+  if (id1 < 0 && id1 > -19 && abs(id1) % 2 == 1-isPos ) return 0.0;
+  else if (id1 > 0 && id1 < 19 && abs(id1) % 2 == isPos ) return 0.0;
 
   // Flavour-dependent kinematics-dependent couplings.
   int idAbs1  = abs(id1);  
@@ -240,55 +385,85 @@ double Sigma2qqbar2charchi0::sigmaHat() {
   complex QuLL(0.0),QtLL(0.0),QuRR(0.0),QtRR(0.0);
   complex QuLR(0.0),QtLR(0.0),QuRL(0.0),QtRL(0.0);
   
-  // Calculate everything from udbar -> ~chi+ ~chi0 template process
-  
+  // Calculate everything from udbar -> ~chi+ ~chi0 template process  
+  int iAdd=0;
+  complex (*LudWloc)[4];
+  complex (*LsddXloc)[4][6]; 
+  complex (*RsddXloc)[4][6];
+  complex (*LsuuXloc)[4][6];
+  complex (*RsuuXloc)[4][6];
+  complex (*LsduXloc)[4][3];
+  complex (*RsduXloc)[4][3];
+  complex (*LsudXloc)[4][3];
+  complex (*RsudXloc)[4][3];
+  if( idAbs1 > 10 && idAbs1 < 17 ) {
+    iAdd+=10;
+    LudWloc  = coupSUSYPtr->LlvW;
+    LsddXloc = coupSUSYPtr->LsllX;
+    RsddXloc = coupSUSYPtr->RsllX;
+    LsuuXloc = coupSUSYPtr->LsvvX;
+    RsuuXloc = coupSUSYPtr->RsvvX;
+    LsduXloc = coupSUSYPtr->LslvX;
+    RsduXloc = coupSUSYPtr->RslvX;
+    LsudXloc = coupSUSYPtr->LsvlX;
+    RsudXloc = coupSUSYPtr->RsvlX;
+  } else {
+    LudWloc  = coupSUSYPtr->LudW;
+    LsddXloc = coupSUSYPtr->LsddX;
+    RsddXloc = coupSUSYPtr->RsddX;
+    LsuuXloc = coupSUSYPtr->LsuuX;
+    RsuuXloc = coupSUSYPtr->RsuuX;
+    LsduXloc = coupSUSYPtr->LsduX;
+    RsduXloc = coupSUSYPtr->RsduX;
+    LsudXloc = coupSUSYPtr->LsudX;
+    RsudXloc = coupSUSYPtr->RsudX;
+  }
+
   // u dbar , ubar d : do nothing
   // dbar u , d ubar : swap 1<->2 and t<->u
-
-  int iGu = abs(id1)/2;
-  int iGd = (abs(id2)+1)/2;
-
+  int iGu = (abs(id1)-iAdd)/2;
+  int iGd = (abs(id2)+1-iAdd)/2;
   if (idAbs1 % 2 != 0) {
     swapTU = true;
-    iGu = abs(id2)/2;
-    iGd = (abs(id1)+1)/2;
+    iGu = (abs(id2)-iAdd)/2;
+    iGd = (abs(id1)+1-iAdd)/2;
   }
 
   // s-channel W contribution
-  QuLL = conj(coupSUSYPtr->LudW[iGu][iGd]) 
+  QuLL = conj(LudWloc[iGu][iGd]) 
     * conj(coupSUSYPtr->OL[iNeut][iChar])
     * propW / sqrt(2.0);
-  QtLL = conj(coupSUSYPtr->LudW[iGu][iGd]) 
+  QtLL = conj(LudWloc[iGu][iGd]) 
     * conj(coupSUSYPtr->OR[iNeut][iChar])
     * propW / sqrt(2.0);
 
   // Add t-channel squark flavour sums to QmXY couplings
   for (int jsq=1; jsq<=6; jsq++) {    
 
-    int idsu=((jsq+2)/3)*1000000 + 2*((jsq-1) % 3) + 2;
-    int idsd=((jsq+2)/3)*1000000 + 2*((jsq-1) % 3) + 1;
+    int idsu=((jsq+2)/3)*1000000 + 2*((jsq-1) % 3) + 2 +iAdd;
+    int idsd=((jsq+2)/3)*1000000 + 2*((jsq-1) % 3) + 1 +iAdd;
     double msd2 = pow(particleDataPtr->m0(idsd),2);
     double msu2 = pow(particleDataPtr->m0(idsu),2);
     double tsq  = tH - msd2;
     double usq  = uH - msu2;
 
-    QuLL += conj(coupSUSYPtr->LsuuX[jsq][iGu][iNeut])
-      * conj(coupSUSYPtr->LsudX[jsq][iGd][iChar])/usq;
-    QuLR += conj(coupSUSYPtr->LsuuX[jsq][iGu][iNeut])
-      * conj(coupSUSYPtr->RsudX[jsq][iGd][iChar])/usq;
-    QuRR += conj(coupSUSYPtr->RsuuX[jsq][iGu][iNeut])
-      * conj(coupSUSYPtr->RsudX[jsq][iGd][iChar])/usq;
-    QuRL += conj(coupSUSYPtr->RsuuX[jsq][iGu][iNeut])
-      * conj(coupSUSYPtr->LsudX[jsq][iGd][iChar])/usq;
+    QuLL += conj(LsuuXloc[jsq][iGu][iNeut])
+      * conj(LsudXloc[jsq][iGd][iChar])/usq;
+    QuLR += conj(LsuuXloc[jsq][iGu][iNeut])
+      * conj(RsudXloc[jsq][iGd][iChar])/usq;
+    QuRR += conj(RsuuXloc[jsq][iGu][iNeut])
+      * conj(RsudXloc[jsq][iGd][iChar])/usq;
+    QuRL += conj(RsuuXloc[jsq][iGu][iNeut])
+      * conj(LsudXloc[jsq][iGd][iChar])/usq;
 
-    QtLL -= conj(coupSUSYPtr->LsduX[jsq][iGu][iChar])
-      * coupSUSYPtr->LsddX[jsq][iGd][iNeut]/tsq;
-    QtRR -= conj(coupSUSYPtr->RsduX[jsq][iGu][iChar])
-      * coupSUSYPtr->RsddX[jsq][iGd][iNeut]/tsq;
-    QtLR += conj(coupSUSYPtr->LsduX[jsq][iGu][iChar])
-      * coupSUSYPtr->RsddX[jsq][iGd][iNeut]/tsq;
-    QtRL += conj(coupSUSYPtr->RsduX[jsq][iGu][iChar])
-      * coupSUSYPtr->LsddX[jsq][iGd][iNeut]/tsq;
+    QtLL -= conj(LsduXloc[jsq][iGu][iChar])
+      * LsddXloc[jsq][iGd][iNeut]/tsq;
+    QtRR -= conj(RsduXloc[jsq][iGu][iChar])
+      * RsddXloc[jsq][iGd][iNeut]/tsq;
+    QtLR += conj(LsduXloc[jsq][iGu][iChar])
+      * RsddXloc[jsq][iGd][iNeut]/tsq;
+    QtRL += conj(RsduXloc[jsq][iGu][iChar])
+      * LsddXloc[jsq][iGd][iNeut]/tsq;
   }
 
   // Compute matrix element weight
@@ -309,8 +484,10 @@ double Sigma2qqbar2charchi0::sigmaHat() {
   weight += norm(QuLR) * ui * uj + norm(QtLR) * ti * tj
     + real(conj(QuLR) * QtLR) * (uH * tH - s3 * s4);
 
+  double colorFactor = ( idAbs1 > 10 && idAbs1 < 17 ) ? 3.0 : 1.0;
+
   // Cross section, including colour factor.
-  double sigma = sigma0 * weight;
+  double sigma = sigma0 * weight * colorFactor;
 
   // Answer.
   return sigma;    
@@ -349,14 +526,10 @@ void Sigma2qqbar2charchar::sigmaKin() {
 double Sigma2qqbar2charchar::sigmaHat() { 
 
   // Only allow quark-antiquark incoming states
-  if (id1*id2 >= 0) {
-    return 0.0;
-  }
+  if (id1*id2 >= 0) return 0.0;
   
   // Only allow incoming states with sum(charge) = 0
-  if ((id1+id2) % 2 != 0) {
-    return 0.0;    
-  }
+  if ((id1+id2) % 2 != 0) return 0.0;    
   
   //if (id1 > 0 || id1==-1 || id1==-3 || id1==-5) return 0.0;
   //if (id1 < 0 || id1==1 || id1==3 || id1==5) return 0.0;
@@ -373,13 +546,38 @@ double Sigma2qqbar2charchar::sigmaHat() {
   complex QuLL(0.0),QtLL(0.0),QuRR(0.0),QtRR(0.0);
   complex QuLR(0.0),QtLR(0.0),QuRL(0.0),QtRL(0.0);
 
+  double *LqqZloc;
+  double *RqqZloc;
+  complex (*LsduXloc)[4][3];
+  complex (*RsduXloc)[4][3];
+  complex (*LsudXloc)[4][3];
+  complex (*RsudXloc)[4][3];
+ 
+  int iShift(0);
+  if( idAbs1 > 10 && idAbs1 < 17 ) {
+    iShift+=10;
+    LqqZloc = coupSUSYPtr->LllZ;
+    RqqZloc = coupSUSYPtr->RllZ;
+    LsduXloc = coupSUSYPtr->LslvX;
+    RsduXloc = coupSUSYPtr->RslvX;
+    LsudXloc = coupSUSYPtr->LsvlX;
+    RsudXloc = coupSUSYPtr->RsvlX;
+  } else {
+    LqqZloc = coupSUSYPtr->LqqZ;
+    RqqZloc = coupSUSYPtr->RqqZ;
+    LsduXloc = coupSUSYPtr->LsduX;
+    RsduXloc = coupSUSYPtr->RsduX;
+    LsudXloc = coupSUSYPtr->LsudX;
+    RsudXloc = coupSUSYPtr->RsudX;
+  }
+
   // Add Z/gamma* for same-flavour in-quarks
   if (idAbs1 == idAbs2) {
     
-    QuLL = -coupSUSYPtr->LqqZ[idAbs1]*conj(coupSUSYPtr->ORp[i3][i4]);
-    QtLL = -coupSUSYPtr->LqqZ[idAbs1]*conj(coupSUSYPtr->OLp[i3][i4]);
-    QuRR = -coupSUSYPtr->RqqZ[idAbs1]*conj(coupSUSYPtr->OLp[i3][i4]);
-    QtRR = -coupSUSYPtr->RqqZ[idAbs1]*conj(coupSUSYPtr->ORp[i3][i4]);
+    QuLL = -LqqZloc[idAbs1-iShift]*conj(coupSUSYPtr->ORp[i3][i4]);
+    QtLL = -LqqZloc[idAbs1-iShift]*conj(coupSUSYPtr->OLp[i3][i4]);
+    QuRR = -RqqZloc[idAbs1-iShift]*conj(coupSUSYPtr->OLp[i3][i4]);
+    QtRR = -RqqZloc[idAbs1-iShift]*conj(coupSUSYPtr->ORp[i3][i4]);
 
     QuLL *= propZ / 2.0 / (1.0-coupSUSYPtr->sin2W);
     QtLL *= propZ / 2.0 / (1.0-coupSUSYPtr->sin2W);
@@ -390,8 +588,7 @@ double Sigma2qqbar2charchar::sigmaHat() {
     if (i3 == i4) {
     
       // Charge of in-particles
-      double q = 2.0/3.0;
-      if (idAbs1 % 2 == 1) q = -1.0/3.0;      
+      double q    = particleDataPtr->chargeType(idAbs1)/3.0;
       QuLL += q * coupSUSYPtr->sin2W / sH;
       QuRR += q * coupSUSYPtr->sin2W / sH;
       QtLL += q * coupSUSYPtr->sin2W / sH;
@@ -400,8 +597,8 @@ double Sigma2qqbar2charchar::sigmaHat() {
     }
   }
 
-  int iG1    = (abs(id1)+1)/2;
-  int iG2    = (abs(id2)+1)/2;
+  int iG1    = (abs(id1)+1-iShift)/2;
+  int iG2    = (abs(id2)+1-iShift)/2;
 
   // Add t- or u-channel squark flavour sums to QmXY couplings
   for (int ksq=1; ksq<=6; ksq++) {    
@@ -412,37 +609,38 @@ double Sigma2qqbar2charchar::sigmaHat() {
       // up-type incoming; u-channel ~d 
       
       int idsd    = ((ksq+2)/3)*1000000 + 2*((ksq-1) % 3) + 1;
+      idsd       +=iShift;
       double msq  = particleDataPtr->m0(idsd);
       double ufac = 2.0 * (uH - pow2(msq));
 
       //u-ubar -> chi-chi+
-      QuLL += coupSUSYPtr->LsduX[ksq][iG2][i3] 
-            * conj(coupSUSYPtr->LsduX[ksq][iG1][i4]) / ufac;
-      QuRR += coupSUSYPtr->RsduX[ksq][iG2][i3] 
-            * conj(coupSUSYPtr->RsduX[ksq][iG1][i4]) / ufac;
-      QuLR += coupSUSYPtr->RsduX[ksq][iG2][i3] 
-            * conj(coupSUSYPtr->LsduX[ksq][iG1][i4]) / ufac;
-      QuRL += coupSUSYPtr->LsduX[ksq][iG2][i3] 
-            * conj(coupSUSYPtr->RsduX[ksq][iG1][i4]) / ufac;
-
+      QuLL += LsduXloc[ksq][iG2][i3] 
+            * conj(LsduXloc[ksq][iG1][i4]) / ufac;
+      QuRR += RsduXloc[ksq][iG2][i3] 
+            * conj(RsduXloc[ksq][iG1][i4]) / ufac;
+      QuLR += RsduXloc[ksq][iG2][i3] 
+            * conj(LsduXloc[ksq][iG1][i4]) / ufac;
+      QuRL += LsduXloc[ksq][iG2][i3] 
+            * conj(RsduXloc[ksq][iG1][i4]) / ufac;
 
     }else{
       // t-channel diagrams only;
       // down-type incoming; t-channel ~u 
 
       int idsu    = ((ksq+2)/3)*1000000 + 2*((ksq-1) % 3) + 2;
+      idsu       += iShift;
       double msq  = particleDataPtr->m0(idsu);
       double tfac = 2.0 * (tH - pow2(msq));
 
       //d-dbar -> chi-chi+
-      QtLL -= coupSUSYPtr->LsudX[ksq][iG1][i3] 
-            * conj(coupSUSYPtr->LsudX[ksq][iG2][i4]) / tfac;
-      QtRR -= coupSUSYPtr->RsudX[ksq][iG1][i3] 
-            * conj(coupSUSYPtr->RsudX[ksq][iG2][i4]) / tfac;
-      QtLR += coupSUSYPtr->LsudX[ksq][iG1][i3] 
-            * conj(coupSUSYPtr->RsudX[ksq][iG2][i4]) / tfac;
-      QtRL += coupSUSYPtr->RsudX[ksq][iG1][i3] 
-            * conj(coupSUSYPtr->LsudX[ksq][iG2][i4]) / tfac;
+      QtLL -= LsudXloc[ksq][iG1][i3] 
+            * conj(LsudXloc[ksq][iG2][i4]) / tfac;
+      QtRR -= RsudXloc[ksq][iG1][i3] 
+            * conj(RsudXloc[ksq][iG2][i4]) / tfac;
+      QtLR += LsudXloc[ksq][iG1][i3] 
+            * conj(RsudXloc[ksq][iG2][i4]) / tfac;
+      QtRL += RsudXloc[ksq][iG1][i3] 
+            * conj(LsudXloc[ksq][iG2][i4]) / tfac;
 
     }
   }
@@ -463,8 +661,10 @@ double Sigma2qqbar2charchar::sigmaHat() {
   weight += norm(QuLR) * ui * uj + norm(QtLR) * ti * tj
     + real(conj(QuLR) * QtLR) * (uH * tH - s3 * s4);
 
+  double colorFactor = ( idAbs1 > 10 && idAbs1 < 17 ) ? 3.0 : 1.0;
+
   // Cross section, including colour factor.
-  double sigma = sigma0 * weight;
+  double sigma = sigma0 * weight * colorFactor;
 
   // Answer.
   return sigma;    
@@ -792,7 +992,7 @@ void Sigma2qq2squarksquark::sigmaKin() {
     sigmaCharNeut = 0.0;
     sigmaCharGlu  = 0.0;
     sigmaNeutGlu  = comFacHat * 8.0 * alpEM * alpS / 9.0 / xW/(1-xW);
-  }
+  }  
 
 }
 
@@ -1265,14 +1465,16 @@ void Sigma2qq2squarksquark::setIdColAcol() {
   // Coded sigma is for ud -> ~q~q'. Swap t and u for du -> ~q~q'.
   swapTU = (isUD && abs(id1) % 2 == 0); 
 
-  // Select colour flow topology 
-  // A: t-channel neutralino, t-channel chargino, or u-channel gluino
-  double fracA = sumNt + sumCt + sumGu 
-    / (sumNt + sumNu + sumCt + sumCu + sumGt + sumGu);
-  if (swapTU) fracA = 1.0 - fracA;
+  // Select colour flow topology   
+  // Recompute contributions to this particular in- out- flavour combination
+  sigmaHat();
+  // A: t-channel neutralino, t-channel chargino, or u-channel gluino  
+  double sumA  = sumNt + sumCt + sumGu;
+  double sumAB = sumNt + sumNu + sumCt + sumCu + sumGt + sumGu;
+  if (swapTU) sumA = sumAB - sumA;
   setColAcol( 1, 0, 2, 0, 1, 0, 2, 0);
   // B: t-channel gluino or u-channel neutralino 
-  if (rndmPtr->flat() > fracA) setColAcol( 1, 0, 2, 0, 2, 0, 1, 0);
+  if (rndmPtr->flat()*sumAB > sumA) setColAcol( 1, 0, 2, 0, 2, 0, 1, 0);
 
   // Switch to anti-colors if antiquarks
   if (id1 < 0 || id2 < 0) swapColAcol();
@@ -1293,13 +1495,19 @@ void Sigma2qqbar2squarkantisquark::initProc() {
   //Typecast to the correct couplings
   coupSUSYPtr = (CoupSUSY*) couplingsPtr;
 
-  // Extract isospin and mass-ordering indices
-  iGen3 = 3*(abs(id3Sav)/2000000) + (abs(id3Sav)%10+1)/2;
-  iGen4 = 3*(abs(id4Sav)/2000000) + (abs(id4Sav)%10+1)/2;
-
   // Is this a ~u_i ~d*_j, ~d_i ~u*_j final state or ~d_i ~d*_j, ~u_i ~u*_j
   if (abs(id3Sav) % 2 == abs(id4Sav) % 2) isUD = false;
   else isUD = true;
+
+  // Extract isospin and mass-ordering indices
+  if(isUD && abs(id3Sav)%2 == 1){ 
+    iGen3 = 3*(abs(id4Sav)/2000000) + (abs(id3Sav)%10+1)/2;
+    iGen4 = 3*(abs(id3Sav)/2000000) + (abs(id4Sav)%10+1)/2;
+  }
+  else {
+    iGen3 = 3*(abs(id3Sav)/2000000) + (abs(id3Sav)%10+1)/2;
+    iGen4 = 3*(abs(id4Sav)/2000000) + (abs(id4Sav)%10+1)/2;
+  }
 
   // Derive name
   nameSave = "q qbar' -> "+particleDataPtr->name(abs(id3Sav))+" "+
@@ -1586,6 +1794,8 @@ void Sigma2qqbar2squarkantisquark::setIdColAcol() {
   }
 
   // Select colour flow topology 
+  // Recompute individual contributions to this in-out flavour combination
+  sigmaHat();
   double R = rndmPtr->flat();
   double fracS = sumColS / (sumColS + sumColT) ;
   // S: color flow as in S-channel singlet
@@ -1732,17 +1942,29 @@ void Sigma2qg2squarkgluino::sigmaKin() {
 
 }
 
+//--------------------------------------------------------------------------
+
 double Sigma2qg2squarkgluino::sigmaHat() {
-  
+
   // Check whether right incoming flavor
-  int idQA = (id1 == 21) ? abs(id2) : abs(id1);
-  int idSqSM = id3Sav%1000000;
-  if (idQA != idSqSM) return 0.0;
-  // NOTE: ONLY WORKS FOR SLHA1 ENUMERATION !!!
-  // (should replace this by squark mixing matrix squares)
+  int idQA = (id1 == 21) ? id2 : id1;
+  int idSq = (abs(id3) == 10000021) ? id4 : id3;
 
-  return comFacHat * (sigmaA + sigmaB);
+  // Check for charge conservation
+  if(idQA%2 != idSq%2) return 0.0;
 
+  int idQ = (abs(idQA)+1)/2;
+  idSq = 3 * (id3Sav / 2000000) + (id3Sav % 10 + 1)/2;
+
+  double mixingFac;
+  if(abs(idQA) % 2 == 1) 
+    mixingFac = 
+      norm(coupSUSYPtr->LsddG[idSq][idQ]) + norm(coupSUSYPtr->RsddG[idSq][idQ]);
+  else 
+    mixingFac = 
+      norm(coupSUSYPtr->LsuuG[idSq][idQ]) + norm(coupSUSYPtr->RsuuG[idSq][idQ]);
+
+  return mixingFac * comFacHat * (sigmaA + sigmaB);
 }
 
 //--------------------------------------------------------------------------
@@ -1760,6 +1982,8 @@ void Sigma2qg2squarkgluino::setIdColAcol() {
   setId( id1, id2, id3, id4);                 
 
   // Select color flow A or B (see above)
+  // Recompute individual contributions to this in-out flavour combination
+  sigmaHat();
   double R = rndmPtr->flat()*(sigmaA+sigmaB);  
   if (idQ == id1) {
     setColAcol(1,0,2,1,3,0,2,3);
@@ -1847,7 +2071,7 @@ void Sigma2gg2gluinogluino::setIdColAcol() {
 
 // Sigma2qqbar2gluinogluino
 // Cross section for gluino pair production from qqbar initial states
-// (validated against Pythia 6)
+// (validated against Pythia 6 for SLHA1 case)
 
 //--------------------------------------------------------------------------
 
@@ -1860,7 +2084,7 @@ void Sigma2qqbar2gluinogluino::initProc() {
 
   // Secondary open width fraction.
   openFracPair = particleDataPtr->resOpenFrac(1000021, 1000021);
-  
+
 } 
 
 //--------------------------------------------------------------------------
@@ -1872,14 +2096,15 @@ void Sigma2qqbar2gluinogluino::sigmaKin() {
   // Modified Mandelstam variables for massive kinematics with m3 = m4.
   // tHG = tHat - m_gluino^2; uHG = uHat - m_gluino^2. 
   // (Note: tHG and uHG defined with opposite sign wrt Pythia 6)
-  s34Avg = 0.5 * (s3 + s4) - 0.25 * pow2(s3 - s4) / sH; 
   tHG    = -0.5 * (sH - tH + uH);
   uHG    = -0.5 * (sH + tH - uH); 
   tHG2   = tHG * tHG;
   uHG2   = uHG * uHG;
+  s34Avg = 0.5 * (s3 + s4) - 0.25 * pow2(s3 - s4) / sH; 
 
-  // s-channel contribution.
-  sigS   = (tHG2 + uHG2 + 2. * s34Avg * sH) / sH2; 
+  // s-channel gluon contribution (only used if id1 == -id2)
+  //   = Qss/s^2 in <Fuk11> including 2N*(N^2-1)/N^2 color factor.
+  sigS   = 16./3. * (tHG2 + uHG2 + 2. * s34Avg * sH) / sH2; 
 
 }
 
@@ -1890,31 +2115,126 @@ void Sigma2qqbar2gluinogluino::sigmaKin() {
 
 double Sigma2qqbar2gluinogluino::sigmaHat() {  
 
-  // Squarks (L/R or 1/2) can contribute in t or u channel.
-  // Assume identical CKM matrices in quark and squark sector. 
-  // (Note: tHQL,R and uHQL,R defined with opposite sign wrt Pythia 6. 
-  //  This affects the sign of the interference term below)
-  double sQL    = pow2( particleDataPtr->m0(1000000 + abs(id1)) );
-  double tHQL   = tHG + s34Avg - sQL; 
-  double uHQL   = uHG + s34Avg - sQL; 
-  double sQR    = pow2( particleDataPtr->m0(2000000 + abs(id1)) );
-  double tHQR   = tHG + s34Avg - sQR; 
-  double uHQR   = uHG + s34Avg - sQR; 
- 
-  // Calculate kinematics dependence.
-  double sigQL  = (4./9.) * (tHG2 / pow2(tHQL) + uHG2 / pow2(uHQL)) 
-                + (1./9.) * s34Avg * sH / (tHQL * uHQL)
-                + (tHG2 + sH * s34Avg) /(sH * tHQL)   
-                + (uHG2 + sH * s34Avg) /(sH * uHQL);   
-  double sigQR  = (4./9.) * (tHG2 / pow2(tHQR) + uHG2 / pow2(uHQR)) 
-                + (1./9.) * s34Avg * sH / (tHQR * uHQR)
-                + (tHG2 + sH * s34Avg) /(sH * tHQR)   
-                + (uHG2 + sH * s34Avg) /(sH * uHQR);
-  double sigSum = sigS + 0.5 * (sigQL + sigQR);     
+  // Only allow quark-antiquark incoming states
+  if (id1 * id2 > 0) return 0.0;
+  
+  // In-pair must both be up-type or both down-type
+  if ((id1+id2) % 2 != 0) return 0.0;
+
+  // Flavor indices for the incoming quarks
+  int iQA = (abs(id1)+1)/2;
+  int iQB = (abs(id2)+1)/2;
+
+  // Use up- or down-type squark-quark-gluino couplings
+  complex LsqqG[7][4];
+  complex RsqqG[7][4];
+  for (int iSq=1; iSq<=6; ++iSq) {
+    for (int iQ=1; iQ<=3; ++iQ) {
+      if (abs(id1) % 2 == 1) {        
+        LsqqG[iSq][iQ] = coupSUSYPtr->LsddG[iSq][iQ];
+        RsqqG[iSq][iQ] = coupSUSYPtr->RsddG[iSq][iQ];
+      }
+      else {
+        LsqqG[iSq][iQ] = coupSUSYPtr->LsuuG[iSq][iQ];
+        RsqqG[iSq][iQ] = coupSUSYPtr->RsuuG[iSq][iQ];
+      }
+    }
+  }
+
+  // sigHel contains (-1, 1), (1,-1), (-1,-1), ( 1, 1) 
+  // divided by 4 for helicity average
+  vector<double> sigHel;
+  for (int iHel=0; iHel <4; ++iHel) sigHel.push_back(0.);
+
+  // S-channel gluon contributions: only if id1 == -id2 (so iQA == iQB)
+  if (abs(id1) == abs(id2)) {
+    // S-channel squared
+    sigHel[0] += sigS;
+    sigHel[1] += sigS;
+  }
+
+  // T, U, and S/T/U interferences 
+  for (int iSq=1; iSq<=6; ++iSq) {
+    int    idSq = ((iSq+2)/3)*1000000 + 2*((iSq-1)%3) + abs(id1-1) % 2 + 1; 
+    double mSq2 = pow2(particleDataPtr->m0(idSq));
+    // Modified Mandelstam variables for massive kinematics with m3 = m4.
+    // tHG = tHat - m_gluino^2; uHG = uHat - m_gluino^2. 
+    double tHsq = tHG + s34Avg - mSq2; 
+    double uHsq = uHG + s34Avg - mSq2; 
     
-  // Answer contains factor 1/2 from identical gluinos.
-  double sigma  = (M_PI / sH2) * pow2(alpS) * (8./3.) * 0.5 * sigSum 
-                * openFracPair;  
+    // ST and SU interferences: only if id1 == -id2 (so iQA == iQB)
+    // incl 2N*(N^2 - 1)/N^2 color factor (note: original reference 
+    // <Fuk11> was missing a factor 2 on the color factor here.)
+    if ( abs(id1) == abs(id2) ) {
+      double Qst1 = 16./3. * norm(LsqqG[iSq][iQA]) * (s34Avg * sH + tHG2);
+      double Qsu1 = 16./3. * norm(LsqqG[iSq][iQA]) * (s34Avg * sH + uHG2); 
+      double Qst2 = 16./3. * norm(RsqqG[iSq][iQA]) * (s34Avg * sH + tHG2);
+      double Qsu2 = 16./3. * norm(RsqqG[iSq][iQA]) * (s34Avg * sH + uHG2); 
+      double sigL = (Qst1 / tHsq + Qsu1 / uHsq) / sH;
+      double sigR = (Qst2 / tHsq + Qsu2 / uHsq) / sH;
+      sigHel[0] += sigL;
+      sigHel[1] += sigR;
+    }
+    
+    // T, U, and TU interferences
+    for (int jSq=1; jSq<=6; ++jSq) {
+      int    idSqJ = ((jSq+2)/3)*1000000 + 2*((jSq-1)%3) + abs(id1-1) % 2 + 1; 
+      double mSqJ2 = pow2(particleDataPtr->m0(idSqJ));
+      // Modified Mandelstam variables for massive kinematics with m3 = m4.
+      // tHG = tHat - m_gluino^2; uHG = uHat - m_gluino^2. 
+      double tHsqJ = tHG + s34Avg - mSqJ2; 
+      double uHsqJ = uHG + s34Avg - mSqJ2; 
+      
+      double Q11 = real(LsqqG[iSq][iQA] * conj(LsqqG[iSq][iQB])
+                        * conj(LsqqG[jSq][iQA]) * LsqqG[jSq][iQB]);
+      double Q12 = real(LsqqG[iSq][iQA] * conj(RsqqG[iSq][iQB])
+                        * conj(LsqqG[jSq][iQA]) * RsqqG[jSq][iQB]);
+      double Q21 = real(RsqqG[iSq][iQA] * conj(LsqqG[iSq][iQB])
+                        * conj(RsqqG[jSq][iQA]) * LsqqG[jSq][iQB]);
+      double Q22 = real(RsqqG[iSq][iQA] * conj(RsqqG[iSq][iQB])
+                        * conj(RsqqG[jSq][iQA]) * RsqqG[jSq][iQB]);      
+
+      double Qtt11 = 64./27. * Q11 * tHG2;
+      double Qtt12 = 64./27. * Q12 * tHG2;
+      double Qtt21 = 64./27. * Q21 * tHG2;
+      double Qtt22 = 64./27. * Q22 * tHG2;
+      
+      double Quu11 = 64./27. * Q11 * uHG2;
+      double Quu12 = 64./27. * Q12 * uHG2;
+      double Quu21 = 64./27. * Q21 * uHG2;
+      double Quu22 = 64./27. * Q22 * uHG2;
+
+      double Qtu11 = 16./27. * Q11 * (s34Avg * sH);
+      double Qtu12 = 16./27. * Q12 * (s34Avg * sH - tHG * uHG);
+      double Qtu21 = 16./27. * Q21 * (s34Avg * sH - tHG * uHG);
+      double Qtu22 = 16./27. * Q22 * (s34Avg * sH);
+      
+      // Cross sections for each helicity configuration (incl average fac 1/4)
+      sigHel[0] += Qtt11 / tHsq / tHsqJ
+        + Quu11 / uHsq / uHsqJ
+        + Qtu11 / tHsq / uHsqJ;
+      sigHel[1] += Qtt22 / tHsq / tHsqJ
+        + Quu22 / uHsq / uHsqJ
+        + Qtu22 / tHsq / uHsqJ;
+      sigHel[2] += Qtt12 / tHsq / tHsqJ
+        + Quu12 / uHsq / uHsqJ
+        + Qtu12 / tHsq / uHsqJ;
+      sigHel[3] += Qtt21 / tHsq / tHsqJ
+        + Quu21 / uHsq / uHsqJ
+        + Qtu21 / tHsq / uHsqJ;
+        
+    }
+
+  }
+
+  // Sum helicity contributions
+  double sigSum = sigHel[0] + sigHel[1] + sigHel[2] + sigHel[3];
+
+  // Return 0 if all terms vanish, else compute and return cross section
+  if ( sigSum <= 0. ) return 0.0;
+
+  // Answer 
+  double sigma  = (M_PI / 8. / sH2) * pow2(alpS) * sigSum * openFracPair;  
   return sigma;
 
 }
@@ -2046,6 +2366,545 @@ void Sigma1qq2antisquark::setIdColAcol() {
 
 }
 
+
+//==========================================================================
+
+
+// Sigma2qqbar2chi0gluino 
+// Cross section for gaugino pair production: neutralino-gluino
+
+//--------------------------------------------------------------------------
+
+// Initialize process. 
+  
+void Sigma2qqbar2chi0gluino::initProc() {
+
+  //Typecast to the correct couplings
+  coupSUSYPtr = (CoupSUSY*) couplingsPtr;
+
+  // Construct name of process. 
+  nameSave = "q qbar' -> " + particleDataPtr->name(id3) + " " 
+    + particleDataPtr->name(id4);
+
+  // Secondary open width fraction.
+  openFracPair = particleDataPtr->resOpenFrac(id3, id4);
+
+}
+
+//--------------------------------------------------------------------------
+
+// Evaluate d(sigmaHat)/d(tHat), part independent of incoming flavour. 
+
+void Sigma2qqbar2chi0gluino::sigmaKin() {
+
+  // Common flavour-independent factor.
+  sigma0 = M_PI * 4.0 / 9.0/ sH2 / coupSUSYPtr->sin2W * alpEM * alpS 
+    * openFracPair; 
+
+  // Auxiliary factors for use below
+  ui       = uH - s3;
+  uj       = uH - s4;
+  ti       = tH - s3;
+  tj       = tH - s4;
+}
+
+//--------------------------------------------------------------------------
+
+// Evaluate d(sigmaHat)/d(tHat), including incoming flavour dependence. 
+
+double Sigma2qqbar2chi0gluino::sigmaHat() {
+
+  // Only allow quark-antiquark incoming states
+  if (id1*id2 >= 0) return 0.0;    
+  
+  // In-pair must both be up-type or both down-type
+  if ((id1+id2) % 2 != 0) return 0.0;    
+
+  // Swap T and U if antiquark-quark instead of quark-antiquark
+  if (id1<0) swapTU = true;
+  
+  // Shorthands
+  int idAbs1    = abs(id1);  
+  int idAbs2    = abs(id2);
+
+  // Flavour-dependent kinematics-dependent couplings.
+  complex QuLL(0.0),QtLL(0.0),QuRR(0.0),QtRR(0.0);
+  complex QuLR(0.0),QtLR(0.0),QuRL(0.0),QtRL(0.0);
+
+  // Flavour indices
+  int ifl1 = (idAbs1+1) / 2;
+  int ifl2 = (idAbs2+1) / 2;
+
+  complex (*LsddXloc)[4][6]; 
+  complex (*RsddXloc)[4][6];
+  complex (*LsuuXloc)[4][6];
+  complex (*RsuuXloc)[4][6];
+  LsddXloc = coupSUSYPtr->LsddX;
+  RsddXloc = coupSUSYPtr->RsddX;
+  LsuuXloc = coupSUSYPtr->LsuuX;
+  RsuuXloc = coupSUSYPtr->RsuuX;
+
+  // Add t-channel squark flavour sums to QmXY couplings
+  for (int ksq=1; ksq<=6; ksq++) {    
+
+    // squark id and squark-subtracted u and t
+
+    int idsq;
+    idsq=((ksq+2)/3)*1000000 + 2*((ksq-1) % 3) + (idAbs1+1) % 2 + 1;
+
+    double msq2    = pow(particleDataPtr->m0(idsq),2);
+    double usq     = uH - msq2;
+    double tsq     = tH - msq2;
+    
+    complex Lsqq1X4; 
+    complex Lsqq2X4;
+    complex Rsqq1X4;
+    complex Rsqq2X4;
+
+    complex Lsqq1G;
+    complex Rsqq1G;
+    complex Lsqq2G;
+    complex Rsqq2G;
+
+    // Couplings
+    Lsqq1X4 = LsuuXloc[ksq][ifl1][id4chi];
+    Lsqq2X4 = LsuuXloc[ksq][ifl2][id4chi];
+    Rsqq1X4 = RsuuXloc[ksq][ifl1][id4chi];
+    Rsqq2X4 = RsuuXloc[ksq][ifl2][id4chi];
+
+    Lsqq1G = coupSUSYPtr->LsuuG[ksq][ifl1];
+    Rsqq1G = coupSUSYPtr->RsuuG[ksq][ifl1];
+    Lsqq2G = coupSUSYPtr->LsuuG[ksq][ifl2];
+    Rsqq2G = coupSUSYPtr->RsuuG[ksq][ifl2];
+
+    if (idAbs1 % 2 != 0) {
+      Lsqq1X4 = LsddXloc[ksq][ifl1][id4chi];
+      Lsqq2X4 = LsddXloc[ksq][ifl2][id4chi];
+      Rsqq1X4 = RsddXloc[ksq][ifl1][id4chi];
+      Rsqq2X4 = RsddXloc[ksq][ifl2][id4chi];      
+
+      Lsqq1G = coupSUSYPtr->LsddG[ksq][ifl1];
+      Rsqq1G = coupSUSYPtr->RsddG[ksq][ifl1];
+      Lsqq2G = coupSUSYPtr->LsddG[ksq][ifl2];
+      Rsqq2G = coupSUSYPtr->RsddG[ksq][ifl2];
+    }
+
+    // QuXY
+    QuLL += conj(Lsqq1X4)*Lsqq2G/usq;
+    QuRR += conj(Rsqq1X4)*Rsqq2G/usq;
+    QuLR += conj(Lsqq1X4)*Rsqq2G/usq;
+    QuRL += conj(Rsqq1X4)*Lsqq2G/usq;
+    
+    // QtXY
+    QtLL -= conj(Lsqq1G)*Lsqq2X4/tsq;
+    QtRR -= conj(Rsqq1G)*Rsqq2X4/tsq;
+    QtLR += conj(Lsqq1G)*Rsqq2X4/tsq;
+    QtRL += conj(Rsqq1G)*Lsqq2X4/tsq;
+
+  }
+
+  // Overall factor multiplying coupling
+  double fac = (1.0-coupSUSYPtr->sin2W);
+
+  // Compute matrix element weight
+  double weight = 0;
+  double facLR = uH*tH - s3*s4;
+  double facMS = m3*m4*sH;
+
+  // Average over separate helicity contributions
+  // LL (ha = -1, hb = +1) (divided by 4 for average)            
+  weight += norm(QuLL) * ui * uj + norm(QtLL) * ti * tj
+    + 2 * real(conj(QuLL) * QtLL) * facMS;
+  // RR (ha =  1, hb = -1) (divided by 4 for average)        
+  weight += norm(QtRR) * ti * tj + norm(QuRR) * ui * uj  
+    + 2 * real(conj(QuRR) * QtRR) * facMS;
+  // RL (ha =  1, hb =  1) (divided by 4 for average)        
+  weight += norm(QuRL) * ui * uj + norm(QtRL) * ti * tj
+    + real(conj(QuRL) * QtRL) * facLR;
+  // LR (ha = -1, hb = -1) (divided by 4 for average)        
+  weight += norm(QuLR) * ui * uj + norm(QtLR) * ti * tj
+    + real(conj(QuLR) * QtLR) * facLR;
+
+  // Cross section, including colour factor.
+  double sigma = sigma0 * weight / fac;
+
+  // Answer.
+  return sigma;    
+
+}
+
+//--------------------------------------------------------------------------
+
+// Select identity, colour and anticolour.
+
+void Sigma2qqbar2chi0gluino::setIdColAcol() {
+
+  // Set flavours.
+  setId( id1, id2, id3, id4);
+
+  // Colour flow topologies. Swap when antiquarks.
+  setColAcol( 1, 0, 0, 2, 1, 2, 0, 0);
+  if (id1 < 0) swapColAcol();
+
+}
+
+//==========================================================================
+
+// Sigma2qqbar2chargluino
+// Cross section for gaugino pair production: chargino-gluino
+
+//--------------------------------------------------------------------------
+
+// Initialize process. 
+  
+void Sigma2qqbar2chargluino::initProc() {
+
+  //Typecast to the correct couplings
+  coupSUSYPtr = (CoupSUSY*) couplingsPtr;
+
+  // Construct name of process. 
+  nameSave = "q qbar' -> " + particleDataPtr->name(id3) + " " 
+    + particleDataPtr->name(id4) + " + c.c";
+
+  // Secondary open width fraction.
+  openFracPair = particleDataPtr->resOpenFrac(id3, id4);
+
+}
+
+//--------------------------------------------------------------------------
+// Evaluate d(sigmaHat)/d(tHat), part independent of incoming flavour. 
+
+void Sigma2qqbar2chargluino::sigmaKin() {
+
+  // Common flavour-independent factor.
+  
+  sigma0 = M_PI / sH2 * 4.0 / 9.0 / coupSUSYPtr->sin2W * alpEM * alpS ; 
+  sigma0 /= 2.0 * (1 - coupSUSYPtr->sin2W) ; 
+
+  // Auxiliary factors for use below
+  ui        = uH - s3;
+  uj        = uH - s4;
+  ti        = tH - s3;
+  tj        = tH - s4;
+}
+
+//--------------------------------------------------------------------------
+
+// Evaluate d(sigmaHat)/d(tHat), including incoming flavour dependence. 
+
+double Sigma2qqbar2chargluino::sigmaHat() {
+
+  // Only allow particle-antiparticle incoming states
+  if (id1*id2 >= 0) return 0.0;    
+  
+  // Only allow incoming states with sum(charge) = final state
+  if (abs(id1) % 2 == abs(id2) % 2) return 0.0;
+  int isPos  = (id4chi > 0 ? 1 : 0);
+  if (id1 < 0 && id1 > -19 && abs(id1) % 2 == 1-isPos ) return 0.0;
+  else if (id1 > 0 && id1 < 19 && abs(id1) % 2 == isPos ) return 0.0;
+
+  // Flavour-dependent kinematics-dependent couplings.
+  int idAbs1  = abs(id1);  
+  int iChar = abs(id4chi);
+  
+  complex QuLL(0.0),QtLL(0.0),QuRR(0.0),QtRR(0.0);
+  complex QuLR(0.0),QtLR(0.0),QuRL(0.0),QtRL(0.0);
+  
+  // Calculate everything from udbar -> ~chi+ ~chi0 template process
+  complex LsddGl;
+  complex RsddGl;
+  complex LsuuGl;
+  complex RsuuGl;
+  complex (*LsduXloc)[4][3];
+  complex (*RsduXloc)[4][3];
+  complex (*LsudXloc)[4][3];
+  complex (*RsudXloc)[4][3];
+
+  LsduXloc = coupSUSYPtr->LsduX;
+  RsduXloc = coupSUSYPtr->RsduX;
+  LsudXloc = coupSUSYPtr->LsudX;
+  RsudXloc = coupSUSYPtr->RsudX;
+  
+  // u dbar , ubar d : do nothing
+  // dbar u , d ubar : swap 1<->2 and t<->u
+  int iGu = abs(id1)/2;
+  int iGd = (abs(id2)+1)/2;
+  if (idAbs1 % 2 != 0) {
+    swapTU = true;
+    iGu = abs(id2)/2;
+    iGd = (abs(id1)+1)/2;
+  }
+
+  // Add t-channel squark flavour sums to QmXY couplings
+  for (int jsq=1; jsq<=6; jsq++) {    
+
+    int idsu=((jsq+2)/3)*1000000 + 2*((jsq-1) % 3) + 2 ;
+    int idsd=((jsq+2)/3)*1000000 + 2*((jsq-1) % 3) + 1 ;
+    
+    LsddGl = coupSUSYPtr->LsddG[jsq][iGd];
+    RsddGl = coupSUSYPtr->RsddG[jsq][iGd];
+    LsuuGl = coupSUSYPtr->LsuuG[jsq][iGu];
+    RsuuGl = coupSUSYPtr->RsuuG[jsq][iGu];
+
+    double msd2 = pow(particleDataPtr->m0(idsd),2);
+    double msu2 = pow(particleDataPtr->m0(idsu),2);
+    double tsq  = tH - msd2;
+    double usq  = uH - msu2;
+
+    QuLL += conj(LsuuGl) * conj(LsudXloc[jsq][iGd][iChar])/usq;
+    QuLR += conj(LsuuGl) * conj(RsudXloc[jsq][iGd][iChar])/usq;
+    QuRR += conj(RsuuGl) * conj(RsudXloc[jsq][iGd][iChar])/usq;
+    QuRL += conj(RsuuGl) * conj(LsudXloc[jsq][iGd][iChar])/usq;
+
+    QtLL -= conj(LsduXloc[jsq][iGu][iChar]) * LsddGl/tsq;
+    QtRR -= conj(RsduXloc[jsq][iGu][iChar]) * RsddGl/tsq;
+    QtLR += conj(LsduXloc[jsq][iGu][iChar]) * RsddGl/tsq;
+    QtRL += conj(RsduXloc[jsq][iGu][iChar]) * LsddGl/tsq;
+  }
+
+  // Compute matrix element weight
+  double weight = 0;
+
+  // Average over separate helicity contributions
+  // (if swapped, swap ha, hb if computing polarized cross sections)
+  // LL (ha = -1, hb = +1) (divided by 4 for average)            
+  weight += norm(QuLL) * ui * uj + norm(QtLL) * ti * tj
+    + 2 * real(conj(QuLL) * QtLL) * m3 * m4 * sH;
+  // RR (ha =  1, hb = -1) (divided by 4 for average)        
+  weight += norm(QtRR) * ti * tj + norm(QuRR) * ui * uj  
+    + 2 * real(conj(QuRR) * QtRR) * m3 * m4 * sH;
+  // RL (ha =  1, hb =  1) (divided by 4 for average)        
+  weight += norm(QuRL) * ui * uj + norm(QtRL) * ti * tj
+    + real(conj(QuRL) * QtRL) * (uH * tH - s3 * s4);
+  // LR (ha = -1, hb = -1) (divided by 4 for average)        
+  weight += norm(QuLR) * ui * uj + norm(QtLR) * ti * tj
+    + real(conj(QuLR) * QtLR) * (uH * tH - s3 * s4);
+
+  // Cross section, including colour factor.
+  double sigma = sigma0 * weight;
+
+  // Answer.
+  return sigma;    
+
+}
+
+//--------------------------------------------------------------------------
+
+void Sigma2qqbar2chargluino::setIdColAcol() {
+
+  // Set flavours.
+  setId( id1, id2, id3, id4);
+
+  // Colour flow topologies. Swap when antiquarks.
+  setColAcol( 1, 0, 0, 2, 1, 2, 0, 0);
+  if (id1 < 0) swapColAcol();
+
+}
+
+//==========================================================================
+
+// Sigma2qqbar2sleptonantislepton
+// Cross section for qqbar-initiated slepton-antislepton production
+
+//--------------------------------------------------------------------------
+
+// Initialize process. 
+  
+void Sigma2qqbar2sleptonantislepton::initProc() {
+
+  //Typecast to the correct couplings
+  coupSUSYPtr = (CoupSUSY*) couplingsPtr;
+
+  // Is this a ~u_i ~d*_j, ~d_i ~u*_j final state or ~d_i ~d*_j, ~u_i ~u*_j
+  if (abs(id3Sav) % 2 == abs(id4Sav) % 2) isUD = false;
+  else isUD = true;
+
+  // Derive name
+  nameSave = "q qbar' -> "+particleDataPtr->name(abs(id3Sav))+" "+
+    particleDataPtr->name(-abs(id4Sav));
+  if (isUD) nameSave +=" + c.c.";
+
+  // Extract isospin and mass-ordering indices
+
+  if(isUD && abs(id3Sav)%2 == 0) {
+    // Make sure iGen3 is always slepton and iGen4 is always sneutrino
+    iGen3 = 3*(abs(id4Sav)/2000000) + (abs(id4Sav)%10+1)/2;
+    iGen4 = 3*(abs(id3Sav)/2000000) + (abs(id3Sav)%10+1)/2;
+  }
+  else {
+    iGen3 = 3*(abs(id3Sav)/2000000) + (abs(id3Sav)%10+1)/2;
+    iGen4 = 3*(abs(id4Sav)/2000000) + (abs(id4Sav)%10+1)/2;
+  }
+
+  // Count 5 neutralinos in NMSSM
+  nNeut = (coupSUSYPtr->isNMSSM ? 5 : 4);
+
+  // Store mass squares of all possible internal propagator lines;
+  // retained for future extension to leptonic initial states
+  m2Neut.resize(nNeut+1);
+  for (int iNeut=1;iNeut<=nNeut;iNeut++) 
+    m2Neut[iNeut] = pow2(particleDataPtr->m0(coupSUSYPtr->idNeut(iNeut)));
+  
+  // Set sizes of some arrays to be used below
+  tNeut.resize(nNeut+1);
+  uNeut.resize(nNeut+1);
+
+  // Shorthand for Weak mixing
+  xW = coupSUSYPtr->sin2W;
+
+  // Secondary open width fraction.
+  openFracPair = particleDataPtr->resOpenFrac(id3Sav, id4Sav);
+
+}
+
+//--------------------------------------------------------------------------
+
+// Evaluate d(sigmaHat)/d(tHat), part independent of incoming flavour. 
+
+void Sigma2qqbar2sleptonantislepton::sigmaKin() {
+
+  // Z/W propagator
+  if (! isUD) {
+    double sV= sH - pow2(coupSUSYPtr->mZpole);
+    double d = pow2(sV) + pow2(coupSUSYPtr->mZpole * coupSUSYPtr->wZpole);
+    propZW   = complex( sV / d, coupSUSYPtr->mZpole * coupSUSYPtr->wZpole / d);
+  } else {
+    double sV= sH - pow2(coupSUSYPtr->mWpole);
+    double d = pow2(sV) + pow2(coupSUSYPtr->mWpole * coupSUSYPtr->wWpole);
+    propZW   = complex( sV / d, coupSUSYPtr->mWpole * coupSUSYPtr->wWpole / d);
+  }
+
+  // Flavor-independent pre-factors
+  double comFacHat = M_PI/sH2 * openFracPair;
+
+  sigmaEW       = comFacHat * pow2(alpEM);
+}
+
+//--------------------------------------------------------------------------
+
+// Evaluate d(sigmaHat)/d(tHat), including incoming flavour dependence. 
+
+double Sigma2qqbar2sleptonantislepton::sigmaHat() {
+
+  // In-pair must be opposite-sign
+  if (id1 * id2 > 0) return 0.0;
+  
+  // Check correct charge sum
+  if (isUD && abs(id1) %2 == abs(id2) % 2) return 0.0;
+  if (!isUD && abs(id1) % 2 != abs(id2) % 2) return 0.0;
+
+  // No RH sneutrinos
+  if ( (abs(id3)%2 == 0 && abs(id3) > 2000000) 
+       || (abs(id4)%2 == 0 && abs(id4) > 2000000) ) return 0.0;
+
+  // Coded UD sigma is for udbar -> ~v~l'*. Swap t<->u for dbaru -> ~l~v*.
+  swapTU = (isUD && abs(id1) % 2 != 0); 
+
+  // Coded QQ sigma is for qqbar -> ~l~l*. Swap t<->u for qbarq -> ~l~l*.
+  if (!isUD && id1 < 0) swapTU = true;
+
+  // Generation indices of incoming particles
+  int idIn1A = (swapTU) ? abs(id2) : abs(id1);
+  int idIn2A = (swapTU) ? abs(id1) : abs(id2);
+  int iGen1  = (idIn1A+1)/2;
+  int iGen2  = (idIn2A+1)/2;  
+
+  // Auxiliary factors for use below  
+  for (int i=1; i<= nNeut; i++) {
+    tNeut[i] = tH - m2Neut[i];
+    uNeut[i] = uH - m2Neut[i];
+  }
+
+  double eQ  = (idIn1A % 2 == 0) ? 2./3. : -1./3. ;
+  double eSl = (abs(id3Sav) % 2 == 0) ? 0. : -1. ;
+
+  // Initial values for pieces used for color-flow selection below
+  sumColS   = 0.0;
+  sumColT   = 0.0;
+  sumInterference = 0.0;
+
+  // Common factor for LR and RL contributions
+  double facTU =  uH*tH-s3*s4;
+  
+  // Opposite-isospin: udbar -> ~l~v* 
+  if ( isUD ) {
+
+    // s-channel W contribution (only contributes to LL helicities)
+    sumColS = sigmaEW / 32.0 / pow2(xW) / pow2(1.0-xW)
+      * norm(conj(coupSUSYPtr->LudW[iGen1][iGen2])
+	     * coupSUSYPtr->LslsvW[iGen3][iGen4]) * facTU * norm(propZW);
+  }
+
+  double CslZ;
+
+  // s-channel Z/photon and interference
+  if (abs(id1) == abs(id2)) {
+
+    CslZ = real(coupSUSYPtr->LslslZ[iGen3][iGen4] 
+                       + coupSUSYPtr->RslslZ[iGen3][iGen4]);
+    if (abs(id3)%2 == 0) 
+      CslZ = real(coupSUSYPtr->LsvsvZ[iGen3][iGen4] 
+                  + coupSUSYPtr->RsvsvZ[iGen3][iGen4]);
+
+    // gamma
+    // Factor 2 since contributes to both ha != hb helicities
+    sumColS += (abs(CslZ) > 0.0) ? 2. * pow2(eQ) * pow2(eSl) * sigmaEW * facTU / pow2(sH): 0.0;
+      
+    // Z/gamma interference
+    sumInterference += eQ * eSl * sigmaEW * facTU / 2.0 / xW / (1.-xW) 
+      * sqrt(norm(propZW)) / sH * CslZ
+      * (coupSUSYPtr->LqqZ[idIn1A] + coupSUSYPtr->RqqZ[idIn1A]);
+    
+    // s-channel Z 
+
+    CslZ = norm(coupSUSYPtr->LslslZ[iGen3][iGen4] 
+		+ coupSUSYPtr->RslslZ[iGen3][iGen4]);
+    if (abs(id3Sav)%2 == 0) 
+      CslZ = norm(coupSUSYPtr->LsvsvZ[iGen3][iGen4] 
+                  + coupSUSYPtr->RsvsvZ[iGen3][iGen4]);
+
+    sumColS += sigmaEW * facTU / 16.0 / pow2(xW) / pow2(1.0-xW) 
+      * norm(propZW) * CslZ 
+      * ( pow2(coupSUSYPtr->LqqZ[idIn1A]) + pow2(coupSUSYPtr->RqqZ[idIn1A]) );
+  }
+
+  // Cross section
+  double sigma = sumColS + sumColT + sumInterference;
+
+  // Colour average
+  if(abs(id1) < 10) sigma /= 3.0;
+
+  // Add cc term 
+  if(isUD) sigma *= 2.0;
+
+  // Return answer. 
+  return sigma;
+  
+}
+
+//--------------------------------------------------------------------------
+
+// Select identity, colour and anticolour.
+
+void Sigma2qqbar2sleptonantislepton::setIdColAcol() {
+
+  // Set flavours.
+  int iSl, iSv;
+  if( isUD ){
+    iSl = (abs(id3)%2 == 0) ? abs(id3) : abs(id4);
+    iSv = (abs(id3)%2 == 0) ? abs(id4) : abs(id3);
+    if ((id1%2 + id2%2 ) > 0) 
+      setId( id1, id2, -iSl, iSv);  
+    else
+      setId( id1, id2, iSl, -iSv);  
+  }
+  else
+    setId( id1, id2, abs(id3), -abs(id4));  
+
+  setColAcol( 1, 0, 0, 1, 0, 0, 0, 0);
+  if (id1 < 0 ) swapColAcol();
+
+}
 
 //==========================================================================
 
