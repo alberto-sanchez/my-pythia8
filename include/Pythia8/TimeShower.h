@@ -188,8 +188,8 @@ protected:
 private:
 
   // Constants: could only be changed in the code itself.
-  static const double SIMPLIFYROOT, XMARGIN, XMARGINCOMB, TINYPDF, LARGEM2,
-                      THRESHM2, LAMBDA3MARGIN, WEAKPSWEIGHT, WG2QEXTRA;
+  static const double MCMIN, MBMIN, SIMPLIFYROOT, XMARGIN, XMARGINCOMB, 
+         TINYPDF, LARGEM2, THRESHM2, LAMBDA3MARGIN, WEAKPSWEIGHT, WG2QEXTRA;
   // Rescatter: try to fix up recoil between systems
   static const bool   FIXRESCATTER, VETONEGENERGY;
   static const double MAXVIRTUALITYFRACTION, MAXNEGENERGYFRACTION;
@@ -282,9 +282,12 @@ private:
   // Properties stored for (some) global recoil schemes.
   // Vectors of event indices defining the hard process.
   vector<int> hardPartons;
-  // Number of proposed splittings, number of partons in current hard event,
-  // number of partons in Born-type hard event (distinguish between S and H).
-  int nProposed, nHard, nFinalBorn, nMaxGlobalBranch;
+  // Number of partons in current hard event, number of partons in Born-type
+  // hard event (to distinguish between S and H), maximally allowed number of
+  // global recoil branchings.
+  int nHard, nFinalBorn, nMaxGlobalBranch;
+  // Number of proposed splittings in hard scattering systems.
+  map<int,int> nProposed;
   // Number of splittings with global recoil (currently only 1).
   int nGlobal, globalRecoilMode;
   // Switch to constrain recoiling system.

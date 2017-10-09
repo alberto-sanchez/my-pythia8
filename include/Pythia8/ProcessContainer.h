@@ -158,12 +158,13 @@ private:
   LHAup*           lhaUpPtr;
 
   // Possibility to modify Les Houches input.
-  int    setLifetime;
+  int    idRenameBeams, setLifetime;
 
   // Info on process.
   bool   isLHA, isNonDiff, isResolved, isDiffA, isDiffB, isDiffC, isQCD3body,
          allowNegSig, isSameSave, increaseMaximum, canVetoResDecay;
   int    lhaStrat, lhaStratAbs;
+  bool   useStrictLHEFscales;
 
   // Statistics on generation process. (Long integers just in case.)
   bool   newSigmaMx;
