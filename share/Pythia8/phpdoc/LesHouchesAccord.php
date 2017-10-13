@@ -559,7 +559,7 @@ or <i>t &rarr; b W</i>), then decay is still isotropic.
  
 <p/> 
 There are four settings available for event input. They take effect when 
-the LHA event record is translated to the PYTHIA <code>process</code>
+the LHA event record is translated to the PYTHIA <code>process</code> 
 event record. 
  
 <br/><br/><table><tr><td><strong>LesHouches:idRenameBeams  </td><td></td><td> <input type="text" name="1" value="1000022" size="20"/>  &nbsp;&nbsp;(<code>default = <strong>1000022</strong></code>; <code>minimum = 0</code>)</td></tr></table>
@@ -589,18 +589,18 @@ the <ei>tau</ei> lepton.
 <br/><br/><table><tr><td><strong>LesHouches:setLeptonMass  </td><td>  &nbsp;&nbsp;(<code>default = <strong>1</strong></code>; <code>minimum = 0</code>; <code>maximum = 2</code>)</td></tr></table>
 setting of mass for final-state charged leptons. The reason here is that 
 some matrix-element generators assume leptons to be massless, so as to 
-simplify calculations. This is particularly common for the <ei>e</ei> and
-<ei>mu</ei> leptons, but sometimes also the <ei>tau</ei> lepton is
+simplify calculations. This is particularly common for the <ei>e</ei> and 
+<ei>mu</ei> leptons, but sometimes also the <ei>tau</ei> lepton is 
 afflicted. Incoming leptons are not affected by this procedure. 
 <br/>
 <input type="radio" name="3" value="0"><strong>0 </strong>:  all lepton masses are taken from the Les Houches input.  <br/>
-<input type="radio" name="3" value="1" checked="checked"><strong>1 </strong>:  if the input lepton mass deviates by more than 10%  from the PYTHIA (data table) mass then its mass is reset according to the  PYTHIA value, and the energy is recalculated from this mass and the  three-momentum. This should catch weird masses, while allowing sensible   variations. <br/>
+<input type="radio" name="3" value="1" checked="checked"><strong>1 </strong>:  if the input lepton mass deviates by more than 10%  from the PYTHIA (data table) mass then its mass is reset according to the  PYTHIA value, and the energy is recalculated from this mass and the  three-momentum. This should catch weird masses, while allowing sensible  variations.  <br/>
 <input type="radio" name="3" value="2"><strong>2 </strong>:  each lepton mass is reset according to the PYTHIA value,  and the energy is recalculated from this mass and the three-momentum.  <br/>
 <br/><b>Warning:</b> the change of masses and the resultant change of 
 energies can result in energy-momentum non-conservation warnings and, 
 in extreme cases, also to aborts. One possibility then is to change the 
-<aloc href="ErrorChecks">tolerance</aloc> to such errors.
-
+<aloc href="ErrorChecks">tolerance</aloc> to such errors. 
+ 
 <br/><br/><table><tr><td><strong>LesHouches:mRecalculate </td><td></td><td> <input type="text" name="4" value="-1." size="20"/>  &nbsp;&nbsp;(<code>default = <strong>-1.</strong></code>)</td></tr></table>
 Does not have any effect by default, or more generally when it is negative. 
 If it is positive then all particles with an input mass above this 
@@ -617,6 +617,21 @@ at least 10 GeV, so that only massive particles like <i>W^+-</i>,
 its mass recalculated, currently instead the energy is recalculated 
 from its three-momntum and mass. This is to avoid spurious mismatches 
 from limited numerical precision in an LHEF. 
+   
+ 
+<br/><br/><strong>LesHouches:matchInOut</strong>  <input type="radio" name="5" value="on" checked="checked"><strong>On</strong>
+<input type="radio" name="5" value="off"><strong>Off</strong>
+ &nbsp;&nbsp;(<code>default = <strong>on</strong></code>)<br/>
+The energies and longitudinal momenta of the two incoming partons are 
+recalculated from the sum of the outgoing final (i.e. status 1) particles. 
+The incoming partons are set massless. There are two main applications 
+for this option. Firstly, if there is a mismatch in the Les Houches 
+input itself, e.g. owing to limited precision in the stored momenta. 
+Secondly, if a mismatch is induced by PYTHIA recalculations, notably when 
+an outgoing lepton is assigned a mass although assumed massles in the 
+Les Houches input. 
+<br/><b>Warning:</b> it is assumed that the incoming partons are along 
+the <i>+-z</i> axis; else the kinematics construction will fail. 
    
  
 <h3>An interface to Les Houches Event Files</h3> 
@@ -871,10 +886,11 @@ close main event file (LHEF) and, if present, separate header file.
 The runtime Fortran interface requires linking to an external Fortran 
 code. In order to avoid problems with unresolved external references 
 when this interface is not used, the code has been put in a separate 
-<code>LHAFortran.h</code> file, that is not included in any of the 
-other library files. Instead it should be included in the 
-user-supplied main program, together with the implementation of two 
-methods below that call the Fortran program to do its part of the job. 
+<code>include/Pythia8Plugins/LHAFortran.h</code> file, that is not 
+included in any of the other library files. Instead it should be included 
+in the user-supplied main program, and used to create a derived class that 
+contains the implementation of two methods below that call the Fortran 
+program to do its part of the job. 
  
 <p/> 
 The <code>LHAupFortran</code> class derives from <code>LHAup</code>. 
@@ -960,7 +976,7 @@ another process in between, the file will be corrupted.
 Return the name of the LHE file above. 
    
  
-<h3>PYTHIA 8 output to an LHEF</h3> 
+<h3>PYTHIA 8 output to a Les Houches Event File version 1.0</h3> 
  
 The above methods could be used by any program to write an LHEF. 
 For PYTHIA 8 to do this, a derived class already exists, 
@@ -1008,6 +1024,71 @@ In addition, the <code>PartonLevel:all = off</code> command found in
 <code>main20.cc</code> obviously must be removed if one wants to 
 obtain complete events. 
  
+<h3>PYTHIA 8 output to a Les Houches Event File version 3.0</h3> 
+ 
+PYTHIA 8 also supports LHEF 3.0 output, and we include a 
+general LHEF3 writer (<code>Pythia::Writer</code> of LHEF3.h and 
+LHEF3.cc) for this purpose. The functions of this 
+file writer are used in the <code>LHEF3FromPYTHIA8</code>. 
+This latter class allows users to output PYTHIA events 
+in LHEF3 format from a PYTHIA main program. An example of how to use 
+<code>LHEF3FromPYTHIA8</code> is found in the 
+<code>main20lhef3.cc</code> example. Please note that, although 
+similar, the usage of <code>LHEF3FromPYTHIA8</code> differs from 
+the usage of <code>LHAupFromPYTHIA8</code>, with  <code>LHEF3FromPYTHIA8 
+</code> requiring fewer function calls. 
+ 
+<p/> 
+To print a comprehensive LHE file, <code>LHEF3FromPYTHIA8</code> 
+is constructed with pointers to an <code>Event</code> object, 
+as well as pointers to instances of <code>Settings</code>, 
+<code>Info</code> and <code>ParticleData</code>, giving e.g. 
+a constructor call 
+<br/><code>LHEF3FromPYTHIA8 myLHEF3(&pythia.event, &pythia.settings, 
+&pythia.info, &pythia.particleData);</code> 
+ 
+<p/> 
+As a next step, you should open the output file by using the 
+<code>LHAupFromPYTHIA8</code> member function 
+<br/><code>openLHEF(string name)</code> 
+</br> 
+where <code>name</code> is the output file name. 
+ 
+<p/> 
+Then, the method <code>setInit()</code> should be called to store the 
+initialization information (read from <code>settings</code> and 
+<code>info</code>) and write the header and init blocks into the 
+output file. Note that at this stage, the cross section printed 
+in the init block is not sensible, as no integration has yet 
+taken place. The init block can be updated at the end of 
+the event generation (see below). 
+ 
+</p> 
+During event generation, you should use <code>setEvent()</code> to 
+write the event information (as read from <code>info</code> and 
+<code>event</code>) to the output file. 
+ 
+</p> 
+Finally, before leaving your main program, it is necessary to 
+close the output file by using the 
+<code>LHAupFromPYTHIA8</code> member function 
+<br/><code>closeLHEF( bool doUpdate = false)</code> 
+</br> 
+The boolean variable <code>doUpdate</code> is optional. 
+If <code>doUpdate</code> is used, and if 
+<code>doUpdate = true</code>, then the init block of the output 
+file will be updated with the latest cross section information. 
+ 
+<p/> 
+Currently there are some limitations, that could be overcome if 
+necessary. Firstly, you may mix many processes in the same run, 
+but the cross-section information stored in <code>info</code> only 
+refers to the sum of them all, and therefore they are all classified 
+as a common process 9999. Secondly, you should generate your events 
+in the CM frame of the collision, since this is the assumed frame of 
+stored Les Houches events, and no boosts have been implemented 
+for the case that <code>Pythia::process</code> is not in this frame. 
+ 
 <input type="hidden" name="saved" value="1"/>
 
 <?php
@@ -1041,6 +1122,11 @@ fwrite($handle,$data);
 if($_POST["4"] != "-1.")
 {
 $data = "LesHouches:mRecalculate = ".$_POST["4"]."\n";
+fwrite($handle,$data);
+}
+if($_POST["5"] != "on")
+{
+$data = "LesHouches:matchInOut = ".$_POST["5"]."\n";
 fwrite($handle,$data);
 }
 fclose($handle);

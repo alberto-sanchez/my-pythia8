@@ -21,7 +21,7 @@ bool HadronLevel::init(Info* infoPtrIn, Settings& settings,
   ParticleData* particleDataPtrIn, Rndm* rndmPtrIn,
   Couplings* couplingsPtrIn, TimeShower* timesDecPtr,
   RHadrons* rHadronsPtrIn, DecayHandler* decayHandlePtr,
-  vector<int> handledParticles) {
+  vector<int> handledParticles, UserHooks* userHooksPtrIn) {
 
   // Save pointers.
   infoPtr         = infoPtrIn;
@@ -29,6 +29,7 @@ bool HadronLevel::init(Info* infoPtrIn, Settings& settings,
   rndmPtr         = rndmPtrIn;
   couplingsPtr    = couplingsPtrIn;
   rHadronsPtr     = rHadronsPtrIn;
+  userHooksPtr    = userHooksPtrIn;
 
   // Main flags.
   doHadronize     = settings.flag("HadronLevel:Hadronize");
@@ -61,7 +62,7 @@ bool HadronLevel::init(Info* infoPtrIn, Settings& settings,
 
   // Initialize string and ministring fragmentation.
   stringFrag.init(infoPtr, settings, particleDataPtr, rndmPtr,
-    &flavSel, &pTSel, &zSel);
+    &flavSel, &pTSel, &zSel, userHooksPtr);
   ministringFrag.init(infoPtr, settings, particleDataPtr, rndmPtr,
     &flavSel, &pTSel, &zSel);
 
@@ -100,6 +101,9 @@ bool HadronLevel::init(Info* infoPtrIn, Settings& settings,
 
 bool HadronLevel::next( Event& event) {
 
+  // Store current event size to mark Parton Level content.
+  event.savePartonLevelSize();
+
   // Do Hidden-Valley fragmentation, if necessary.
   if (useHiddenValley) hiddenvalleyFrag.fragment(event);
 
@@ -107,7 +111,11 @@ bool HadronLevel::next( Event& event) {
   if (!decayOctetOnia(event)) return false;
 
   // remove junction structures.
-  junctionSplitting.checkColours(event);
+  if (!junctionSplitting.checkColours(event)) {
+    infoPtr->errorMsg("Error in HadronLevel::next: "
+        "failed colour/junction check");
+    return false;
+  }
 
   // Possibility of hadronization inside decay, but then no BE second time.
   // Hadron scattering, first pass only --rjc

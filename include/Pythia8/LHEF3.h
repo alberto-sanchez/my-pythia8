@@ -12,6 +12,7 @@
 #define Pythia8_LHEF3_H
 
 #include "Pythia8/PythiaStdlib.h"
+#include "Pythia8/Streams.h"
 #include <stdexcept>
 
 namespace Pythia8 {
@@ -109,6 +110,23 @@ struct XMLTag {
       // Skip comments.
       if ( str.find("<!--", curr) == begin ) {
         pos_t endcom = str.find("-->", begin);
+        if ( endcom == end ) {
+          if ( leftover ) *leftover += str.substr(curr);
+             return tags;
+        }
+        if ( leftover ) *leftover += str.substr(curr, endcom - curr);
+        curr = endcom;
+        continue;
+      }
+
+      // Also skip CDATA statements.
+      // Used for text data that should not be parsed by the XML parser.
+      // (e.g., JavaScript code contains a lot of "<" or "&" characters
+      // which XML would erroneously interpret as the start of a new
+      // element or the start of a character entity, respectively.)
+      // See eg http://www.w3schools.com/xml/xml_cdata.asp
+      if ( str.find("<![CDATA[", curr) == begin ) {
+        pos_t endcom = str.find("]]>", begin);
         if ( endcom == end ) {
           if ( leftover ) *leftover += str.substr(curr);
              return tags;
@@ -549,6 +567,9 @@ public:
     LPRUP.resize(NPRUP);
   }
 
+  // Clear all members.
+  void clear();
+
   // PDG id's of beam particles. (first/second is in +/-z direction).
   pair<long,long> IDBMUP;
 
@@ -757,20 +778,6 @@ class Reader {
 
 public:
 
-  // Initialize the Reader with a stream from which to read an event
-  // file. After the constructor is called the whole header block
-  // including the enclosing lines with tags are available in the
-  // public headerBlock member variable. Also the information from the
-  // init block is available in the heprup member variable and any
-  // additional comment lines are available in initComments.
-  //
-  // is: the stream to read from.
-  //
-  Reader(istream & is)
-    : file(is) {
-    isGood = init();
-  }
-
   // Initialize the Reader with a filename from which to read an event
   // file. After the constructor is called the whole header block
   // including the enclosing lines with tags are available in the
@@ -780,9 +787,26 @@ public:
   //
   // filename: the name of the file to read from.
   //
-  Reader(string filename)
-    : intstream(filename.c_str()), file(intstream) {
-    init();
+  Reader(string filenameIn)
+    : filename(filenameIn), intstream(NULL), file(NULL) {
+    intstream = new igzstream(filename.c_str());
+    file = intstream;
+    isGood = init();
+  }
+
+  // (Re)initialize the Reader with a filename from which to read an event
+  // file. After this, all information from the header and init block is
+  // available.
+  //
+  // filename: File name (not used as the input file stream is given)
+  // isIn    : Name of the input file stream.
+  bool setup(string filenameIn) {
+    filename = filenameIn;
+    if (intstream) delete intstream;
+    intstream = new igzstream(filename.c_str());
+    file = intstream;
+    isGood = init();
+    return isGood;
   }
 
 private:
@@ -802,7 +826,7 @@ protected:
   // Used internally to read a single line from the stream.
   bool getLine() {
     currentLine = "";
-    if(!getline(file, currentLine)) return false;
+    if(!getline(*file, currentLine)) return false;
     // Replace single by double quotes
     replace(currentLine.begin(),currentLine.end(),'\'','\"');
     return true;
@@ -810,13 +834,16 @@ protected:
 
 protected:
 
+  // Name of file-to-be-read.
+  string filename;
+
   // A local stream which is unused if a stream is supplied from the
   // outside.
-  ifstream intstream;
+  igzstream* intstream;
 
-  // The stream we are reading from. This may be a reference to an
+  // The stream we are reading from. This may be a pointer to an
   // external stream or the internal intstream.
-  istream & file;
+  istream * file;
 
   // The last line read in from the stream in getline().
   string currentLine;
@@ -945,7 +972,7 @@ public:
 
   // Write out the event stored in hepeup, followed by optional
   // comment lines.
-  bool writeEvent(HEPEUP * peup = 0);
+  bool writeEvent(HEPEUP * peup = 0, int pDigits = 15);
 
 protected:
 

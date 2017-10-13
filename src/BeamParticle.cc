@@ -21,8 +21,9 @@ namespace Pythia8 {
 
 class ColState {
 public:
-  ColState() : nTotal(0) {}
+  ColState() : nTotal(0.) {}
   vector< pair<int,int> > lastSteps;
+  // nTotal is integer but can become extremely big.
   double nTotal;
 };
 
@@ -40,6 +41,9 @@ const double BeamParticle::XMINUNRESOLVED = 1. - 1e-10;
 
 // Fictitious Pomeron mass to leave some room for beam remnant.
 const double BeamParticle::POMERONMASS = 1.;
+
+// Avoid numerical instability in the x -> 1 limit for companion quark.
+const double BeamParticle::XMAXCOMPANION = 0.99;
 
 // Maximum number of tries to find a suitable colour.
 const int BeamParticle::NMAX = 1000;
@@ -438,6 +442,9 @@ double BeamParticle::xValFrac(int j, double Q2) {
 
 double BeamParticle::xCompFrac(double xs) {
 
+  // Tiny answer for xs -> 1 is numerically unstable, so set = 0.
+  if (xs > XMAXCOMPANION) return 0.;
+
   // Select case by power of gluon (1-x_g) shape.
   switch (companionPower) {
 
@@ -478,6 +485,9 @@ double BeamParticle::xCompFrac(double xs) {
 
 double BeamParticle::xCompDist(double xc, double xs) {
 
+  // Tiny answer for xs -> 1 is numerically unstable, so set = 0.
+  if (xs > XMAXCOMPANION) return 0.;
+
   // Mother gluon momentum fraction. Check physical limit.
   double xg = xc + xs;
   if (xg > 1.) return 0.;
@@ -514,13 +524,14 @@ double BeamParticle::xCompDist(double xc, double xs) {
 
 // Add required extra remnant flavour content. Also initial colours.
 
-bool BeamParticle::remnantFlavours(Event& event) {
+bool BeamParticle::remnantFlavours(Event& event, bool isDIS) {
 
   // A baryon will have a junction, unless a diquark is formed later.
   hasJunctionBeam = (isBaryon());
 
   // Store how many hard-scattering partons were removed from beam.
   nInit = size();
+  if (isDIS && nInit != 1) return false;
 
   // Find remaining valence quarks.
   for (int i = 0; i < nValKinds; ++i) {
@@ -566,9 +577,36 @@ bool BeamParticle::remnantFlavours(Event& event) {
   }
 
   // If no other remnants found, add a gluon or photon to carry momentum.
-  if (size() == nInit) {
+  if (size() == nInit && !isUnresolvedBeam) {
     int    idRemnant = (isHadronBeam) ? 21 : 22;
     append(0, idRemnant, 0., -1);
+  }
+
+  // For DIS allow collapse to one colour singlet hadron.
+  if (isHadronBeam && isDIS && size() > 2) {
+    if (size() != 4) {
+      infoPtr->errorMsg("Error in BeamParticle::remnantFlavours: "
+        "unexpected number of beam remnants for DIS");
+      return false;
+    }
+
+    // Companion last; find parton with matching colour.
+    int colTypeComp = particleDataPtr->colType( resolved[3].id() );
+    int colType1    = particleDataPtr->colType( resolved[1].id() );
+    int i12         = (colType1 == -colTypeComp) ? 1 : 2;
+
+    // Combine to new hadron flavour.
+    int idHad = flavSelPtr->combine( resolved[i12].id(), resolved[3].id() );
+    if (idHad == 0) {
+      infoPtr->errorMsg("Error in BeamParticle::remnantFlavours: "
+        "failed to combine hadron for DIS");
+      return false;
+    }
+
+    // Overwrite with hadron flavour and remove companion.
+    resolved[i12].id(idHad);
+    resolved.pop_back();
+    resolved[0].companion(-3);
   }
 
   // Set initiator and remnant masses.
@@ -762,8 +800,13 @@ double BeamParticle::xRemnant( int i) {
 
   double x = 0.;
 
+  // Hadrons (only used for DIS) rather primitive for now (probably OK).
+  int idAbs = abs(resolved[i].id());
+  if (idAbs > 100 && (idAbs/10)%10 != 0) {
+    x = 1.;
+
   // Calculation of x of valence quark or diquark, for latter as sum.
-  if (resolved[i].isValence()) {
+  } else if (resolved[i].isValence()) {
 
     // Resolve diquark into sum of two quarks.
     int id1 = resolved[i].id();
@@ -979,26 +1022,25 @@ void BeamParticle::findColSetup(Event& event) {
     for (int j = 0; j < 2*(i+1); ++j)
       colStates[i][j].resize(2*(i+1));
   }
-  colStates[0][0][0].nTotal = 1;
+  colStates[0][0][0].nTotal = 1.;
 
   bool noColouredParticles = true;
   // Find all possible multiplets and their degeneracies.
   for (int i = 0; i < size(); ++i) {
     for (int j = 0; j < int(colStates[i].size()); ++j) {
       for (int k = 0; k < int(colStates[i][j].size()); ++k) {
-        if (colStates[i][j][k].nTotal == 0)
-          continue;
+        if (colStates[i][j][k].nTotal < 0.5) continue;
         int idParton = resolved[i].id();
 
         // If particle is a quark.
         if (idParton > 0 && idParton < 9) {
           colStates[i+1][j+1][k].lastSteps.push_back(make_pair(j,k));
-          colStates[i+1][j+1][k].nTotal += colStates[i][j][k].nTotal;   
+          colStates[i+1][j+1][k].nTotal += colStates[i][j][k].nTotal;
           if (k > 0) {
             colStates[i+1][j][k -1].lastSteps.push_back(make_pair(j,k));
             colStates[i+1][j][k -1].nTotal += colStates[i][j][k].nTotal;
           }
-        
+
           // Junction combination.
           if (j > 0 && allowBeamJunctions) {
             colStates[i+1][j - 1][k + 1].lastSteps.push_back(make_pair(j,k));
@@ -1029,7 +1071,7 @@ void BeamParticle::findColSetup(Event& event) {
           if (j > 0) {
             colStates[i+1][j][k].lastSteps.push_back(make_pair(j,k));
             colStates[i+1][j][k].nTotal += colStates[i][j][k].nTotal;
-          }     
+          }
           if (k > 0) {
             colStates[i+1][j][k].lastSteps.push_back(make_pair(j,k));
             colStates[i+1][j][k].nTotal += colStates[i][j][k].nTotal;
@@ -1194,7 +1236,7 @@ void BeamParticle::findColSetup(Event& event) {
         // Then remove anti colour.
         int iAcol = int(acols.size() * rndmPtr->flat());
         int acol = acols[iAcol];
-        acols.erase(acols.begin() + iAcol);     
+        acols.erase(acols.begin() + iAcol);
         updateSingleCol(acol, resolved[i].col());
       }
 
@@ -1360,7 +1402,7 @@ bool BeamParticle::remnantFlavoursNew(Event& event) {
 
     // Either form di-quark or (anti-)junction.
     if (beamJunction) {
-      // Form anti junction.
+      // Form antijunction.
       if (resolved[iQ1].id() < 0) {
 
         // Start by finding last colour in the out going particles.
@@ -1371,7 +1413,7 @@ bool BeamParticle::remnantFlavoursNew(Event& event) {
         int acol = findSingleCol(event, true, true);
         if ( acol == 0) return false;
 
-        // Make the anti junction.
+        // Make the antijunction.
         int newCol1 = event.nextColTag();
         int newCol2 = event.nextColTag();
         resolved[iQ1].acol(newCol1);

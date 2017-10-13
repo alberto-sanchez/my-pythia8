@@ -419,8 +419,8 @@ LHAupAlpgen::LHAupAlpgen(const char* baseFNin, Info* infoPtrIn)
   }
 
   // Read entire contents into string and close file
-  string paramStr((istreambuf_iterator<char>(isPar->rdbuf())),
-                   istreambuf_iterator<char>());
+  string paramStr((std::istreambuf_iterator<char>(isPar->rdbuf())),
+                   std::istreambuf_iterator<char>());
 
   // Make sure we reached EOF and not other error
   if (ifsPar.bad()) {
@@ -1213,7 +1213,7 @@ inline void MadgraphPar::printParams() {
 
 // Warn if a parameter is going to be overwriten
 
-inline void MadgraphPar::warnParamOverwrite(const string &paramIn, 
+inline void MadgraphPar::warnParamOverwrite(const string &paramIn,
   double val) {
 
   // Check if present and if new value is different

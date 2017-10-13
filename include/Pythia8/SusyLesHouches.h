@@ -5,35 +5,21 @@
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
 // Header file for SUSY Les Houches Accord functionality
-// This part of the SLHA interface basically contains the Pythia-independent 
-// SLHA read/write and processing utilities, which would be common to any 
+// This part of the SLHA interface basically contains the Pythia-independent
+// SLHA read/write and processing utilities, which would be common to any
 // SLHA interface.
 // (The Pythia-specific components reside in the SLHAinterface class.)
 
-#ifndef SLHA_H
-#define SLHA_H
+#ifndef Pythia8_SLHA_H
+#define Pythia8_SLHA_H
 
-// Stdlib header files for string and character manipulation.
-#include <string>
-#include <cctype>
-// Stdlib header files for containers.
-#include <vector>
-#include <map>
-// Stdlib header files for input/output.
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <sstream>
-// Stdlib header files for mathematics.
-#include <cmath>
-#include <cstdlib>
-
-// Stdlib namespace
-using namespace std;
-
-//************************* SLHA AUX CLASSES *****************************//
+#include "Pythia8/PythiaStdlib.h"
 
 namespace Pythia8 {
+
+//==========================================================================
+
+//************************* SLHA AUX CLASSES *****************************//
 
   //class LHblock: the generic SLHA block (see below for matrices)
   //Explicit typing required, e.g. block<double> minpar;
@@ -640,7 +626,7 @@ public:
 
   // Access/change verbose setting
   int verbose() {return verboseSav;}
-  void verbose(double verboseIn) {verboseSav = verboseIn;}
+  void verbose(int verboseIn) {verboseSav = verboseIn;}
 
   // Output of messages from SLHA interface
   void message(int, string,string ,int line=0);
@@ -887,9 +873,9 @@ template <class T> bool SusyLesHouches::getEntry(string blockName, int indx,
   return false;
  }
 
+//==========================================================================
+
+
 } // end of namespace Pythia8
 
-#endif
-
-
-
+#endif // end Pythia8_SLHA_H

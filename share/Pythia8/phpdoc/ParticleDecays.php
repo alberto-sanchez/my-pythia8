@@ -57,7 +57,13 @@ tested by the <code>canDecay()</code> method of <code>Event</code>
 <p/> 
 (ii) The main switch for allowing this particle kind to decay must 
 be on; tested by the <code>mayDecay()</code> method of <code>Event</code> 
-(and <code>ParticleData</code>). 
+(and <code>ParticleData</code>). By default this is defined as true for 
+all particles with <i>tau0</i> below 1000 mm, and false for ones above, 
+see the <?php $filepath = $_GET["filepath"];
+echo "<a href='ParticleDataScheme.php?filepath=".$filepath."' target='page'>";?>Particle Data Scheme</a>. 
+This means that <i>mu^+-</i>, <i>pi^+-</i>, <i>K^+-</i>, 
+<i>K^0_L</i> and  <i>n/nbar</i> always remain stable unless decays 
+are explicity switched on, e.g. <code>211:mayDecay  = true</code>. 
  
 <p/> 
 (iii) Particles may be requested to have a nominal proper lifetime 
@@ -158,19 +164,25 @@ input from Tauola [<a href="Bibliography.php" target="page">Jad90</a>]. A short 
 [<a href="Bibliography.php" target="page">Ilt12</a>], while the complete writeup is in [<a href="Bibliography.php" target="page">Ilt14</a>]. 
  
 <p/> 
+ 
 The decays of <i>tau</i> leptons are categorized 
 as <code>correlated</code>, where a <i>tau</i> pair is produced from 
 a single process, or <code>uncorrelated</code>, where only 
 one <i>tau</i> is produced. Currently internally 
 supported <i>tau</i> production mechanisms include correlated decays 
-from <i>gamma</i>, <i>Z^0</i>, <i>gamma^*/Z^0</i>, and Higgs 
-bosons (CP-even, odd, or mixed) and uncorrelated decays 
-from <i>W^+-</i>, <i>B/D</i> hadrons, and charged Higgs 
-bosons. For all mechanisms except <i>B/D</i> hadrons, both the full 
-process, e.g. <i>q qbar &rarr; Z^0 &rarr; tau^+ tau^-</i>, as well 
-as just the decay of the boson with a given initial polarization, e.g. 
-<i>Z^0 &rarr; tau^+ tau^-</i>, can be handled. Note that the CP of 
-the various Higgs bosons can be set with the 
+from <i>gamma</i>, <i>Z^0</i>, <i>Z'^0</i>, <i>gamma^*/Z^0/Z'^0</i>, 
+and Higgs bosons (CP-even, odd, or mixed) and uncorrelated decays 
+from <i>W^+-</i>, <i>W'^+-</i>, <i>B/D</i> hadrons, and charged 
+Higgs bosons. For all mechanisms except <i>B/D</i> hadrons, both the 
+full process, e.g. <i>q qbar &rarr; Z^0 &rarr; tau^+ tau^-</i>, as 
+well as just the decay of the boson with a given initial polarization, 
+e.g. 
+<i>Z^0 &rarr; tau^+ tau^-</i>, can be handled. The axial and vector 
+couplings of the <i>Z'^0</i> and <i>W'^0</i> are set from the 
+relevant parameters in <?php $filepath = $_GET["filepath"];
+echo "<a href='NewGaugeBosonProcesses.php?filepath=".$filepath."' target='page'>";?>New Gauge 
+Boson Processes</a>. Note that the CP of the various Higgs bosons 
+can be set with the 
 options <code>HiggsX:parity</code>, <code>HiggsX:etaParity</code>, 
 and <code>HiggsX:phiParity</code> as described 
 in <?php $filepath = $_GET["filepath"];
@@ -588,4 +600,3 @@ fclose($handle);
 </html>
  
 <!-- Copyright (C) 2015 Torbjorn Sjostrand --> 
- 

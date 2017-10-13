@@ -5,25 +5,7 @@
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
 #include "Pythia8/SusyLesHouches.h"
-
-// GZIP support.
-#ifdef GZIPSUPPORT
-
-// For GCC versions >= 4.6, can switch off shadow warnings.
-#if (defined GZIPSUPPORT && ((__GNUC__ * 100) + __GNUC_MINOR__) >= 406)
-#pragma GCC diagnostic ignored "-Wshadow"
-#endif
-
-// Boost includes.
-#include "boost/iostreams/filtering_stream.hpp"
-#include "boost/iostreams/filter/gzip.hpp"
-
-// Switch shadow warnings back on.
-#if (defined GZIPSUPPORT && ((__GNUC__ * 100) + __GNUC_MINOR__) >= 406)
-#pragma GCC diagnostic warning "-Wshadow"
-#endif
-
-#endif // GZIPSUPPORT
+#include "Pythia8/Streams.h"
 
 namespace Pythia8 {
 
@@ -41,27 +23,7 @@ int SusyLesHouches::readFile(string slhaFileIn, int verboseIn,
   slhaFile = slhaFileIn;
   // Check that input file is OK.
   const char* cstring = slhaFile.c_str();
-
-// Construct istream without gzip support.
-#ifndef GZIPSUPPORT
-  ifstream file(cstring);
-
-// Construct istream with gzip support.
-#else
-  boost::iostreams::filtering_istream file;
-  ifstream fileBase(cstring);
-
-  // Pass along the 'good()' flag, so code elsewhere works unmodified.
-  if (!fileBase.good()) file.setstate(ios_base::badbit);
-
-  // Check filename ending to decide which filters to apply.
-  else {
-    const char *last = strrchr(cstring, '.');
-    if (last && strncmp(last, ".gz", 3) == 0)
-      file.push(boost::iostreams::gzip_decompressor());
-    file.push(fileBase);
-  }
-#endif
+  igzstream file(cstring);
 
   // Exit if input file not found. Else print file name.
   if (!file.good()) {
@@ -1879,9 +1841,11 @@ int SusyLesHouches::checkSpectrum() {
 void SusyLesHouches::message(int level, string place,string themessage,
   int line) {
   if (verboseSav == 0) return;
+  // By default all output to cout, but lines below allow finer control.
+  ostream* outstream = &cout;
   //Send normal messages and warnings to stdout, errors to stderr.
-  ostream* outstream = &cerr;
-  if (level <= 1) outstream = &cout;
+  //ostream* outstream = &cerr;
+  //if (level <= 1) outstream = &cout;
   // if (level == 2) { *outstream << endl; }
   if (place != "") *outstream  <<  " | (SLHA::"+place+") ";
   else *outstream  <<  " | ";
@@ -1922,8 +1886,3 @@ void SusyLesHouches::toLower(string& name) {
 //==========================================================================
 
 } // end namespace Pythia8
-
-
-
-
-

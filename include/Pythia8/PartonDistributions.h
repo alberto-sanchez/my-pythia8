@@ -64,6 +64,15 @@ public:
   virtual double xfVal(int id, double x, double Q2);
   virtual double xfSea(int id, double x, double Q2);
 
+  // Check whether x and Q2 values fall inside the fit bounds (LHAPDF6 only).
+  virtual bool insideBounds(double, double) {return true;}
+
+  // Access the running alpha_s of a PDF set (LHAPDF6 only).
+  virtual double alphaS(double) { return 1.;}
+
+  // Return quark masses used in the PDF fit (LHAPDF6 only).
+  virtual double mQuarkPDF(int) { return -1.;}
+
 protected:
 
   // Allow the LHAPDF class to access these methods.
@@ -147,8 +156,9 @@ class MSTWpdf : public PDF {
 public:
 
   // Constructor.
-  MSTWpdf(int idBeamIn = 2212, int iFitIn = 1, string xmlPath = "../xmldoc/",
-    Info* infoPtr = 0) : PDF(idBeamIn) {init( iFitIn,  xmlPath, infoPtr);}
+  MSTWpdf(int idBeamIn = 2212, int iFitIn = 1,
+    string xmlPath = "../share/Pythia8/xmldoc/", Info* infoPtr = 0)
+    : PDF(idBeamIn) {init( iFitIn,  xmlPath, infoPtr);}
 
 private:
 
@@ -199,8 +209,9 @@ class CTEQ6pdf : public PDF {
 public:
 
   // Constructor.
-  CTEQ6pdf(int idBeamIn = 2212, int iFitIn = 1, string xmlPath = "../xmldoc/",
-    Info* infoPtr = 0) : PDF(idBeamIn) {init( iFitIn, xmlPath, infoPtr);}
+  CTEQ6pdf(int idBeamIn = 2212, int iFitIn = 1,
+    string xmlPath = "../share/Pythia8/xmldoc/", Info* infoPtr = 0)
+    : PDF(idBeamIn) {init( iFitIn, xmlPath, infoPtr);}
 
 private:
 
@@ -322,8 +333,8 @@ public:
 
   // Constructor.
  PomH1FitAB(int idBeamIn = 990, int iFit = 1, double rescaleIn = 1.,
-   string xmlPath = "../xmldoc/", Info* infoPtr = 0) : PDF(idBeamIn)
-   {rescale = rescaleIn; init( iFit, xmlPath, infoPtr);}
+   string xmlPath = "../share/Pythia8/xmldoc/", Info* infoPtr = 0)
+   : PDF(idBeamIn) {rescale = rescaleIn; init( iFit, xmlPath, infoPtr);}
 
 private:
 
@@ -354,8 +365,8 @@ public:
 
   // Constructor.
   PomH1Jets(int idBeamIn = 990,  double rescaleIn = 1.,
-   string xmlPath = "../xmldoc/", Info* infoPtr = 0) : PDF(idBeamIn)
-   {rescale = rescaleIn; init( xmlPath, infoPtr);}
+   string xmlPath = "../share/Pythia8/xmldoc/", Info* infoPtr = 0)
+   : PDF(idBeamIn) {rescale = rescaleIn; init( xmlPath, infoPtr);}
 
 private:
 
@@ -453,10 +464,11 @@ class NNPDF : public PDF {
 public:
 
   // Constructor.
-  NNPDF(int idBeamIn = 2212, int iFitIn = 1, string xmlPath = "../xmldoc/",
-    Info* infoPtr = 0) : PDF(idBeamIn), fPDFGrid(NULL), fXGrid(NULL),
-    fLogXGrid(NULL), fQ2Grid(NULL), fLogQ2Grid(NULL), fRes(NULL) {
-      init( iFitIn, xmlPath, infoPtr); };
+  NNPDF(int idBeamIn = 2212, int iFitIn = 1,
+    string xmlPath = "../share/Pythia8/xmldoc/", Info* infoPtr = 0)
+    : PDF(idBeamIn), fPDFGrid(NULL), fXGrid(NULL), fLogXGrid(NULL),
+    fQ2Grid(NULL), fLogQ2Grid(NULL), fRes(NULL) {
+    init( iFitIn, xmlPath, infoPtr); };
 
   // Destructor.
   ~NNPDF() {
@@ -543,6 +555,18 @@ public:
     if (pdfPtr) return pdfPtr->xfVal(id, x, Q2); else return 0;}
   double xfSea(int id, double x, double Q2) {
     if (pdfPtr) return pdfPtr->xfSea(id, x, Q2); else return 0;}
+
+  // Check whether x and Q2 values fall inside the fit bounds (LHAPDF6 only).
+  bool insideBounds(double x, double Q2) {
+    if(pdfPtr) return pdfPtr->insideBounds(x, Q2); else return true;}
+
+  // Access the running alpha_s of a PDF set (LHAPDF6 only).
+  double alphaS(double Q2) {
+    if(pdfPtr) return pdfPtr->alphaS(Q2); else return 1.;}
+
+  // Return quark masses used in the PDF fit (LHAPDF6 only).
+  double mQuarkPDF(int idIn) {
+    if(pdfPtr) return pdfPtr->mQuarkPDF(idIn); else return -1.;}
 
 private:
 

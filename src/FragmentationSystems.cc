@@ -148,7 +148,7 @@ bool ColConfig::insert( vector<int>& iPartonIn, Event& event) {
       Vec4 pNew   = event[iJoin1].p() + event[iJoin2].p();
 
       int statusHad = 73;
-      // Need to keep status as 74 for junctions in order to keep track 
+      // Need to keep status as 74 for junctions in order to keep track
       // of them.
       if (event[iMoth1].statusAbs() == 74) statusHad = 74;
 
@@ -464,6 +464,8 @@ void StringRegion::setUp(Vec4 p1, Vec4 p2, bool isMassless) {
     double k2 = 0.5 * ( (m1Sq + p1p2) / root - 1.);
     pPos = (1. + k1) * p1 - k2 * p2;
     pNeg = (1. + k2) * p2 - k1 * p1;
+    if (pPos.e() < TINY || pNeg.e() < TINY)
+      {isSetUp = true; isEmpty = true; return;}
   }
 
   // Find two spacelike transverse four-vector directions.

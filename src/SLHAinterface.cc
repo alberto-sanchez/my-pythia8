@@ -18,7 +18,7 @@ namespace Pythia8 {
 
 void SLHAinterface::init( Settings& settings, Rndm* rndmPtr,
   Couplings* couplingsPtrIn, ParticleData* particleDataPtr,
-  bool& useSLHAcouplings) {
+  bool& useSLHAcouplings, stringstream& particleDataBuffer) {
 
   // Initialize SLHA couplingsPtr to PYTHIA one by default
   couplingsPtr     = couplingsPtrIn;
@@ -28,6 +28,16 @@ void SLHAinterface::init( Settings& settings, Rndm* rndmPtr,
   if( !initSLHA(settings, particleDataPtr))
     infoPtr->errorMsg("Error in SLHAinterface::init: "
       "Could not read SLHA file");
+
+  // Reset any particle-related user settings.
+  string line;
+  string warnPref = "Warning in SLHAinterface::init: ";
+  while (getline(particleDataBuffer, line)
+    && settings.flag("SLHA:allowUserOverride")) {
+    bool pass = particleDataPtr->readString(line, true);
+    if (!pass) infoPtr->errorMsg(warnPref + "Unable to process line " + line);
+    else infoPtr->errorMsg(warnPref + "Overwriting SLHA by " + line);
+  }
 
   // SLHA sets isSUSY flag to tell us if there was an SLHA SUSY spectrum
   if (couplingsPtr->isSUSY) {
@@ -162,10 +172,10 @@ bool SLHAinterface::initSLHA(Settings& settings,
     string dName = "~d_"+indx.str();
     string lName = "~e_"+indx.str();
     if (isOrderedQ) {
-      particleDataPtr->names(idSup[i],uName,uName+"bar");
-      particleDataPtr->names(idSdown[i],dName,dName+"bar");
+      particleDataPtr->names(idSup[i-1],uName,uName+"bar");
+      particleDataPtr->names(idSdown[i-1],dName,dName+"bar");
     }
-    if (isOrderedL) particleDataPtr->names(idSlep[i],lName+"-",lName+"+");
+    if (isOrderedL) particleDataPtr->names(idSlep[i-1],lName+"-",lName+"+");
   }
 
   // NMSSM spectrum (modify existing Higgs names and add particles)
@@ -362,18 +372,18 @@ bool SLHAinterface::initSLHA(Settings& settings,
   // Import mass spectrum.
   bool   keepSM            = settings.flag("SLHA:keepSM");
   double minMassSM         = settings.parm("SLHA:minMassSM");
-  bool   allowUserOverride = settings.flag("SLHA:allowUserOverride");
   vector<int> idModified;
   if (ifailSpc == 1 || ifailSpc == 0) {
 
     // Start at beginning of mass array
     int    id = slha.mass.first();
+    vector<int> ignoreMassKeepSM;
+    vector<int> ignoreMassM0;
+    vector<int> importMass;
     // Loop through to update particle data.
     for (int i = 1; i <= slha.mass.size() ; i++) {
       // Step to next mass entry
       if (i>1) id = slha.mass.next();
-      ostringstream idCode;
-      idCode << id;
       double mass = abs(slha.mass(id));
 
       // Check if this ID was added by qnumbers
@@ -384,33 +394,58 @@ bool SLHAinterface::initSLHA(Settings& settings,
       // Ignore masses for known SM particles or particles with
       // default masses < minMassSM; overwrite masses for rest.
       if (keepSM && (id < 25 || (id > 80 && id < 1000000)) && isInternal)
-        infoPtr->errorMsg(warnPref + "ignoring MASS entry", "for id = "
-          + idCode.str()
-          + " (SLHA:keepSM. Use id > 1000000 for new particles)", true);
+        ignoreMassKeepSM.push_back(id);
       else if (id < 1000000 && particleDataPtr->m0(id) < minMassSM
-        && isInternal) {
-        infoPtr->errorMsg(warnPref + "ignoring MASS entry", "for id = "
-          + idCode.str() + " (m0 < SLHA:minMassSM)", true);
-      }
-
-      // Also ignore SLHA mass values if user has already set
-      // a different value and is allowed to override them.
-      else if (allowUserOverride && particleDataPtr->hasChanged(id)) {
-        ostringstream mValue;
-        mValue << particleDataPtr->m0(id);
-        infoPtr->errorMsg(warnPref + "keeping user mass",
-          "for id = " + idCode.str() + ", m0 = " + mValue.str(), true);
-        idModified.push_back(id);
-      }
+        && isInternal)
+        ignoreMassM0.push_back(id);
       else {
         particleDataPtr->m0(id,mass);
         idModified.push_back(id);
+        importMass.push_back(id);
       }
     };
-
+    // Give summary of any imported/ignored MASS entries, and state reason
+    if (importMass.size() >= 1) {
+      string idImport;
+      for (unsigned int i=0; i<importMass.size(); ++i) {
+        ostringstream idCode;
+        idCode << importMass[i];
+        if (i != 0) idImport +=",";
+        idImport += idCode.str();
+      }
+      infoPtr->errorMsg(infoPref + "importing MASS entries","for id = ["
+        + idImport + "]", true);
+    }
+    if (ignoreMassKeepSM.size() >= 1) {
+      string idIgnore;
+      for (unsigned int i=0; i<ignoreMassKeepSM.size(); ++i) {
+        ostringstream idCode;
+        idCode << ignoreMassKeepSM[i];
+        if (i != 0) idIgnore +=",";
+        idIgnore += idCode.str();
+      }
+      infoPtr->errorMsg(warnPref + "ignoring MASS entries", "for id = ["
+        + idIgnore + "]"
+        + " (SLHA:keepSM. Use id > 1000000 for new particles)", true);
+    }
+    if (ignoreMassM0.size() >= 1) {
+      string idIgnore;
+      for (unsigned int i=0; i<ignoreMassM0.size(); ++i) {
+        ostringstream idCode;
+        idCode << ignoreMassM0[i];
+        if (i != 0) idIgnore +=",";
+        idIgnore += idCode.str();
+      }
+      infoPtr->errorMsg(warnPref + "ignoring MASS entries", "for id = ["
+        + idIgnore + "]" + " (m0 < SLHA:minMassSM)", true);
+    }
   }
 
   // Update decay data.
+  vector<int> ignoreDecayKeepSM;
+  vector<int> ignoreDecayM0;
+  vector<int> ignoreDecayBR;
+  vector<int> importDecay;
   for (int iTable=0; iTable < int(slha.decays.size()); iTable++) {
 
     // Pointer to this SLHA table
@@ -432,24 +467,14 @@ bool SLHAinterface::initSLHA(Settings& settings,
     // default masses < minMassSM; overwrite masses for rest.
     if (keepSM && (idRes < 25 || (idRes > 80 && idRes < 1000000))
         && isInternal) {
-      infoPtr->errorMsg(warnPref + "ignoring DECAY table", "for id = "
-        + idCode.str()
-        + " (SLHA:keepSM. Use id > 1000000 for new particles)", true);
+      ignoreDecayKeepSM.push_back(idRes);
       continue;
     }
     else if (idRes < 1000000 && particleDataPtr->m0(idRes) < minMassSM
-             && !particleDataPtr->hasChanged(idRes) && isInternal) {
-      infoPtr->errorMsg(warnPref + "ignoring DECAY table", "for id = "
-        + idCode.str() + " (m0 < SLHA:minMassSM)", true);
+             && isInternal) {
+      ignoreDecayM0.push_back(idRes);
       continue;
     }
-
-    // Verbose output. Let user know we are using these tables.
-    if (verboseSLHA <= 1)
-      infoPtr->errorMsg(infoPref + "importing SLHA decay table(s)","");
-    else
-      infoPtr->errorMsg(infoPref + "importing SLHA decay table","for id = "
-        +idCode.str(),true);
 
     // Extract and store total width (absolute value, neg -> switch off)
     double widRes         = abs(slhaTable->getWidth());
@@ -472,12 +497,12 @@ bool SLHAinterface::initSLHA(Settings& settings,
         particlePtr->clearChannels();
         particleDataPtr->mayDecay(idRes,true);
         particleDataPtr->isResonance(idRes,true);
-      } else {
-        infoPtr->errorMsg(warnPref + "empty DECAY table ","for id = "
-          + idCode.str() + " (total width provided but no branching"
-          + " fractions)", true);
-      }
+        // Let user know we are using these tables.
+        importDecay.push_back(idRes);
+      } else
+        ignoreDecayBR.push_back(idRes);
     }
+
     // Reset to stable if width <= 0.0
     else {
       particlePtr->clearChannels();
@@ -497,9 +522,11 @@ bool SLHAinterface::initSLHA(Settings& settings,
       double brat      = slhaChannel.getBrat();
       vector<int> idDa = slhaChannel.getIdDa();
       if (idDa.size() >= 9) {
-        infoPtr->errorMsg(errPref + "max number of DECAY products is 8");
+        infoPtr->errorMsg(errPref + "max number of DECAY products is 8 ",
+          "for id = "+idCode.str(), true);
       } else if (idDa.size() <= 1) {
-        infoPtr->errorMsg(errPref + "min number of DECAY products is 2");
+        infoPtr->errorMsg(errPref + "min number of DECAY products is 2 ",
+          "for id = "+idCode.str(), true);
       }
       else {
         int onMode = 1;
@@ -571,6 +598,54 @@ bool SLHAinterface::initSLHA(Settings& settings,
 
   }
 
+  // Give summary of imported/ignored DECAY tables, and state reason
+  if (importDecay.size() >= 1) {
+    string idImport;
+    for (unsigned int i=0; i<importDecay.size(); ++i) {
+      ostringstream idCode;
+      idCode << importDecay[i];
+      if (i != 0) idImport +=",";
+      idImport += idCode.str();
+    }
+    infoPtr->errorMsg(infoPref + "importing DECAY tables","for id = ["
+      + idImport + "]", true);
+  }
+  if (ignoreDecayKeepSM.size() >= 1) {
+    string idIgnore;
+    for (unsigned int i=0; i<ignoreDecayKeepSM.size(); ++i) {
+      ostringstream idCode;
+      idCode << ignoreDecayKeepSM[i];
+      if (i != 0) idIgnore +=",";
+      idIgnore += idCode.str();
+    }
+    infoPtr->errorMsg(warnPref + "ignoring DECAY tables", "for id = ["
+      + idIgnore + "]"
+      + " (SLHA:keepSM. Use id > 1000000 for new particles)", true);
+  }
+  if (ignoreDecayM0.size() >= 1) {
+    string idIgnore;
+    for (unsigned int i=0; i<ignoreDecayM0.size(); ++i) {
+      ostringstream idCode;
+      idCode << ignoreDecayM0[i];
+      if (i != 0) idIgnore +=",";
+      idIgnore += idCode.str();
+    }
+    infoPtr->errorMsg(warnPref + "ignoring DECAY tables", "for id = ["
+      + idIgnore + "]" + " (m0 < SLHA:minMassSM)", true);
+  }
+  if (ignoreDecayBR.size() >= 1) {
+    string idIgnore;
+    for (unsigned int i=0; i<ignoreDecayBR.size(); ++i) {
+      ostringstream idCode;
+      idCode << ignoreDecayBR[i];
+      if (i != 0) idIgnore +=",";
+      idIgnore += idCode.str();
+    }
+    infoPtr->errorMsg(warnPref + "ignoring empty DECAY tables", "for id = ["
+      + idIgnore + "]" + " (total width provided but no Branching Ratios)",
+      true);
+  }
+
   // Sanity check of all decay tables with modified MASS or DECAY info
   for (int iMod = 0; iMod < int(idModified.size()); ++iMod) {
     int id = idModified[iMod];
@@ -611,12 +686,17 @@ bool SLHAinterface::initSLHA(Settings& settings,
         mSumMin = min(mSumMin, mSum);
       }
       // Require at least one on-shell channel
-      if (mSumMin > m0) {
+      if (mSumMin > m0 && particlePtr->id() != 25) {
         infoPtr->errorMsg(warnPref + "particle forced stable"," id = "
           + idCode.str() + " (no on-shell decay channels)", true);
         particlePtr->setMWidth(0.0);
         particlePtr->setMayDecay(false);
         continue;
+      }
+      else if (mSumMin > m0 && particlePtr->id() == 25) {
+        infoPtr->errorMsg(warnPref
+          + "allowing particle with no on-shell decays ",
+          " id = " + idCode.str() , true);
       }
       else {
       // mMin: lower cutoff on Breit-Wigner: default is mMin = m0 - 5*Gamma
@@ -683,6 +763,3 @@ void SLHAinterface::pythia2slha(ParticleData* particleDataPtr) {
 //==========================================================================
 
 } // end namespace Pythia8
-
-
-
