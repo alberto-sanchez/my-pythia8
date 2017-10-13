@@ -1,5 +1,5 @@
 // EvtGen.h is a part of the PYTHIA event generator.
-// Copyright (C) 2015 Torbjorn Sjostrand.
+// Copyright (C) 2017 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 // Author: Philip Ilten.
@@ -121,7 +121,7 @@ public:
   bool extOwner, fsrOwner;
   EvtExternalGenList *extPtr;
   EvtAbsRadCorr      *fsrPtr;
-  list<EvtDecayBase*> models;
+  std::list<EvtDecayBase*> models;
 
   // Map of signal particle info.
   struct Signal {int status; EvtId egId; vector<double> bfs; vector<int> map;
@@ -407,7 +407,7 @@ void EvtGenDecays::updatePythia() {
 
 void EvtGenDecays::updateEvtGen() {
   if (!pythiaPtr || !evtgen) return;
-  int pyId = pythiaPtr->particleData.nextId(0);
+  int pyId = pythiaPtr->particleData.nextId(1);
   while (pyId != 0) {
     EvtId egId = EvtPDL::evtIdFromStdHep(pyId);
     EvtPDL::reSetMass   (egId, pythiaPtr->particleData.m0(pyId));

@@ -142,14 +142,14 @@
         require, and enables them if needed. It then checks to see if
         these packages fulfill a). If not, it disables both packages.
      If any "--with-PACKAGE" option is passed to "configure" it will
-     attempt to enable the package. For example, "--with-LHAPDF6" will
-     enable LHAPDF6, while "--with-LHAPDF6-lib=/lib/foo" will also
+     attempt to enable the package. For example, "--with-lhapdf6" will
+     enable LHAPDF6, while "--with-lhapdf6-lib=/lib/foo" will also
      enable LHAPDF6. The available "--with" arguments are
      described by "./configure --help", but further details are given
      here.
      --with-PACKAGE=[DIR] : enables a package and if "DIR" is
          provided, then looks for the package at this root path. For
-         example, if the command "--with-LHAPDF6=/foo/bar" is passed,
+         example, if the command "--with-lhapdf6=/foo/bar" is passed,
          then "configure" will look for the library LHAPDF along the
          path "/foo/bar/lib" and the LHAPDF headers along the path
          "/foo/bar/include".
@@ -158,8 +158,8 @@
          "--with-PACKAGE=DIR" and the default system paths. This can
          be used for non-standard installations of packages, where the
          "bin", "lib", and "include" directories are scattered across
-         the system. In the example "--with-LHAPDF6=/foo
-         --with-LHAPDF6-bin=/foo/bar" the "configure" script will look
+         the system. In the example "--with-lhapdf6=/foo
+         --with-lhapdf6-bin=/foo/bar" the "configure" script will look
          for libraries and headers on the paths "/foo/lib" and
          "/foo/include", but the binaries on the path "/foo/bar" and
          not "/foo/bin".
@@ -212,7 +212,7 @@
        note here. First, the LHAPDF6 package provides the exact same C
        interface as the LHAPDF5 package, and so technically supplying
        LHAPDF6 libraries to the LHAPDF5 package option will work. This
-       is not recommended except for checkin that the new C++
+       is not recommended except for checking that the new C++
        interface works properly. Second, both LHAPDF5 and LHAPDF6 can
        be used simultaneously, technically. This behavior has not
        been tested and is not recommended.
@@ -220,17 +220,21 @@
        visualization, http://root.cern.ch. This package is only used
        for the "examples/main9[1,2].cc" examples.
    BOOST) Advanced C++ libraries, http://www.boost.org/, which are needed
-       when using either LHAPDF6 or GZIP.
-   GZIP) support for the reading of gzipped LHE files. It relies upon
-       BOOST and zlib to function. The BOOST location can be specified
-       with "--with-boost=PATH" while the "--with-gzip=PATH" provides
-       the location for "zlib.h" and "libz.[so,dylib]". From BOOST the
-       headers in "iostreams/" and the library
-       "libboost_iostreams.[so,dylib]" are required.  Note that when
-       compiling a final PYTHIA executable, these libraries must also
-       be included, e.g.: "-lboost_iostreams -lz". This is done
-       automatically for the examples in "examples/"
-       when GZIP support is enabled.
+       when using the C++ interface for LHAPDF6.
+   GZIP) Support for the reading of gzipped LHE files. It relies upon
+       zlib to function. The "--with-gzip=PATH" provides the location
+       for "zlib.h" and "libz.[so,dylib]". Note that when compiling a
+       final PYTHIA executable, the zlib library must also be
+       included, e.g.: "-lz". This is done automatically for the
+       examples in "examples/" when GZIP support is enabled.
+   PYTHON) Provides a Python interface to Pythia. To build this interface,
+       the executable "python" must be available, as well as the
+       Python system header "Python.h". Typically this can be found
+       under "/usr/include/pythonX.Y". Note that the interface
+       includes this header as "#include <Python.h>" so the user will
+       typically need to explicitly set the include path with
+       "--with-python-include=/usr/include/pythonX.Y" or something
+       similar. The interface works both with Python 2 and 3.
 
 ----------------------------------------------------------------------
 

@@ -1,5 +1,5 @@
 // SpaceShower.h is a part of the PYTHIA event generator.
-// Copyright (C) 2015 Torbjorn Sjostrand.
+// Copyright (C) 2017 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL version 2, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -22,6 +22,7 @@
 #include "Pythia8/UserHooks.h"
 #include "Pythia8/MergingHooks.h"
 #include "Pythia8/WeakShowerMEs.h"
+
 
 namespace Pythia8 {
 
@@ -64,6 +65,9 @@ public:
   int    nBranch, idDaughter, idMother, idSister, iFinPol;
   double x1, x2, m2Dip, pT2, z, xMo, Q2, mSister, m2Sister, pT2corr,
          pT2Old, zOld, asymPol;
+
+  // Properties needed for the evaluation of parameter variations
+  double pAccept;
 
 } ;
 
@@ -121,6 +125,16 @@ public:
   // ME corrections and kinematics that may give failure.
   virtual bool branch( Event& event);
 
+  // Initialize data members for calculation of uncertainty bands.
+  bool initUncertainties();
+
+  // Calculate uncertainty-band weights for accepted/rejected trial branching.
+  void calcUncertainties(bool accept, double pAcceptIn, double pT20in,
+    SpaceDipoleEnd* dip, Particle* motherPtr, Particle* sisterPtr);
+
+  // Tell if latest scattering was a gamma->qqbar.
+  bool wasGamma2qqbar() { return gamma2qqbar; }
+
   // Tell which system was the last processed one.
   virtual int system() const {return iSysSel;}
 
@@ -131,7 +145,7 @@ public:
   bool getHasWeaklyRadiated() {return hasWeaklyRadiated;}
 
   // Print dipole list; for debug mainly.
-  virtual void list(ostream& os = cout) const;
+  virtual void list() const;
 
   // Functions to allow usage of shower kinematics, evolution variables,
   // and splitting probabilities outside of shower.
@@ -142,37 +156,34 @@ public:
   // Please see the documentation under "Implement New Showers" for details.
 
   // Return clustering kinematics - as needed form merging.
-  // Usage: clustered( const Event& event, string name, int iRad, int iEmt,
-  //                   int iRec)
-  virtual Event clustered( const Event&, string, int, int, int)
+  virtual Event clustered( const Event& , int , int , int , string )
     { return Event();}
 
-  // Return state after a branching, as needed to evaluate more complicated
-  // kernels.
-  // Usage: branched( const Event& event, int iRadBef, int iRecBef, int idEmt,
-  //                  double pT2, double z, double RN, vector<double> aux)
-  virtual Event branched( const Event&, int, int, int, int, double,
-    double, double, vector<double>) { return Event();}
+  // Return the evolution variable(s).
+  // Important note: this map must contain the following entries
+  // - a key "t" for the value of the shower evolution variable;
+  // - a key "tRS" for the value of the shower evolution variable
+  //   from which the shower would be restarted after a branching;
+  // - a key "scaleAS" for the argument of alpha_s used for the branching;
+  // - a key "scalePDF" for the argument of the PDFs used for the branching.
+  // Usage: getStateVariables( event, iRad, iEmt, iRec,  name)
+  virtual map<string, double> getStateVariables (const Event& , int , int ,
+    int , string ) { return map<string,double>();}
 
-  // Return the evolution variable.
-  // Usage: pT2Space( const Particle& rad, const Particle& emt,
-  //                  const Particle& rec)
-  virtual double pT2Space ( const Particle&, const Particle&, const Particle&)
-    { return 0.;}
+  // Check if attempted clustering is handled by spacelike shower.
+  // Usage: isSpacelike( event, iRad, iEmt, iRec, name)
+  virtual bool isSpacelike(const Event&, int, int, int, string)
+    { return false; }
 
-  // Return the auxiliary (energy sharing) variable.
-  // Usage: zSpace( const Particle& rad, const Particle& emt,
-  //                const Particle& rec)
-  virtual double zSpace ( const Particle&, const Particle&, const Particle&)
-    { return 0.;}
-
-  // Return a string to identifier of a splitting.
-  // Usage: getSplittingName( const Event& event, int iRad, int iEmt)
-  virtual string getSplittingName( const Event&, int, int) { return "";}
+  // Return a string identifier of a splitting.
+  // Usage: getSplittingName( event, iRad, iEmt, iRec)
+  virtual string getSplittingName( const Event& , int , int , int )
+    { return "";}
 
   // Return the splitting probability.
-  // Usage: getSplittingProb( const Event& event, int iRad, int iEmt, int iRec)
-  virtual double getSplittingProb( const Event&, int, int, int ) { return 0.;}
+  // Usage: getSplittingProb( event, iRad, iEmt, iRec)
+  virtual double getSplittingProb( const Event& , int , int , int , string )
+    { return 0.;}
 
 protected:
 
@@ -218,14 +229,15 @@ private:
          TINYPDF, TINYKERNELPDF, TINYPT2, HEAVYPT2EVOL, HEAVYXEVOL,
          EXTRASPACEQ, LAMBDA3MARGIN, PT2MINWARN, LEPTONXMIN, LEPTONXMAX,
          LEPTONPT2MIN, LEPTONFUDGE, WEAKPSWEIGHT, HEADROOMQ2Q, HEADROOMQ2G,
-         HEADROOMG2G, HEADROOMG2Q;
+         HEADROOMG2G, HEADROOMG2Q, HEADROOMHQG, REJECTFACTOR, PROBLIMIT;
 
   // Initialization data, normally only set once.
   bool   doQCDshower, doQEDshowerByQ, doQEDshowerByL, useSamePTasMPI,
          doWeakShower, doMEcorrections, doMEafterFirst, doPhiPolAsym,
-         doPhiIntAsym, doRapidityOrder, useFixedFacScale, doSecondHard,
-         canVetoEmission, hasUserHooks, alphaSuseCMW, singleWeakEmission,
-         vetoWeakJets;
+         doPhiPolAsymHard, doPhiIntAsym, doRapidityOrder, useFixedFacScale,
+         doSecondHard, canVetoEmission, hasUserHooks, alphaSuseCMW,
+         singleWeakEmission, vetoWeakJets, weakExternal, doRapidityOrderMPI,
+         doUncertainties, uVarMuSoftCorr, uVarMPIshowers, doMPI, gamma2qqbar;
   int    pTmaxMatch, pTdampMatch, alphaSorder, alphaSnfmax, alphaEMorder,
          nQuarkIn, enhanceScreening, weakMode;
   double pTdampFudge, mc, mb, m2c, m2b, renormMultFac, factorMultFac,
@@ -234,14 +246,15 @@ private:
          ecmRef, ecmPow, pTmin, sCM, eCM, pT0, pTminChgQ, pTminChgL, pT20,
          pT2min, pT2minChgQ, pT2minChgL, pTweakCut, pT2weakCut, pTmaxFudgeMPI,
          strengthIntAsym, weakEnhancement, mZ, gammaZ, thetaWRat, mW, gammaW,
-         weakMaxWt, vetoWeakDeltaR2;
+         weakMaxWt, vetoWeakDeltaR2, dASmax, cNSpTmin;
 
   // alphaStrong and alphaEM calculations.
   AlphaStrong alphaS;
   AlphaEM alphaEM;
 
   // Some current values.
-  bool   sideA, dopTlimit1, dopTlimit2, dopTdamp, hasWeaklyRadiated, tChannel;
+  bool   sideA, dopTlimit1, dopTlimit2, dopTdamp, hasWeaklyRadiated, tChannel,
+         doUncertaintiesNow;
   int    iNow, iRec, idDaughter, nRad, idResFirst, idResSecond;
   double xDaughter, x1Now, x2Now, m2Dip, m2Rec, pT2damp, pTbegRef, pdfScale2;
 
@@ -258,6 +271,9 @@ private:
   // All dipole ends
   vector<SpaceDipoleEnd> dipEnd;
 
+  // List of 2 -> 2 momenta for external weak setup.
+  vector<Vec4> weakMomenta;
+
   // Pointers to the current and hardest (so far) dipole ends.
   int iDipNow, iSysNow;
   SpaceDipoleEnd* dipEndNow;
@@ -267,8 +283,8 @@ private:
   // Evolve a QCD dipole end.
   void pT2nextQCD( double pT2begDip, double pT2endDip);
 
-  // Evolve a QCD dipole end near heavy quark threshold region.
-  void pT2nearQCDthreshold( BeamParticle& beam, double m2Massive,
+  // Evolve a QCD and QED dipole end near heavy quark threshold region.
+  void pT2nearThreshold( BeamParticle& beam, double m2Massive,
     double m2Threshold, double xMaxAbs, double zMinAbs,
     double zMaxMassive);
 
@@ -298,6 +314,12 @@ private:
 
   // Pointer to MergingHooks object for NLO merging.
   MergingHooks* mergingHooksPtr;
+
+  // Store uncertainty variations relevant to TimeShower.
+  int nUncertaintyVariations, nVarQCD, uVarNflavQ;
+  map<int,double> varG2GGmuRfac, varQ2QGmuRfac, varQ2GQmuRfac, varG2QQmuRfac,
+    varX2XGmuRfac;
+  map<int,double> varG2GGcNS, varQ2QGcNS, varQ2GQcNS, varG2QQcNS, varX2XGcNS;
 
 };
 

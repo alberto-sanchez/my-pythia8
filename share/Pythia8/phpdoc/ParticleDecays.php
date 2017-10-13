@@ -231,7 +231,7 @@ decay is performed and a warning is issued.
  
 <p/> 
 Both the internal and external determination have advantages and 
-disadvantages. For example, if an LHEF <ei Z^0 &rarr; tau^+ tau^-</i> 
+disadvantages. For example, if an LHEF <i>Z^0 &rarr; tau^+ tau^-</i> 
 event is passed with SPINUP provided for both <i>tau</i>s but 
 without SPINUP for the <i>Z^0</i> then 
 with <code>TauDecays:externalTau</code> set to <code>0</code> the 
@@ -365,9 +365,9 @@ the probability that this original assignment is not respected, and
 default corresponds to no memory of this original colour topology. 
    
  
-<br/><br/><strong>ParticleDecays:FSRinDecays</strong>  <input type="radio" name="25" value="on"><strong>On</strong>
+<br/><br/><strong>ParticleDecays:FSRinDecays</strong>  <input type="radio" name="25" value="on" checked="checked"><strong>On</strong>
 <input type="radio" name="25" value="off"><strong>Off</strong>
- &nbsp;&nbsp;(<code>default = <strong>true</strong></code>)<br/>
+ &nbsp;&nbsp;(<code>default = <strong>on</strong></code>)<br/>
 When a particle decays to <i>q qbar</i>, <i>g g</i>, <i>g g g</i> 
 or <i>gamma g g</i>, with <code>meMode > 90</code>, allow or not a 
 shower to develop from it, before the partonic system is hadronized. 
@@ -587,7 +587,7 @@ if($_POST["24"] != "0.5")
 $data = "ParticleDecays:colRearrange = ".$_POST["24"]."\n";
 fwrite($handle,$data);
 }
-if($_POST["25"] != "true")
+if($_POST["25"] != "on")
 {
 $data = "ParticleDecays:FSRinDecays = ".$_POST["25"]."\n";
 fwrite($handle,$data);
@@ -599,4 +599,4 @@ fclose($handle);
 </body>
 </html>
  
-<!-- Copyright (C) 2015 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2017 Torbjorn Sjostrand --> 
