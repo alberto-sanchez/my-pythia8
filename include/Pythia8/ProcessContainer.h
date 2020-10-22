@@ -1,5 +1,5 @@
 // ProcessContainer.h is a part of the PYTHIA event generator.
-// Copyright (C) 2018 Torbjorn Sjostrand.
+// Copyright (C) 2019 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -107,10 +107,6 @@ public:
   // Set whether (photon) beam is resolved or unresolved.
   // Method propagates the choice of photon process type to beam pointers.
   void setBeamModes(bool setVMD = false, bool isSampled = true);
-
-  // If resolved photons, then choose VMD states. Method propagates
-  // states to beam pointers and info pointer.
-  pair<int, int> chooseVMDstates(int idA, int idB, bool isSampled);
 
   // Process name and code, and the number of final-state particles.
   string name()             const {return sigmaProcessPtr->name();}
